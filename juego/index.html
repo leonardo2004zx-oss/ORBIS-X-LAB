@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Orbi y el Faro de Cristal</title>
+  <link rel="stylesheet" href="juego.css" />
+</head>
+<body>
+  <div id="game"></div>
+
+  <!-- HUD -->
+  <div id="hud" hidden>
+    <div class="hud-left">
+      <div class="pill"><span class="ic crystal">◆</span><span id="hudCrystals">0</span><small>/6</small></div>
+      <div class="pill"><span class="ic coin">●</span><span id="hudCoins">0</span></div>
+      <div class="pill" id="hudFragBox" hidden><span class="ic frag">◇</span><span id="hudFrags">0</span><small>/8</small></div>
+    </div>
+    <div class="hud-right">
+      <div id="hudHearts" class="hearts"></div>
+      <div class="pill lives">Orbi × <span id="hudLives">4</span></div>
+    </div>
+    <div id="timer" class="timer" hidden></div>
+    <div id="hint" class="hint" hidden></div>
+  </div>
+
+  <div id="banner" class="banner" hidden>
+    <div class="banner-title" id="bannerTitle"></div>
+    <div class="banner-sub" id="bannerSub"></div>
+  </div>
+
+  <div id="fade" class="fade"></div>
+
+  <!-- Pantalla de título -->
+  <div id="title" class="screen">
+    <div class="logo">
+      <div class="logo-main">ORBI</div>
+      <div class="logo-sub">y el Faro de Cristal</div>
+    </div>
+    <p class="story">Los seis Cristales que encendían el Faro de las Islas Nimbo se han dispersado.<br />Ayuda a Orbi a recuperarlos y devolver la luz al cielo.</p>
+    <button id="startBtn" class="big-btn">▶ Jugar</button>
+    <div class="controls">
+      <div><b>WASD / Flechas</b> moverse</div>
+      <div><b>Espacio</b> saltar · encadena 3 para el <i>triple salto</i></div>
+      <div><b>Shift</b> en el aire: <i>golpe en el suelo</i></div>
+      <div><b>Shift + Espacio</b> corriendo: <i>salto largo</i></div>
+      <div><b>Salto contra una pared</b> en el aire: <i>salto de pared</i></div>
+      <div><b>Ratón / Q E</b> cámara · <b>Rueda</b> zoom · <b>P / Esc</b> pausa · <b>M</b> sonido</div>
+      <div class="muted">También con mando o pantalla táctil.</div>
+    </div>
+  </div>
+
+  <!-- Pausa -->
+  <div id="pause" class="screen" hidden>
+    <h2>Pausa</h2>
+    <ul id="crystalList" class="crystal-list"></ul>
+    <div class="row">
+      <button id="resumeBtn" class="big-btn">Continuar</button>
+      <button id="muteBtn" class="btn">Sonido: sí</button>
+      <button id="resetBtn" class="btn danger">Borrar progreso</button>
+    </div>
+  </div>
+
+  <!-- Controles táctiles -->
+  <div id="touch" hidden>
+    <div id="stick" class="stick"><div id="knob" class="knob"></div></div>
+    <button id="btnJump" class="tbtn jump">A</button>
+    <button id="btnPound" class="tbtn pound">B</button>
+    <button id="btnPause" class="tbtn small">II</button>
+  </div>
+
+  <script type="module" src="juego.js"></script>
+</body>
+</html>

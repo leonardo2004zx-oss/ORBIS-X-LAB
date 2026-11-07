@@ -39,3 +39,12 @@ python3 scripts/make_demo_gifs.py
 | `js/caption.js` | Animaciones de texto compartidas |
 | `js/export.js` | Exportación a vídeo con `MediaRecorder` |
 | `js/store.js` | Guardado en IndexedDB |
+
+## Juego: Orbi y el Faro de Cristal
+
+En `juego/` hay un **juego de plataformas 3D original** (Three.js, incluido en `juego/vendor/`, sin dependencias externas). Sírvelo igual que la app y abre `http://localhost:8000/juego/`.
+
+- Orbi recorre las Islas Nimbo para recuperar **6 Cristales**: subir el faro en espiral, cruzar plataformas móviles hasta la Isla del Viento, vencer al **Rey Pedrusco**, reunir 8 fragmentos azules, activar el interruptor de las nubes (contrarreloj) y juntar 50 monedas.
+- Movimientos: salto, doble y **triple salto**, **salto largo**, **salto de pared** y **golpe en el suelo**; muelles, tobogán y enemigos que se derrotan saltando encima.
+- Controles: teclado + ratón, mando o pantalla táctil. El progreso se guarda en el navegador.
+- Música y efectos sintetizados con Web Audio.
