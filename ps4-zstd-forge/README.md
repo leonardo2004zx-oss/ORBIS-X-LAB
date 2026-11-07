@@ -221,6 +221,14 @@ python -m unittest discover tests      # 31 pruebas
 - `tests/test_real_mkpfs.py` crea un juego sintético con **MkPFS real** y lo comprueba con el
   lector nativo. Se salta si MkPFS no está instalado.
 
+**Resultado con MkPFS 1.1.0 real** (juego sintético de 20 MiB, 351 bloques PFSC):
+- el lector nativo da los mismos tamaños que `mkpfs verify`: 23.003.136 bytes lógicos y
+  7.940.658 guardados;
+- la extracción nativa es idéntica byte a byte a `mkpfs unpack --deep` y a la carpeta
+  original;
+- al cambiar un byte de un bloque comprimido, la verificación nativa y `mkpfs verify` señalan
+  el mismo bloque (175) con "incorrect data check", y `verify` termina con código 2.
+
 ## Créditos y licencias
 
 - **MkPFS** (PSBrew, GPL-3.0) escribe la imagen. No está incluido en el repo: se instala

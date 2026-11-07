@@ -408,7 +408,7 @@ def verify_ffpfsc(
         try:
             out = run_mkpfs([*mk, "verify", image, "--format", "pfs"], on_progress=progress)
             checks.append({"name": "mkpfs verify", "ok": True,
-                           "detail": (out.splitlines() or ["OK"])[-1]})
+                           "detail": _mkpfs_verify_summary(out)})
         except MkpfsError as e:
             checks.append({"name": "mkpfs verify", "ok": False, "detail": str(e)})
     src_root = find_game_root(source) if source else None
@@ -416,6 +416,16 @@ def verify_ffpfsc(
                            progress=progress, title_id=title_id)
     checks.extend(native["checks"])
     return {"ok": all(c["ok"] for c in checks), "mode": mode, "checks": checks}
+
+
+def _mkpfs_verify_summary(out: str) -> str:
+    """'Errors: 0 · Warnings: 0 · Data CRC32: 0x…' from MkPFS's report."""
+    keep = []
+    for line in out.splitlines():
+        key, _, val = line.partition(":")
+        if key.strip() in ("Errors", "Warnings", "Data CRC32") and val.strip():
+            keep.append(f"{key.strip()}: {val.strip()}")
+    return " · ".join(keep) or "OK"
 
 
 def extract_ffpfsc(image: str, dest: str, only: Optional[List[str]] = None,
