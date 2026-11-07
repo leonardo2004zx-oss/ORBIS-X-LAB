@@ -244,12 +244,16 @@ async function doExport() {
   $("exporting").hidden = false;
   try {
     const blob = await exportVideo(state.slides, (p) => ($("exportBar").value = p));
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
     const ext = blob.type.includes("mp4") ? "mp4" : "webm";
+    const url = URL.createObjectURL(blob);
+    const video = $("outVideo");
+    if (video.src) URL.revokeObjectURL(video.src);
+    video.src = url;
+    const a = $("outLink");
+    a.href = url;
     a.download = (state.title || "historia").replace(/[^\w\-áéíóúñ ]/gi, "").trim().replace(/\s+/g, "-") + "." + ext;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    $("videoOut").hidden = false;
+    video.play().catch(() => {});
     toast("Vídeo exportado ✔");
   } catch (e) {
     toast("Error al exportar: " + e.message);
@@ -276,6 +280,21 @@ function init() {
   $("play").onclick = () => openViewer(Math.max(0, state.current));
   $("export").onclick = doExport;
   $("close").onclick = closeViewer;
+  // Dentro de claude.ai las descargas pasan por la capacidad "downloads".
+  $("outLink").addEventListener("click", async (e) => {
+    if (!window.claude?.use) return; // fuera de claude.ai: enlace normal
+    e.preventDefault();
+    const downloads = await window.claude.use("downloads");
+    if (!downloads) return toast("Aquí no se pueden descargar archivos; mantén pulsado el vídeo para guardarlo");
+    try {
+      const blob = await (await fetch($("outLink").href)).blob();
+      await downloads.save({ filename: $("outLink").download, data: blob });
+      toast("Vídeo guardado ✔");
+    } catch (err) {
+      if (err?.code !== "declined") toast("No se pudo guardar: " + (err?.message || err));
+    }
+  });
+  $("outClose").onclick = () => { $("outVideo").pause(); $("videoOut").hidden = true; };
 
   $("fitLoop").onclick = () => {
     const s = state.slides[state.current];
@@ -325,7 +344,7 @@ function init() {
   requestAnimationFrame(previewLoop);
 
   loadProject().then((p) => {
-    if (!p?.slides?.length) return;
+    if (!p?.slides?.length) return loadDemo(); // primera visita: abre la demo
     state.title = p.title || "";
     state.slides = p.slides;
     $("title").value = state.title;
