@@ -90,7 +90,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--version", action="version", version=f"PS4 ZSTD Forge {__version__}")
     sub = p.add_subparsers(dest="cmd")
 
-    pk = sub.add_parser("pack", help="empaquetar una carpeta de juego")
+    pk = sub.add_parser("pack", aliases=["compress"], help="empaquetar/comprimir una carpeta de juego")
     pk.add_argument("-i", "--input", required=True, help="carpeta del juego (CUSAxxxxx)")
     pk.add_argument("-o", "--output", help="archivo o carpeta de destino (por defecto: "
                     "TITLEID_Titulo.ffpfsc en el directorio actual)")
@@ -120,7 +120,10 @@ def build_parser() -> argparse.ArgumentParser:
     vf = sub.add_parser("verify", help="verificar una imagen .ffpfsc o un .tar.zst")
     vf.add_argument("archive")
     vf.add_argument("-s", "--source", help="carpeta original para comparar")
-    vf.add_argument("--full", action="store_true", help="descomprimir y comprobar todo")
+    vf.add_argument("--full", action="store_true",
+                    help="comparar además el SHA-256 de todos los archivos con --source")
+    vf.add_argument("--mkpfs-check", action="store_true",
+                    help="[ffpfsc] ejecutar también 'mkpfs verify' (segunda opinión)")
     vf.add_argument("--mkpfs", help="ruta o comando de MkPFS")
     vf.add_argument("--sample-percent", type=float, default=10.0,
                     help="porcentaje de tramas a muestrear en modo rápido (10)")
@@ -331,24 +334,7 @@ def cmd_info(a) -> int:
     from .ffpfsc import is_ffpfsc
 
     if is_ffpfsc(a.path):
-        import json
-
-        side = a.path + ".manifest.json"
-        print(f"Imagen    : {a.path} ({human(os.path.getsize(a.path))})")
-        if os.path.isfile(side):
-            with open(side, encoding="utf-8") as f:
-                m = json.load(f)
-            for k, v in m.get("game", {}).items():
-                if v:
-                    print(f"{k:<10}: {v}")
-            print(f"Original  : {human(m['source']['bytes'])} en {m['source']['files']} archivos")
-            c = m.get("compression", {})
-            print(f"zlib      : nivel {c.get('level')} ({c.get('backend')})")
-            print(f"Interna   : {m['layout']['inner_image']}")
-            print(f"Creado    : {m.get('created')} con {m.get('tool')} / {m.get('engine')}")
-        else:
-            print("(sin .manifest.json al lado; usa 'mkpfs inspect' para más detalles)")
-        return 0
+        return info_ffpfsc(a)
     from .extract import list_archive
 
     m = list_archive(a.path)
@@ -370,6 +356,41 @@ def cmd_info(a) -> int:
     return 0
 
 
+def info_ffpfsc(a) -> int:
+    import json
+
+    from .ffpfsc_native import open_ffpfsc
+
+    print(f"Imagen    : {a.path} ({human(os.path.getsize(a.path))})")
+    side = a.path + ".manifest.json"
+    if os.path.isfile(side):
+        with open(side, encoding="utf-8") as f:
+            m = json.load(f)
+        for k, v in m.get("game", {}).items():
+            if v:
+                print(f"{k:<10}: {v}")
+        c = m.get("compression", {})
+        print(f"zlib      : nivel {c.get('level')} ({c.get('backend')})")
+        print(f"Creado    : {m.get('created')} con {m.get('tool')} / {m.get('engine')}")
+    img = open_ffpfsc(a.path)
+    try:
+        h = img.pfs.header
+        print(f"PFS       : perfil {h.profile}, bloque {h.block_size // 1024} KiB, "
+              f"{', '.join(h.mode_flags())}")
+        inner = img.inner
+        print(f"Interna   : {img.inner_name} · {human(inner.size)} lógicos → "
+              f"{human(inner.ino.stored_size)} guardados"
+              + (f" · PFSC {inner.block_count} bloques zlib de 64 KiB" if inner.compressed else ""))
+        files = [e for e in img.exfat.walk() if not e.is_dir]
+        print(f"Contenido : {len(files)} archivos, {human(sum(e.data_length for e in files))}")
+        if a.files:
+            for e in files:
+                print(f"{e.data_length:>14}  {e.path}")
+    finally:
+        img.close()
+    return 0
+
+
 def cmd_extract(a) -> int:
     from .extract import extract_all, extract_some
     from .ffpfsc import extract_ffpfsc, is_ffpfsc
@@ -377,10 +398,10 @@ def cmd_extract(a) -> int:
     if is_ffpfsc(a.archive):
         bar = PhaseBar()
         try:
-            extract_ffpfsc(a.archive, a.dest, a.only, mkpfs=a.mkpfs, progress=bar)
+            n = extract_ffpfsc(a.archive, a.dest, a.only, progress=bar)
         finally:
             bar.close()
-        print(f"Extraído en {a.dest}")
+        print(f"{n} archivos extraídos en {a.dest}")
         return 0
     if a.only:
         n = extract_some(a.archive, a.dest, a.only)
@@ -409,7 +430,7 @@ def main(argv=None) -> int:
         argv = ["gui"]
     a = build_parser().parse_args(argv)
     try:
-        if a.cmd == "pack":
+        if a.cmd in ("pack", "compress"):
             return cmd_pack(a)
         if a.cmd == "verify":
             from .ffpfsc import is_ffpfsc, verify_ffpfsc
@@ -419,7 +440,8 @@ def main(argv=None) -> int:
                 try:
                     v = verify_ffpfsc(a.archive, source=a.source,
                                       mode="full" if a.full else "quick",
-                                      mkpfs=a.mkpfs, progress=bar)
+                                      mkpfs=a.mkpfs, progress=bar,
+                                      use_mkpfs=a.mkpfs_check, threads=a.threads)
                 finally:
                     bar.close()
                 print_ffpfsc_report(v)
@@ -435,7 +457,7 @@ def main(argv=None) -> int:
             from .gui import run_gui
 
             return run_gui()
-    except (FileNotFoundError, FileExistsError, ValueError, KeyError) as e:
+    except (FileNotFoundError, FileExistsError, ValueError, KeyError, OSError) as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     except RuntimeError as e:  # MkPFS missing/failed, staging problems

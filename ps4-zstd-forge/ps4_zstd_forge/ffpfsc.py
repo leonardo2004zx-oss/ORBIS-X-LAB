@@ -24,12 +24,9 @@ Steps:
 
 from __future__ import annotations
 
-import filecmp
-import hashlib
 import json
 import os
 import shutil
-import sys
 import tempfile
 import time
 import uuid
@@ -297,9 +294,11 @@ def pack_ffpfsc(
             raise MkpfsError("MkPFS terminó sin crear la imagen")
         verification = {"mode": "none"}
         if verify_mode != "none":
+            log("Verificando: cabeceras PFS/PFSC, todos los bloques zlib, exFAT y archivos…")
             verification = verify_ffpfsc(partial, source=game_dir, mode=verify_mode,
                                          mkpfs=mkpfs, log=log, progress=progress,
-                                         title_id=title_id, temp_dir=mk_temp)
+                                         title_id=title_id, temp_dir=mk_temp,
+                                         use_mkpfs=True, threads=nthreads)
             if not verification["ok"]:
                 raise MkpfsError("la verificación de la imagen falló: "
                                  + "; ".join(c["detail"] for c in verification["checks"]
@@ -382,14 +381,6 @@ def _write_sidecars(st: FfpfscStats, info, param_json: bytes, mk: List[str]) -> 
 # ---------------------------------------------------------------------------
 
 
-def _sha256(path: str) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def verify_ffpfsc(
     image: str,
     source: Optional[str] = None,
@@ -399,116 +390,41 @@ def verify_ffpfsc(
     progress: Optional[Progress] = None,
     title_id: Optional[str] = None,
     temp_dir: Optional[str] = None,
+    use_mkpfs: bool = False,
+    threads: int = -1,
 ) -> dict:
     """Return {"ok": bool, "mode": ..., "checks": [{"name","ok","detail"}]}.
 
-    ``source`` may be the original game folder (param.json is then checked
-    for validity instead of byte equality, since the original has none)."""
-    mk = find_mkpfs(mkpfs)
+    The native reader (ffpfsc_native) always runs: PFS header, PFSC header,
+    every zlib block, exFAT, required files, param.json and comparison with
+    ``source``.  With ``use_mkpfs`` MkPFS's own ``verify`` also runs as an
+    independent second opinion.  ``source`` may be the original game folder:
+    param.json is validated, not compared, since the original has none."""
+    from .ffpfsc_native import verify_native
+
     checks = []
-
-    def add(name, ok, detail):
-        checks.append({"name": name, "ok": bool(ok), "detail": detail})
-
-    src_root = find_game_root(source) if source else None
-
-    # 1. Container structure and checksums.
-    try:
-        out = run_mkpfs([*mk, "verify", image, "--format", "pfs"], on_progress=progress)
-        add("contenedor PFS/PFSC", True, (out.splitlines() or ["mkpfs verify OK"])[-1])
-    except MkpfsError as e:
-        add("contenedor PFS/PFSC", False, str(e))
-        return {"ok": False, "mode": mode, "checks": checks}
-
-    # 2. Deep unpack: required files (quick) or everything (full).
-    work = tempfile.mkdtemp(prefix="ps4forge-verify-", dir=temp_dir)
-    try:
-        dest = os.path.join(work, "x")
-        cmd = [*mk, "unpack", image, dest, "--deep", "--format", "pfs", "--no-progress"]
-        if mode != "full":
-            for item in (*REQUIRED, *OPTIONAL):
-                cmd += ["--only", item]
-        elif src_root:
-            need = sum(s for _, s, _ in scan_tree(src_root).files)
-            free = shutil.disk_usage(work).free
-            if free < need:
-                add("verificación completa", False,
-                    f"hace falta {need / 2**30:.1f} GiB libres en {work}, hay {free / 2**30:.1f}")
-                return {"ok": False, "mode": mode, "checks": checks}
+    if use_mkpfs:
+        mk = find_mkpfs(mkpfs)
         try:
-            run_mkpfs(cmd, on_progress=progress)
+            out = run_mkpfs([*mk, "verify", image, "--format", "pfs"], on_progress=progress)
+            checks.append({"name": "mkpfs verify", "ok": True,
+                           "detail": (out.splitlines() or ["OK"])[-1]})
         except MkpfsError as e:
-            add("desempaquetado exFAT interno", False, str(e))
-            return {"ok": False, "mode": mode, "checks": checks}
-
-        missing = [p for p in REQUIRED if not os.path.isfile(os.path.join(dest, *p.split("/")))]
-        add("archivos requeridos", not missing,
-            "eboot.bin, sce_sys/param.sfo y sce_sys/param.json en la raíz de la exFAT"
-            if not missing else "faltan: " + ", ".join(missing))
-        if missing:
-            return {"ok": False, "mode": mode, "checks": checks}
-
-        sfo_info = read_game_info(dest)
-        tid = title_id or sfo_info.title_id
-        add("TITLE_ID", valid_title_id(sfo_info.sfo.get("TITLE_ID")) and sfo_info.sfo.get("TITLE_ID") == tid,
-            f"param.sfo dentro de la imagen: {sfo_info.sfo.get('TITLE_ID')}")
-        try:
-            with open(os.path.join(dest, "sce_sys", "param.json"), "rb") as f:
-                pj = validate_param_json(f.read(), tid)
-            add("param.json ShadowMountPlus", True,
-                f"titleId {pj.get('titleId')}, titleName {pj.get('titleName')!r}")
-        except ValueError as e:
-            add("param.json ShadowMountPlus", False, str(e))
-
-        if src_root:
-            if mode == "full":
-                _compare_trees(add, src_root, dest)
-            else:
-                bad = []
-                for rel in ("eboot.bin", "sce_sys/param.sfo", *OPTIONAL):
-                    a = os.path.join(src_root, *rel.split("/"))
-                    b = os.path.join(dest, *rel.split("/"))
-                    if os.path.isfile(a) and not (os.path.isfile(b) and filecmp.cmp(a, b, shallow=False)):
-                        bad.append(rel)
-                add("idénticos al origen", not bad,
-                    "eboot.bin y param.sfo byte a byte" if not bad else "distintos: " + ", ".join(bad))
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
+            checks.append({"name": "mkpfs verify", "ok": False, "detail": str(e)})
+    src_root = find_game_root(source) if source else None
+    native = verify_native(image, source=src_root, mode=mode, threads=threads,
+                           progress=progress, title_id=title_id)
+    checks.extend(native["checks"])
     return {"ok": all(c["ok"] for c in checks), "mode": mode, "checks": checks}
 
 
-def _compare_trees(add, src_root: str, dest: str) -> None:
-    src = {rel: size for rel, size, _ in scan_tree(src_root).files}
-    got = {rel: size for rel, size, _ in scan_tree(dest).files}
-    got.pop("sce_sys/param.json", None)
-    src.pop("sce_sys/param.json", None)
-    # exFAT inside the image is case-insensitive: compare paths case-folded.
-    src_l = {k.lower(): (k, v) for k, v in src.items()}
-    got_l = {k.lower(): (k, v) for k, v in got.items()}
-    missing = sorted(src_l[k][0] for k in set(src_l) - set(got_l))
-    extra = sorted(got_l[k][0] for k in set(got_l) - set(src_l))
-    differ = []
-    for k in sorted(set(src_l) & set(got_l)):
-        a, b = src_l[k], got_l[k]
-        if a[1] != b[1] or _sha256(os.path.join(src_root, *a[0].split("/"))) != \
-                _sha256(os.path.join(dest, *b[0].split("/"))):
-            differ.append(a[0])
-            if len(differ) >= 10:
-                break
-    ok = not (missing or extra or differ)
-    add("todos los archivos", ok,
-        f"{len(src)} archivos idénticos (SHA-256) al origen" if ok else
-        f"faltan {len(missing)}, sobran {len(extra)}, distintos {len(differ)}: "
-        + ", ".join((missing + extra + differ)[:5]))
-
-
 def extract_ffpfsc(image: str, dest: str, only: Optional[List[str]] = None,
-                   mkpfs: Optional[str] = None, progress: Optional[Progress] = None) -> None:
-    mk = find_mkpfs(mkpfs)
-    cmd = [*mk, "unpack", image, dest, "--deep", "--format", "pfs"]
-    for item in only or []:
-        cmd += ["--only", item.replace("\\", "/").lstrip("/")]
-    run_mkpfs(cmd, on_progress=progress, on_line=lambda l: print(f"  mkpfs: {l}", file=sys.stderr))
+                   mkpfs: Optional[str] = None, progress: Optional[Progress] = None) -> int:
+    """Extract natively (no MkPFS needed).  ``mkpfs`` is accepted for API
+    compatibility and ignored."""
+    from .ffpfsc_native import extract_native
+
+    return extract_native(image, dest, only=only, progress=progress)
 
 
 def is_ffpfsc(path: str) -> bool:

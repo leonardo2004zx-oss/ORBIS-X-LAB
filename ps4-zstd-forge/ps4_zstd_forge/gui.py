@@ -18,7 +18,7 @@ def run_gui() -> int:
         return 1
 
     from .cli import duration, human
-    from .ffpfsc import pack_ffpfsc
+    from .ffpfsc import extract_ffpfsc, is_ffpfsc, pack_ffpfsc, verify_ffpfsc
     from .mkpfs_runner import MkpfsNotFound, find_mkpfs, mkpfs_version
     from .packer import pack
     from .sfo import find_game_root, read_game_info
@@ -147,8 +147,13 @@ def run_gui() -> int:
     btns.grid(row=r, column=0, columnspan=3, sticky="e")
     b_start = ttk.Button(btns, text="Empaquetar")
     b_cancel = ttk.Button(btns, text="Cancelar", state="disabled", command=cancel_flag.set)
+    b_verify = ttk.Button(btns, text="Verificar imagen…")
+    b_extract = ttk.Button(btns, text="Extraer imagen…")
     b_cancel.pack(side="right", padx=4)
     b_start.pack(side="right")
+    b_extract.pack(side="right", padx=4)
+    b_verify.pack(side="right")
+    busy_buttons = [b_start, b_verify, b_extract]
 
     def write_log(text):
         log.config(state="normal")
@@ -205,6 +210,60 @@ def run_gui() -> int:
                 msgs.put(("log", "\n".join(out.splitlines()[-15:])))
             msgs.put(("done", False))
 
+    def run_job(fn):
+        cancel_flag.clear()
+        for b in busy_buttons:
+            b.config(state="disabled")
+        b_cancel.config(state="normal")
+        pb["value"] = 0
+
+        def wrap():
+            try:
+                fn()
+                msgs.put(("done", True))
+            except Exception as e:  # noqa: BLE001
+                msgs.put(("log", f"Error: {e}"))
+                msgs.put(("done", False))
+        threading.Thread(target=wrap, daemon=True).start()
+
+    def report(v):
+        msgs.put(("log", ("✔ " if v["ok"] else "✘ ") + "Verificación "
+                         + ("superada" if v["ok"] else "FALLIDA")))
+        for c in v["checks"]:
+            msgs.put(("log", f"   {'✓' if c['ok'] else '✗'} {c['name']}: {c['detail']}"))
+
+    def pct(p, phase, det):
+        msgs.put(("pct", p, phase, det))
+
+    def do_verify():
+        img = filedialog.askopenfilename(title="Imagen .ffpfsc",
+                                         filetypes=[("FFPFSC", "*.ffpfsc"), ("Todos", "*.*")])
+        if not img:
+            return
+        if not is_ffpfsc(img):
+            messagebox.showwarning("PS4 ZSTD Forge", "Usa la CLI para verificar .tar.zst.")
+            return
+        src = v_in.get() or None
+        write_log(f"Verificando {img}" + (f" contra {src}" if src else ""))
+        run_job(lambda: report(verify_ffpfsc(img, source=src, mode=v_verify.get()
+                                             if v_verify.get() != "none" else "quick",
+                                             progress=pct, threads=int(v_threads.get()))))
+
+    def do_extract():
+        img = filedialog.askopenfilename(title="Imagen .ffpfsc",
+                                         filetypes=[("FFPFSC", "*.ffpfsc"), ("Todos", "*.*")])
+        if not img:
+            return
+        dest = filedialog.askdirectory(title="Carpeta donde extraer")
+        if not dest:
+            return
+        write_log(f"Extrayendo {img} → {dest}")
+        run_job(lambda: msgs.put(("log", f"{extract_ffpfsc(img, dest, progress=pct)} "
+                                         f"archivos extraídos en {dest}")))
+
+    b_verify.config(command=do_verify)
+    b_extract.config(command=do_extract)
+
     def start():
         if not v_in.get():
             messagebox.showwarning("PS4 ZSTD Forge", "Elige la carpeta del juego.")
@@ -222,14 +281,16 @@ def run_gui() -> int:
                 messagebox.showerror("PS4 ZSTD Forge", f"MkPFS no responde: {e}")
                 return
         cancel_flag.clear()
-        b_start.config(state="disabled")
+        for b in busy_buttons:
+            b.config(state="disabled")
         b_cancel.config(state="normal")
         pb["value"] = 0
         threading.Thread(target=worker, args=(p,), daemon=True).start()
 
     b_start.config(command=start)
     phase_names = {"preparar": "Preparando", "compress": "Comprimiendo", "write": "Escribiendo",
-                   "verify": "Verificando", "check": "Verificando"}
+                   "verify": "Verificando", "check": "Verificando",
+                   "zlib": "Bloques zlib", "comparar": "Comparando", "extraer": "Extrayendo"}
 
     def poll():
         try:
@@ -252,7 +313,8 @@ def run_gui() -> int:
                     v_status.set(f"{human(done)} / {human(total)} · zst {human(comp)} · "
                                  f"{human(done / el if el else 0)}/s · quedan {duration(eta)}")
                 elif kind == "done":
-                    b_start.config(state="normal")
+                    for b in busy_buttons:
+                        b.config(state="normal")
                     b_cancel.config(state="disabled")
                     v_status.set("Terminado." if m[1] else "Detenido.")
         except queue.Empty:
