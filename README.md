@@ -39,3 +39,7 @@ python3 scripts/make_demo_gifs.py
 | `js/caption.js` | Animaciones de texto compartidas |
 | `js/export.js` | Exportación a vídeo con `MediaRecorder` |
 | `js/store.js` | Guardado en IndexedDB |
+
+## Otras herramientas
+
+- [`ps4-zstd-forge/`](ps4-zstd-forge/README.md): **PS4 ZSTD Forge**, empaqueta dumps de PS4 (CUSAxxxxx) en archivos zstd con tabla de búsqueda (Python, CLI + GUI).
