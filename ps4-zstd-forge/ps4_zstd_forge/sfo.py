@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import struct
 from dataclasses import dataclass, field
 from typing import Dict, Optional
@@ -58,6 +59,7 @@ class GameInfo:
     firmware: Optional[str] = None
     has_eboot: bool = False
     notes: list = field(default_factory=list)
+    sfo: Dict[str, object] = field(default_factory=dict)  # every raw param.sfo value
 
     def as_dict(self) -> dict:
         return {
@@ -106,6 +108,7 @@ def read_game_info(root: str) -> GameInfo:
         try:
             with open(sfo_path, "rb") as f:
                 sfo = parse_sfo(f.read())
+            info.sfo = sfo
             info.title_id = sfo.get("TITLE_ID")
             info.title = sfo.get("TITLE")
             info.content_id = sfo.get("CONTENT_ID")
@@ -126,3 +129,10 @@ def read_game_info(root: str) -> GameInfo:
         if base[:4].upper() in ("CUSA", "PLAS", "PCAS", "PCJS", "PLJS", "PLJM"):
             info.title_id = base[:9].upper()
     return info
+
+
+TITLE_ID_RE = re.compile(r"^[A-Z]{4}[0-9]{5}$")
+
+
+def valid_title_id(value: Optional[str]) -> bool:
+    return bool(value) and bool(TITLE_ID_RE.match(value))

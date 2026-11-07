@@ -1,3 +1,4 @@
-"""PS4 ZSTD Forge: pack PS4 game dumps (CUSAxxxxx) into seekable zstd archives."""
+"""PS4 ZSTD Forge: pack PS4 game dumps (CUSAxxxxx) into ShadowMountPlus .ffpfsc images
+(via MkPFS) or seekable .tar.zst backups."""
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

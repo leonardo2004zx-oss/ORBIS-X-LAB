@@ -1,3 +1,6 @@
+# Motor del formato .ffpfsc (PSBrew/MkPFS, GPL-3.0), fijado a una versión probada en lectura de código.
+mkpfs @ git+https://github.com/PSBrew/MkPFS@1d5df56ae29390900e888fa12e5f9856aa797adc
+# Formato .tar.zst de respaldo
 zstandard>=0.22
 xxhash>=3.0
 tqdm>=4.60

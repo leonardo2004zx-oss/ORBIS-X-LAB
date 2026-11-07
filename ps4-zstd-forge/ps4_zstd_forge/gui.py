@@ -18,21 +18,25 @@ def run_gui() -> int:
         return 1
 
     from .cli import duration, human
+    from .ffpfsc import pack_ffpfsc
+    from .mkpfs_runner import MkpfsNotFound, find_mkpfs, mkpfs_version
     from .packer import pack
     from .sfo import find_game_root, read_game_info
     from .verify import verify
 
     root = tk.Tk()
     root.title("PS4 ZSTD Forge")
-    root.minsize(640, 520)
+    root.minsize(680, 580)
     msgs: "queue.Queue[tuple]" = queue.Queue()
     cancel_flag = threading.Event()
 
     v_in = tk.StringVar()
     v_out = tk.StringVar()
-    v_level = tk.IntVar(value=22)
+    v_fmt = tk.StringVar(value="ffpfsc")
+    v_level = tk.IntVar(value=9)
     v_threads = tk.IntVar(value=os.cpu_count() or 1)
-    v_frame = tk.StringVar(value="2 MiB")
+    v_backend = tk.StringVar(value="zlib")
+    v_mkpfs = tk.StringVar(value=os.environ.get("PS4FORGE_MKPFS", ""))
     v_verify = tk.StringVar(value="quick")
     v_status = tk.StringVar(value="Elige la carpeta del juego (CUSAxxxxx).")
     v_game = tk.StringVar(value="—")
@@ -55,6 +59,11 @@ def run_gui() -> int:
         if d:
             v_out.set(d)
 
+    def pick_mkpfs():
+        f = filedialog.askopenfilename(title="Ejecutable de MkPFS")
+        if f:
+            v_mkpfs.set(f)
+
     r = 0
     ttk.Label(frm, text="Juego:").grid(row=r, column=0, sticky="w")
     ttk.Entry(frm, textvariable=v_in).grid(row=r, column=1, sticky="ew", padx=6)
@@ -67,29 +76,62 @@ def run_gui() -> int:
     ttk.Button(frm, text="Elegir…", command=pick_out).grid(row=r, column=2, pady=(8, 0))
     r += 1
 
-    opts = ttk.LabelFrame(frm, text="Compresión zstd", padding=8)
+    opts = ttk.LabelFrame(frm, text="Empaquetar", padding=8)
     opts.grid(row=r, column=0, columnspan=3, sticky="ew", pady=10)
-    ttk.Label(opts, text="Nivel").grid(row=0, column=0, sticky="w")
-    lvl_lbl = ttk.Label(opts, text="22 (Máximo)")
-    scale = ttk.Scale(opts, from_=1, to=22, orient="horizontal",
-                      command=lambda v: (v_level.set(int(float(v))),
-                                         lvl_lbl.config(text=f"{int(float(v))}"
-                                                        + (" (Máximo)" if int(float(v)) == 22 else ""))))
-    scale.set(22)
-    scale.grid(row=0, column=1, sticky="ew", padx=6)
-    lvl_lbl.grid(row=0, column=2, sticky="w")
     opts.columnconfigure(1, weight=1)
-    ttk.Label(opts, text="Hilos").grid(row=1, column=0, sticky="w", pady=4)
-    ttk.Spinbox(opts, from_=1, to=256, textvariable=v_threads, width=6).grid(row=1, column=1, sticky="w", padx=6)
-    ttk.Label(opts, text="Trama").grid(row=2, column=0, sticky="w")
-    ttk.Combobox(opts, textvariable=v_frame, width=10, state="readonly",
-                 values=("512 KiB", "1 MiB", "2 MiB", "4 MiB", "8 MiB", "16 MiB")).grid(
+    ttk.Label(opts, text="Formato").grid(row=0, column=0, sticky="w")
+    fb = ttk.Frame(opts)
+    fb.grid(row=0, column=1, columnspan=2, sticky="w", padx=6)
+    lvl_lbl = ttk.Label(opts)
+    scale = ttk.Scale(opts, orient="horizontal")
+
+    def set_level(v):
+        v = int(float(v))
+        v_level.set(v)
+        top = 9 if v_fmt.get() == "ffpfsc" else 22
+        lvl_lbl.config(text=f"{v}" + (" (Máximo)" if v == top else ""))
+
+    def on_fmt(*_):
+        if v_fmt.get() == "ffpfsc":
+            scale.config(from_=0, to=9)
+            scale.set(9)
+        else:
+            scale.config(from_=1, to=22)
+            scale.set(22)
+        state = "normal" if v_fmt.get() == "ffpfsc" else "disabled"
+        for w in ff_widgets:
+            w.config(state=state)
+
+    ttk.Radiobutton(fb, text=".ffpfsc (ShadowMountPlus)", value="ffpfsc", variable=v_fmt,
+                    command=on_fmt).pack(side="left", padx=(0, 10))
+    ttk.Radiobutton(fb, text=".tar.zst (respaldo)", value="zst", variable=v_fmt,
+                    command=on_fmt).pack(side="left")
+    ttk.Label(opts, text="Nivel").grid(row=1, column=0, sticky="w", pady=4)
+    scale.config(command=set_level)
+    scale.grid(row=1, column=1, sticky="ew", padx=6)
+    lvl_lbl.grid(row=1, column=2, sticky="w")
+    ttk.Label(opts, text="Hilos").grid(row=2, column=0, sticky="w")
+    ttk.Spinbox(opts, from_=1, to=256, textvariable=v_threads, width=6).grid(
         row=2, column=1, sticky="w", padx=6)
-    ttk.Label(opts, text="Verificación").grid(row=3, column=0, sticky="w", pady=4)
+    ttk.Label(opts, text="Backend zlib").grid(row=3, column=0, sticky="w", pady=4)
+    cb_backend = ttk.Combobox(opts, textvariable=v_backend, width=10, state="readonly",
+                              values=("zlib", "auto", "zlib-ng", "isal"))
+    cb_backend.grid(row=3, column=1, sticky="w", padx=6)
+    ttk.Label(opts, text="MkPFS").grid(row=4, column=0, sticky="w")
+    mk_row = ttk.Frame(opts)
+    mk_row.grid(row=4, column=1, columnspan=2, sticky="ew", padx=6)
+    mk_row.columnconfigure(0, weight=1)
+    e_mkpfs = ttk.Entry(mk_row, textvariable=v_mkpfs)
+    e_mkpfs.grid(row=0, column=0, sticky="ew")
+    b_mkpfs = ttk.Button(mk_row, text="…", width=3, command=pick_mkpfs)
+    b_mkpfs.grid(row=0, column=1, padx=(4, 0))
+    ff_widgets = [cb_backend, e_mkpfs, b_mkpfs]
+    ttk.Label(opts, text="Verificación").grid(row=5, column=0, sticky="w", pady=4)
     vb = ttk.Frame(opts)
-    vb.grid(row=3, column=1, sticky="w", padx=6)
+    vb.grid(row=5, column=1, sticky="w", padx=6)
     for val, txt in (("quick", "Rápida"), ("full", "Completa"), ("none", "Ninguna")):
         ttk.Radiobutton(vb, text=txt, value=val, variable=v_verify).pack(side="left", padx=(0, 8))
+    on_fmt()
     r += 1
 
     pb = ttk.Progressbar(frm, maximum=1000)
@@ -114,48 +156,80 @@ def run_gui() -> int:
         log.see("end")
         log.config(state="disabled")
 
-    def worker(params):
+    def worker_ffpfsc(p):
+        st = pack_ffpfsc(
+            p["input_dir"], p["output"], level=p["level"], threads=p["threads"],
+            backend=p["backend"], verify_mode=p["verify"], mkpfs=p["mkpfs"],
+            log=lambda s: msgs.put(("log", s)),
+            progress=lambda pct, phase, det: msgs.put(("pct", pct, phase, det)),
+            cancel=cancel_flag.is_set)
+        msgs.put(("log", f"Hecho: {human(st.image_bytes)} de {human(st.source_bytes)} "
+                         f"({st.ratio * 100:.1f}%) en {duration(st.seconds)}"))
+        msgs.put(("log", f"→ {st.output}"))
+        v = st.verification
+        if v.get("mode") != "none":
+            msgs.put(("log", ("✔ " if v["ok"] else "✘ ") + "Verificación "
+                             + ("superada" if v["ok"] else "FALLIDA")))
+            for c in v["checks"]:
+                msgs.put(("log", f"   {'✓' if c['ok'] else '✗'} {c['name']}: {c['detail']}"))
+        msgs.put(("log", f"Instrucciones: {st.shadowmount_path}"))
+
+    def worker_zst(p):
         t0 = time.time()
+        st = pack(p["input_dir"], p["output"], level=p["level"], threads=p["threads"],
+                  log=lambda s: msgs.put(("log", s)),
+                  progress=lambda d, t, c: msgs.put(("bytes", d, t, c, t0)),
+                  cancel=cancel_flag.is_set)
+        msgs.put(("log", f"Hecho: {human(st.compressed_bytes)} de {human(st.source_bytes)} "
+                         f"({st.ratio * 100:.1f}%) en {duration(st.seconds)}"))
+        msgs.put(("log", f"→ {st.output}"))
+        if p["verify"] != "none":
+            msgs.put(("status", "Verificando…"))
+            rep = verify(st.output, source=p["input_dir"], mode=p["verify"],
+                         progress=lambda d, t: msgs.put(("pct", d * 100 // max(t, 1), "verify", "")))
+            msgs.put(("log", ("✔ " if rep.ok else "✘ ") + rep.summary()))
+            for c in rep.checks:
+                msgs.put(("log", f"   {'✓' if c.ok else '✗'} {c.name}: {c.detail}"))
 
-        def progress(done, total, comp):
-            msgs.put(("progress", done, total, comp, t0))
-
+    def worker(p):
         try:
-            st = pack(log=lambda s: msgs.put(("log", s)), progress=progress,
-                      cancel=cancel_flag.is_set, **params)
-            msgs.put(("log", f"Hecho: {human(st.compressed_bytes)} de {human(st.source_bytes)} "
-                             f"({st.ratio * 100:.1f}%) en {duration(st.seconds)}"))
-            msgs.put(("log", f"→ {st.output}"))
-            if v_verify.get() != "none":
-                msgs.put(("status", "Verificando…"))
-                rep = verify(st.output, source=params["input_dir"], mode=v_verify.get(),
-                             progress=lambda d, t: msgs.put(("vprogress", d, t)))
-                msgs.put(("log", ("✔ " if rep.ok else "✘ ") + rep.summary()))
-                for c in rep.checks:
-                    msgs.put(("log", f"   {'✓' if c.ok else '✗'} {c.name}: {c.detail}"))
+            (worker_ffpfsc if p["format"] == "ffpfsc" else worker_zst)(p)
             msgs.put(("done", True))
         except KeyboardInterrupt:
-            msgs.put(("log", "Cancelado. Se borró el archivo parcial."))
+            msgs.put(("log", "Cancelado. Se borraron los archivos parciales."))
             msgs.put(("done", False))
         except Exception as e:  # noqa: BLE001
             msgs.put(("log", f"Error: {e}"))
+            out = getattr(e, "output", "")
+            if out:
+                msgs.put(("log", "\n".join(out.splitlines()[-15:])))
             msgs.put(("done", False))
 
     def start():
         if not v_in.get():
             messagebox.showwarning("PS4 ZSTD Forge", "Elige la carpeta del juego.")
             return
-        num, unit = v_frame.get().split()
-        frame = int(num) * (1024 if unit == "KiB" else 1024 * 1024)
-        params = dict(input_dir=v_in.get(), output=v_out.get() or None,
-                      level=v_level.get(), threads=int(v_threads.get()), frame_size=frame)
+        p = dict(input_dir=v_in.get(), output=(v_out.get() + os.sep) if v_out.get() else None,
+                 format=v_fmt.get(), level=v_level.get(), threads=int(v_threads.get()),
+                 backend=v_backend.get(), mkpfs=v_mkpfs.get() or None, verify=v_verify.get())
+        if p["format"] == "ffpfsc":
+            try:
+                write_log(f"Motor: {mkpfs_version(find_mkpfs(p['mkpfs']))}")
+            except MkpfsNotFound as e:
+                messagebox.showerror("PS4 ZSTD Forge", str(e))
+                return
+            except Exception as e:  # noqa: BLE001
+                messagebox.showerror("PS4 ZSTD Forge", f"MkPFS no responde: {e}")
+                return
         cancel_flag.clear()
         b_start.config(state="disabled")
         b_cancel.config(state="normal")
         pb["value"] = 0
-        threading.Thread(target=worker, args=(params,), daemon=True).start()
+        threading.Thread(target=worker, args=(p,), daemon=True).start()
 
     b_start.config(command=start)
+    phase_names = {"preparar": "Preparando", "compress": "Comprimiendo", "write": "Escribiendo",
+                   "verify": "Verificando", "check": "Verificando"}
 
     def poll():
         try:
@@ -166,15 +240,17 @@ def run_gui() -> int:
                     write_log(m[1])
                 elif kind == "status":
                     v_status.set(m[1])
-                elif kind == "progress":
+                elif kind == "pct":
+                    _, pct, phase, det = m
+                    pb["value"] = pct * 10
+                    v_status.set(f"{phase_names.get(phase, phase)}: {pct}% {det}")
+                elif kind == "bytes":
                     _, done, total, comp, t0 = m
                     pb["value"] = done * 1000 / max(total, 1)
                     el = time.time() - t0
                     eta = el * (total - done) / done if done else 0
                     v_status.set(f"{human(done)} / {human(total)} · zst {human(comp)} · "
                                  f"{human(done / el if el else 0)}/s · quedan {duration(eta)}")
-                elif kind == "vprogress":
-                    pb["value"] = m[1] * 1000 / max(m[2], 1)
                 elif kind == "done":
                     b_start.config(state="normal")
                     b_cancel.config(state="disabled")

@@ -42,4 +42,4 @@ python3 scripts/make_demo_gifs.py
 
 ## Otras herramientas
 
-- [`ps4-zstd-forge/`](ps4-zstd-forge/README.md): **PS4 ZSTD Forge**, empaqueta dumps de PS4 (CUSAxxxxx) en archivos zstd con tabla de búsqueda (Python, CLI + GUI).
+- [`ps4-zstd-forge/`](ps4-zstd-forge/README.md): **PS4 ZSTD Forge**, convierte dumps de PS4 (CUSAxxxxx) en imágenes `.ffpfsc` para ShadowMountPlus (vía MkPFS) o en respaldos `.tar.zst` (Python, CLI + GUI).
