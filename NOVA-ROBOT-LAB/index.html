@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOVA ROBOT LAB</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>NOVA <span>ROBOT</span> LAB</h1>
+  <p>Simulador de robot ESP32 · cuadrícula 10×10</p>
+</header>
+<main>
+  <section class="arena">
+    <div id="grid" class="grid">
+      <div id="cells" class="cells"></div>
+      <div id="robot" class="robot" aria-label="Robot">
+        <div class="body"><div class="eye"></div><div class="eye"></div></div>
+      </div>
+    </div>
+  </section>
+  <aside>
+    <div class="panel telemetry">
+      <h2>Telemetría</h2>
+      <div><label>Posición</label><output id="pos"></output></div>
+      <div><label>Dirección</label><output id="dir"></output></div>
+      <div><label>Estado</label><output id="state"></output></div>
+    </div>
+    <div class="panel controls">
+      <h2>Control</h2>
+      <div class="pad">
+        <button data-cmd="forward" class="up">▲<small>AVANZAR</small></button>
+        <button data-cmd="left" class="lt">⟲<small>GIRAR IZQUIERDA</small></button>
+        <button data-cmd="stop" class="stop">■<small>DETENER</small></button>
+        <button data-cmd="right" class="rt">⟳<small>GIRAR DERECHA</small></button>
+        <button data-cmd="backward" class="dn">▼<small>RETROCEDER</small></button>
+      </div>
+      <button data-cmd="reset" class="reset">↺ REINICIAR SIMULACIÓN</button>
+      <p class="hint">Teclado: flechas · Espacio = detener · R = reiniciar</p>
+    </div>
+    <div class="panel log">
+      <h2>Historial <span id="count"></span></h2>
+      <ol id="history"></ol>
+    </div>
+  </aside>
+</main>
+<script src="robot.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
