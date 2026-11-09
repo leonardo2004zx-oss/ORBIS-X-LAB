@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dual Projector Lab</title>
+<meta name="description" content="Simulador de Edge Blending con dos proyectores formando una pantalla gigante.">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">
+      <div class="logo"><i></i><i></i></div>
+      <div><b>DUAL PROJECTOR LAB</b><small>Simulador de Edge Blending · laboratorio virtual</small></div>
+    </div>
+    <nav class="views">
+      <button id="btn2d" class="btn">Vista 2D</button>
+      <button id="btnFT" class="btn">Vista técnica</button>
+      <button id="btnSeat" class="btn">🛋 Sillón</button>
+      <label class="q">Calidad
+        <select id="quality">
+          <option value="low">Baja (PC liviana)</option>
+          <option value="medium">Media</option>
+          <option value="high">Alta</option>
+        </select>
+      </label>
+      <button id="help" class="btn ghost" title="Ayuda">?</button>
+      <button id="btnPanel" class="btn ghost" title="Mostrar / ocultar panel">☰</button>
+    </nav>
+  </header>
+
+  <main id="stage">
+    <canvas id="gl" aria-label="Vista del simulador"></canvas>
+    <div id="labels2d" hidden></div>
+    <div class="hud">
+      <span id="badge" class="badge">Modo</span>
+      <span id="viewName" class="chip">Vista</span>
+      <span id="fps" class="chip mono">– fps</span>
+    </div>
+    <div id="hint3d" class="hint">Arrastrá: girar · Rueda: acercar · Clic derecho: desplazar · W A S D / Q E: caminar (con la vista seleccionada)</div>
+    <div id="toast" class="toast" hidden></div>
+    <div id="helpBox" class="helpbox" hidden>
+      <h3>Cómo experimentar</h3>
+      <ol>
+        <li>Empezá en <b>Modo A</b>: mirá la franja brillante y el “fantasma” en el centro.</li>
+        <li>Pasá a <b>Modo B</b> y elegí el patrón <b>Cuadrícula</b>. Ajustá posición, rotación y zoom de B hasta que las diagonales amarillas sigan rectas.</li>
+        <li>Con <b>Gris 50 %</b>, subí la <b>Gamma de compensación</b> hasta ~2,2: la banda oscura o clara desaparece.</li>
+        <li>Pulsá <b>Modo C</b> para ver la fusión optimizada. Probá el patrón <b>Negro</b>: el nivel de negro no se puede “borrar” con la rampa.</li>
+        <li>Cargá un video propio en <b>Contenido</b>: una sola fuente alimenta A y B, por eso nunca se desincroniza.</li>
+      </ol>
+      <p>Doble clic sobre un control lo vuelve a su valor inicial. Clic aquí para cerrar.</p>
+    </div>
+    <div id="nogl" class="nogl" hidden>
+      <h2>Este navegador no pudo iniciar WebGL</h2>
+      <p>Actualizá Chrome o Edge y activá la “aceleración por hardware” en la configuración.</p>
+    </div>
+  </main>
+
+  <aside id="panel">
+    <section>
+      <h3>Modo de unión</h3>
+      <div class="seg modes">
+        <button data-mode="A"><b>A</b><small>Sin calibración</small></button>
+        <button data-mode="B"><b>B</b><small>Manual</small></button>
+        <button data-mode="C"><b>C</b><small>Optimizada</small></button>
+      </div>
+      <p id="modeDesc" class="desc"></p>
+    </section>
+
+    <section>
+      <h3>Contenido</h3>
+      <select id="source" class="wide"></select>
+      <div class="row2">
+        <button id="btnLoadVideo" class="btn small">🎬 Cargar video local…</button>
+        <button id="btnLoadImage" class="btn small">🖼 Cargar imagen…</button>
+      </div>
+      <input type="file" id="fileVideo" accept="video/*" hidden>
+      <input type="file" id="fileImage" accept="image/*" hidden>
+      <div id="videoCtl" hidden>
+        <div class="vname" id="vName"></div>
+        <div class="row2"><button id="vPlay" class="btn small">▶ Reproducir</button><button id="vMute" class="btn small">🔇</button></div>
+        <input type="range" id="vSeek" min="0" max="1000" value="0"><span id="vTime" class="mono small">0:00</span>
+      </div>
+      <label id="fitRow" class="inline" hidden>Ajuste a la pantalla
+        <select id="fit"><option value="cover">Recortar (llenar)</option><option value="contain">Encajar completo</option><option value="stretch">Estirar</option></select>
+      </label>
+    </section>
+
+    <section>
+      <h3>Pantalla</h3>
+      <div id="sizes" class="seg sizes"></div>
+      <div id="screenCtl"></div>
+      <label class="check"><input type="checkbox" id="showRef"> Contorno de la pantalla 16:9 de referencia</label>
+      <label class="check"><input type="checkbox" id="showBeams"> Mostrar haces de luz (3D)</label>
+    </section>
+
+    <section>
+      <h3>Fusión (Edge Blending)</h3>
+      <div id="blendCtl"></div>
+      <label class="check"><input type="checkbox" id="edges"> Mostrar bordes de cada proyector</label>
+      <button id="btnAuto" class="btn small wide">⌖ Auto-alinear geometría</button>
+    </section>
+
+    <section>
+      <div class="seg tabs">
+        <button data-tab="0" class="ta">Proyector A</button>
+        <button data-tab="1" class="tb">Proyector B</button>
+      </div>
+      <div id="proj0"></div>
+      <div id="proj1" hidden></div>
+    </section>
+
+    <section>
+      <h3>Cálculos</h3>
+      <div id="info" class="info"></div>
+    </section>
+    <footer class="foot">Laboratorio virtual: no garantiza que dos proyectores físicos se fusionen perfectamente, ni que funcione directamente con la salida HDMI de una consola.</footer>
+  </aside>
+</div>
+<video id="vid" playsinline loop muted hidden></video>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="js/content.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
