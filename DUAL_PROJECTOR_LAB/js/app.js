@@ -667,15 +667,30 @@
     sel.value = S.source;
     sel.addEventListener('change', function () {
       const v = sel.value;
-      if (v === 'video' && !videoTex) { $('fileVideo').click(); sel.value = S.source; return; }
-      if (v === 'image' && !imageTex) { $('fileImage').click(); sel.value = S.source; return; }
+      if (v === 'video' && !videoTex) { sel.value = S.source; toast('Primero tocá “Cargar video local…” o arrastrá un video sobre la vista.'); return; }
+      if (v === 'image' && !imageTex) { sel.value = S.source; toast('Primero tocá “Cargar imagen…” o arrastrá una imagen sobre la vista.'); return; }
       if (S.source === 'video' && v !== 'video') video.pause();
       S.source = v; refreshSource();
     });
     $('fileVideo').addEventListener('change', function (e) { const f = e.target.files[0]; if (f) loadVideo(f); e.target.value = ''; });
     $('fileImage').addEventListener('change', function (e) { const f = e.target.files[0]; if (f) loadImage(f); e.target.value = ''; });
-    $('btnLoadVideo').addEventListener('click', function () { $('fileVideo').click(); });
-    $('btnLoadImage').addEventListener('click', function () { $('fileImage').click(); });
+    // Los botones son <label for=...>: abren el selector de archivos de forma nativa (sin .click() por código)
+    ['btnLoadVideo', 'btnLoadImage'].forEach(function (id) {
+      $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $(id === 'btnLoadVideo' ? 'fileVideo' : 'fileImage').click(); } });
+    });
+    // Arrastrar y soltar un archivo sobre la vista
+    let dragDepth = 0;
+    stage.addEventListener('dragenter', function (e) { e.preventDefault(); dragDepth++; $('dropZone').hidden = false; });
+    stage.addEventListener('dragover', function (e) { e.preventDefault(); });
+    stage.addEventListener('dragleave', function () { if (--dragDepth <= 0) { dragDepth = 0; $('dropZone').hidden = true; } });
+    stage.addEventListener('drop', function (e) {
+      e.preventDefault(); dragDepth = 0; $('dropZone').hidden = true;
+      const f = e.dataTransfer && e.dataTransfer.files[0];
+      if (!f) return;
+      if (/^video\//.test(f.type) || /\.(mp4|webm|mkv|mov|m4v|ogv)$/i.test(f.name)) loadVideo(f);
+      else if (/^image\//.test(f.type)) loadImage(f);
+      else toast('Ese archivo no es un video ni una imagen.');
+    });
     $('fit').addEventListener('change', function () { S.fit = $('fit').value; applyState(); });
     $('vPlay').addEventListener('click', function () { if (video.paused) video.play(); else video.pause(); });
     $('vMute').addEventListener('click', function () { video.muted = !video.muted; updateMediaUI(); });
@@ -768,6 +783,7 @@
 
   /* ---------- video / imagen local ---------- */
   function loadVideo(file) {
+    toast('Cargando ' + file.name + '…');
     if (video.src) URL.revokeObjectURL(video.src);
     videoName = file.name;
     video.src = URL.createObjectURL(file);
@@ -777,7 +793,7 @@
       S.source = 'video'; refreshSource(); refreshUI(); applyState();
       video.play().catch(function () { /* el usuario puede pulsar Reproducir */ });
     };
-    video.onerror = function () { toast('El navegador no pudo abrir ese video. Probá con MP4 (H.264) o WebM.'); };
+    video.onerror = function () { toast('El navegador no pudo abrir ese video (' + file.name + '). Probá con MP4 (H.264) o WebM.'); };
   }
   function loadImage(file) {
     const img = new Image();

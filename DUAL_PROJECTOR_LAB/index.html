@@ -40,6 +40,7 @@
     </div>
     <div id="hint3d" class="hint">Arrastrá: girar · Rueda: acercar · Clic derecho: desplazar · W A S D / Q E: caminar (con la vista seleccionada)</div>
     <div id="toast" class="toast" hidden></div>
+    <div id="dropZone" class="dropzone" hidden>Soltá el video o la imagen acá</div>
     <div id="helpBox" class="helpbox" hidden>
       <h3>Cómo experimentar</h3>
       <ol>
@@ -72,11 +73,12 @@
       <h3>Contenido</h3>
       <select id="source" class="wide"></select>
       <div class="row2">
-        <button id="btnLoadVideo" class="btn small">🎬 Cargar video local…</button>
-        <button id="btnLoadImage" class="btn small">🖼 Cargar imagen…</button>
+        <label id="btnLoadVideo" class="btn small filebtn" for="fileVideo" tabindex="0">🎬 Cargar video local…</label>
+        <label id="btnLoadImage" class="btn small filebtn" for="fileImage" tabindex="0">🖼 Cargar imagen…</label>
       </div>
-      <input type="file" id="fileVideo" accept="video/*" hidden>
-      <input type="file" id="fileImage" accept="image/*" hidden>
+      <input type="file" id="fileVideo" class="vh" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.ogv">
+      <input type="file" id="fileImage" class="vh" accept="image/*">
+      <p class="desc">También podés arrastrar un video o una imagen sobre la vista.</p>
       <div id="videoCtl" hidden>
         <div class="vname" id="vName"></div>
         <div class="row2"><button id="vPlay" class="btn small">▶ Reproducir</button><button id="vMute" class="btn small">🔇</button></div>

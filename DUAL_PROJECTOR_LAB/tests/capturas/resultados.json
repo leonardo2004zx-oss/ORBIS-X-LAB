@@ -2,7 +2,7 @@
   {
     "name": "La aplicación carga sin errores",
     "ok": true,
-    "detail": "tiempo hasta lista: 442 ms; errores: []"
+    "detail": "tiempo hasta lista: 550 ms; errores: []"
   },
   {
     "name": "Cambio 2D ⇄ 3D y vistas frontal / técnica / sillón",
@@ -97,17 +97,22 @@
   {
     "name": "Video local: se carga, se reproduce y la imagen cambia",
     "ok": true,
-    "detail": "t 0.51 → 1.88 s; cambio de píxeles 5.8"
+    "detail": "t 0.51 → 1.95 s; cambio de píxeles 2.8"
   },
   {
     "name": "Video sincronizado: una sola fuente; la franja compartida es idéntica en A y B",
     "ok": true,
-    "detail": "textura única de video: true; dif. franja 0.0; dif. partes propias 142.0"
+    "detail": "textura única de video: true; dif. franja 0.0; dif. partes propias 137.9"
+  },
+  {
+    "name": "Botón \"Cargar imagen…\" abre el selector y carga la imagen",
+    "ok": true,
+    "detail": "fuente actual: imagen"
   },
   {
     "name": "Interfaz liviana con CPU 4× más lenta",
     "ok": true,
-    "detail": "carga 1267 ms; memoria JS 13.6 MB; render mediano 0.4 ms (GPU por software); respuesta a un control 61 ms"
+    "detail": "carga 497 ms; memoria JS 11.3 MB; render mediano 2.1 ms (GPU por software); respuesta a un control 71 ms"
   },
   {
     "name": "En reposo no se redibuja (no consume GPU)",

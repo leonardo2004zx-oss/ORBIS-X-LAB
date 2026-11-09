@@ -185,7 +185,9 @@ const diff = (a, b) => mean(a.map((p, i) => (Math.abs(p[0] - b[i][0]) + Math.abs
 
   // ---------- 7. Video local ----------
   await page.selectOption('#source', 'sunset');
-  await page.setInputFiles('#fileVideo', path.join(__dirname, 'video_prueba.webm'));
+  // clic real en el botón "Cargar video local…" → debe abrirse el selector de archivos del sistema
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser', { timeout: 5000 }), page.click('#btnLoadVideo')]);
+  await chooser.setFiles(path.join(__dirname, 'video_prueba.webm'));
   await page.waitForFunction(() => DPL.S.source === 'video' && DPL.video.readyState >= 2 && DPL.video.currentTime > 0.5, null, { timeout: 15000 });
   const vt1 = await page.evaluate(() => DPL.video.currentTime);
   const f1 = await page.evaluate(() => T.sample(T.grid(0, 0.1, 0.8, 12, [0.3, 0.5, 0.7])));
@@ -210,6 +212,13 @@ const diff = (a, b) => mean(a.map((p, i) => (Math.abs(p[0] - b[i][0]) + Math.abs
   await page.click('#btn2d'); await page.evaluate(() => DPL.video.play()); await page.waitForTimeout(800);
   await page.screenshot({ path: path.join(SHOTS, '10_video_3d.png') });
   await page.evaluate(() => DPL.video.pause());
+
+  // ---------- 7b. Imagen propia (clic real en "Cargar imagen…") ----------
+  const [ich] = await Promise.all([page.waitForEvent('filechooser', { timeout: 5000 }), page.click('#btnLoadImage')]);
+  await ich.setFiles(path.join(SHOTS, '02_vista_2d.png'));
+  await page.waitForFunction(() => DPL.S.source === 'image', null, { timeout: 5000 });
+  check('Botón "Cargar imagen…" abre el selector y carga la imagen', true, 'fuente actual: imagen');
+  await page.screenshot({ path: path.join(SHOTS, '12_imagen_propia.png') });
 
   // ---------- 8. Rendimiento (CPU 4× más lenta y calidad baja) ----------
   const cdp = await page.context().newCDPSession(page);
