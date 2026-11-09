@@ -10,6 +10,12 @@ Funciona en el navegador (Chrome o Edge en Windows), **sin internet y sin instal
    - Enlace local, si la copiaste ahí: `file:///C:/DUAL_PROJECTOR_LAB/index.html`
 3. Si se ve negro: en Chrome/Edge → Configuración → Sistema → activá “Usar aceleración por hardware”.
 
+### Cargar tu video o imagen
+- Botones **“Cargar video local…”** y **“Cargar imagen…”** en *Contenido*.
+- También podés **arrastrar** el archivo desde el Explorador sobre la vista, o copiarlo (Ctrl+C) y **pegarlo** (Ctrl+V).
+- Si abrís la app dentro de un visor integrado que bloquea el selector de archivos, la app lo detecta y te muestra esas alternativas.
+- `DUAL_PROJECTOR_LAB_un_archivo.html` es la misma app en un solo archivo (para copiar o mandar fácilmente).
+
 > Opcional (si tenés Python): `python -m http.server 8000` dentro de la carpeta y abrí `http://localhost:8000`.
 
 ## Qué podés hacer
@@ -48,5 +54,6 @@ js/content.js     panoramas y patrones (dibujados por código, sin imágenes ext
 js/app.js         simulador (Three.js r147 + shader de fusión compartido por 2D y 3D)
 vendor/           Three.js r147 y OrbitControls (licencia MIT), incluidos para funcionar sin internet
 tests/verify.js   pruebas automáticas (opcional: Node.js + Playwright)
-tests/video_prueba.webm  video de prueba para la carga de video local
+tests/carga_archivos.js  prueba de los botones de carga (selector, imagen, video, arrastrar, pegar)
+tests/video_prueba.webm, tests/imagen_prueba.png  archivos de prueba
 ```

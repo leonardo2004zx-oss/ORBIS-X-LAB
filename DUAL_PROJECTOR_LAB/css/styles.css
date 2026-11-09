@@ -83,10 +83,15 @@ select { background: var(--panel2); border: 1px solid var(--line); border-radius
 .tabs .tb.on { color: var(--b); box-shadow: inset 0 -2px 0 var(--b); }
 .row2 { display: flex; gap: 6px; margin-top: 8px; }
 .row2 .btn { flex: 1; }
-.filebtn { display: inline-flex; align-items: center; justify-content: center; text-align: center; user-select: none; }
-.filebtn:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* el input de archivo queda oculto a la vista pero presente (no display:none) para que el label lo abra siempre */
-.vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); pointer-events: none; }
+.filebtn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; text-align: center; user-select: none; }
+/* el input de archivo real, transparente, ocupa todo el botón y recibe el clic directamente */
+.filebtn input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; }
+.filebtn:focus-within, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.blocked { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); width: min(560px, 94%); background: rgba(14, 16, 26, .97);
+  border: 1px solid var(--warn); border-radius: var(--r); padding: 12px 18px; font-size: 13px; z-index: 5; }
+.blocked b:first-child { color: var(--warn); }
+.blocked ol { padding-left: 18px; margin: 6px 0 10px; }
+.blocked li { margin: 4px 0; }
 .dropzone { position: absolute; inset: 12px; display: grid; place-content: center; border: 2px dashed var(--accent); border-radius: 14px;
   background: rgba(10, 12, 20, .8); color: var(--accent); font-size: 18px; pointer-events: none; }
 .inline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }

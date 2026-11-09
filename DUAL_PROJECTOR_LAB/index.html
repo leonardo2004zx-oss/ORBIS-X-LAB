@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dual Projector Lab</title>
 <meta name="description" content="Simulador de Edge Blending con dos proyectores formando una pantalla gigante.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 20%22%3E%3Crect width=%2220%22 height=%2218%22 rx=%223%22 fill=%22%23ffa050%22/%3E%3Crect x=%2212%22 width=%2220%22 height=%2218%22 rx=%223%22 fill=%22%234fb8ff%22 opacity=%22.85%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -41,6 +42,16 @@
     <div id="hint3d" class="hint">Arrastrá: girar · Rueda: acercar · Clic derecho: desplazar · W A S D / Q E: caminar (con la vista seleccionada)</div>
     <div id="toast" class="toast" hidden></div>
     <div id="dropZone" class="dropzone" hidden>Soltá el video o la imagen acá</div>
+    <div id="pickBlocked" class="blocked" role="alert" hidden>
+      <b>El visor donde abriste la página no dejó abrir el selector de archivos.</b>
+      <p>No es un error de la aplicación: algunos visores integrados lo bloquean. Podés cargar el archivo de otra forma:</p>
+      <ol>
+        <li><b>Arrastrá</b> el video o la imagen desde el Explorador de Windows y soltalo sobre esta vista.</li>
+        <li>O copialo en el Explorador (<b>Ctrl+C</b>), hacé clic acá y pegalo con <b>Ctrl+V</b>.</li>
+        <li>O abrí la versión local: carpeta <b>DUAL_PROJECTOR_LAB</b> → doble clic en <b>INICIAR.bat</b> (se abre en Chrome/Edge, donde el botón funciona).</li>
+      </ol>
+      <button id="pickBlockedClose" class="btn small">Entendido</button>
+    </div>
     <div id="helpBox" class="helpbox" hidden>
       <h3>Cómo experimentar</h3>
       <ol>
@@ -73,12 +84,11 @@
       <h3>Contenido</h3>
       <select id="source" class="wide"></select>
       <div class="row2">
-        <label id="btnLoadVideo" class="btn small filebtn" for="fileVideo" tabindex="0">🎬 Cargar video local…</label>
-        <label id="btnLoadImage" class="btn small filebtn" for="fileImage" tabindex="0">🖼 Cargar imagen…</label>
+        <!-- El <input type="file"> real cubre todo el botón: el clic del usuario cae directamente sobre él -->
+        <div id="btnLoadVideo" class="btn small filebtn">🎬 Cargar video local…<input type="file" id="fileVideo" title="Elegir un video" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.ogv"></div>
+        <div id="btnLoadImage" class="btn small filebtn">🖼 Cargar imagen…<input type="file" id="fileImage" title="Elegir una imagen" accept="image/*"></div>
       </div>
-      <input type="file" id="fileVideo" class="vh" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.ogv">
-      <input type="file" id="fileImage" class="vh" accept="image/*">
-      <p class="desc">También podés arrastrar un video o una imagen sobre la vista.</p>
+      <p id="fileStatus" class="desc">También podés arrastrar el archivo sobre la vista o pegarlo con Ctrl+V.</p>
       <div id="videoCtl" hidden>
         <div class="vname" id="vName"></div>
         <div class="row2"><button id="vPlay" class="btn small">▶ Reproducir</button><button id="vMute" class="btn small">🔇</button></div>

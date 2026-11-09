@@ -667,29 +667,34 @@
     sel.value = S.source;
     sel.addEventListener('change', function () {
       const v = sel.value;
-      if (v === 'video' && !videoTex) { sel.value = S.source; toast('Primero tocá “Cargar video local…” o arrastrá un video sobre la vista.'); return; }
+      if (v === 'video' && !videoTex) { sel.value = S.source; toast('Primero tocá “Cargar video local…” (o arrastrá un video sobre la vista).'); return; }
       if (v === 'image' && !imageTex) { sel.value = S.source; toast('Primero tocá “Cargar imagen…” o arrastrá una imagen sobre la vista.'); return; }
       if (S.source === 'video' && v !== 'video') video.pause();
       S.source = v; refreshSource();
     });
-    $('fileVideo').addEventListener('change', function (e) { const f = e.target.files[0]; if (f) loadVideo(f); e.target.value = ''; });
-    $('fileImage').addEventListener('change', function (e) { const f = e.target.files[0]; if (f) loadImage(f); e.target.value = ''; });
-    // Los botones son <label for=...>: abren el selector de archivos de forma nativa (sin .click() por código)
-    ['btnLoadVideo', 'btnLoadImage'].forEach(function (id) {
-      $(id).addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $(id === 'btnLoadVideo' ? 'fileVideo' : 'fileImage').click(); } });
+    // Botones de archivo: el <input type="file"> real cubre el botón, así que el clic del usuario
+    // lo activa directamente (no hay .click() por código, que algunos marcos protegidos bloquean).
+    ['fileVideo', 'fileImage'].forEach(function (id) {
+      const inp = $(id);
+      inp.addEventListener('click', function () { watchPicker(inp); setFileStatus('Abriendo el selector de archivos…'); });
+      inp.addEventListener('change', function () { pickerDone(); const f = inp.files && inp.files[0]; if (f) handleFile(f, id === 'fileVideo' ? 'video' : 'image'); inp.value = ''; });
+      inp.addEventListener('cancel', function () { pickerDone(); setFileStatus('Selección cancelada.'); });
     });
+    $('pickBlockedClose').addEventListener('click', function () { $('pickBlocked').hidden = true; });
     // Arrastrar y soltar un archivo sobre la vista
     let dragDepth = 0;
     stage.addEventListener('dragenter', function (e) { e.preventDefault(); dragDepth++; $('dropZone').hidden = false; });
-    stage.addEventListener('dragover', function (e) { e.preventDefault(); });
+    stage.addEventListener('dragover', function (e) { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; });
     stage.addEventListener('dragleave', function () { if (--dragDepth <= 0) { dragDepth = 0; $('dropZone').hidden = true; } });
     stage.addEventListener('drop', function (e) {
       e.preventDefault(); dragDepth = 0; $('dropZone').hidden = true;
       const f = e.dataTransfer && e.dataTransfer.files[0];
-      if (!f) return;
-      if (/^video\//.test(f.type) || /\.(mp4|webm|mkv|mov|m4v|ogv)$/i.test(f.name)) loadVideo(f);
-      else if (/^image\//.test(f.type)) loadImage(f);
-      else toast('Ese archivo no es un video ni una imagen.');
+      if (f) handleFile(f); else toast('No llegó ningún archivo. Arrastralo desde el Explorador de Windows.');
+    });
+    // Pegar un archivo copiado en el Explorador (Ctrl+C → Ctrl+V)
+    document.addEventListener('paste', function (e) {
+      const f = e.clipboardData && e.clipboardData.files && e.clipboardData.files[0];
+      if (f) { e.preventDefault(); handleFile(f); }
     });
     $('fit').addEventListener('change', function () { S.fit = $('fit').value; applyState(); });
     $('vPlay').addEventListener('click', function () { if (video.paused) video.play(); else video.pause(); });
@@ -782,29 +787,81 @@
   }
 
   /* ---------- video / imagen local ---------- */
-  function loadVideo(file) {
-    toast('Cargando ' + file.name + '…');
-    if (video.src) URL.revokeObjectURL(video.src);
+  function setFileStatus(msg) { $('fileStatus').textContent = msg; }
+  // Detecta si el visor bloqueó el selector: si al abrirse, la ventana nunca pierde el foco
+  // y no llega ningún archivo, el diálogo del sistema no apareció.
+  let pickWatch = null;
+  function watchPicker() {
+    pickerDone();
+    const w = { blurred: false };
+    w.onBlur = function () { w.blurred = true; };
+    window.addEventListener('blur', w.onBlur);
+    w.timer = setTimeout(function () {
+      if (pickWatch === w && !w.blurred && document.hasFocus()) {
+        $('pickBlocked').hidden = false;
+        setFileStatus('El selector de archivos no se abrió en este visor. Arrastrá el archivo sobre la vista o pegalo con Ctrl+V.');
+      }
+    }, 1500);
+    pickWatch = w;
+  }
+  function pickerDone() {
+    if (!pickWatch) return;
+    clearTimeout(pickWatch.timer); window.removeEventListener('blur', pickWatch.onBlur); pickWatch = null;
+  }
+  function isVideoFile(f) { return /^video\//.test(f.type) || /\.(mp4|webm|mkv|mov|m4v|ogv|avi)$/i.test(f.name); }
+  function isImageFile(f) { return /^image\//.test(f.type) || /\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(f.name); }
+  function handleFile(f, expected) {
+    $('pickBlocked').hidden = true;
+    const mb = (f.size / 1048576).toFixed(1) + ' MB';
+    if (isVideoFile(f)) { setFileStatus('Video recibido: ' + f.name + ' (' + mb + '). Cargando…'); loadVideo(f); }
+    else if (isImageFile(f)) { setFileStatus('Imagen recibida: ' + f.name + ' (' + mb + '). Cargando…'); loadImage(f); }
+    else { setFileStatus('“' + f.name + '” no es un video ni una imagen.'); toast('Ese archivo no es un ' + (expected === 'image' ? 'archivo de imagen' : 'video') + '.'); }
+  }
+  function readAsDataURL(file, cb, fail) {
+    const r = new FileReader();
+    r.onload = function () { cb(r.result); };
+    r.onerror = fail;
+    r.readAsDataURL(file);
+  }
+  let videoObjURL = null;
+  function loadVideo(file, useDataURL) {
     videoName = file.name;
-    video.src = URL.createObjectURL(file);
+    if (videoObjURL) { URL.revokeObjectURL(videoObjURL); videoObjURL = null; }
     video.loop = true; video.muted = true;
     video.onloadedmetadata = function () {
       if (!videoTex) { videoTex = new THREE.VideoTexture(video); prepTex(videoTex); }
       S.source = 'video'; refreshSource(); refreshUI(); applyState();
-      video.play().catch(function () { /* el usuario puede pulsar Reproducir */ });
+      video.play().then(function () {
+        setFileStatus('Reproduciendo “' + file.name + '” (' + video.videoWidth + '×' + video.videoHeight + '), repartido entre A y B.');
+      }).catch(function () { setFileStatus('Video listo: pulsá ▶ Reproducir.'); });
     };
-    video.onerror = function () { toast('El navegador no pudo abrir ese video (' + file.name + '). Probá con MP4 (H.264) o WebM.'); };
+    video.onerror = function () {
+      // Si el visor no permite videos desde blob:, se reintenta con una URL data: (archivos de hasta 120 MB)
+      if (!useDataURL && file.size < 120 * 1048576) { loadVideo(file, true); return; }
+      setFileStatus('El navegador no pudo reproducir “' + file.name + '”. Probá con MP4 (H.264) o WebM.');
+      toast('No se pudo reproducir ese video. Probá con MP4 (H.264) o WebM.');
+    };
+    if (useDataURL) {
+      readAsDataURL(file, function (url) { video.src = url; video.load(); }, function () { setFileStatus('No se pudo leer el archivo.'); });
+    } else {
+      videoObjURL = URL.createObjectURL(file);
+      video.src = videoObjURL; video.load();
+    }
   }
   function loadImage(file) {
-    const img = new Image();
-    img.onload = function () {
-      if (imageTex) imageTex.dispose();
-      imageTex = new THREE.Texture(img); prepTex(imageTex); imageTex.needsUpdate = true;
-      imageAspect = img.naturalWidth / img.naturalHeight; imageName = file.name;
-      S.source = 'image'; refreshSource(); refreshUI(); applyState();
-    };
-    img.onerror = function () { toast('No se pudo leer la imagen.'); };
-    img.src = URL.createObjectURL(file);
+    // data: URL en vez de blob: (es lo más compatible con visores que restringen fuentes)
+    readAsDataURL(file, function (url) {
+      const img = new Image();
+      img.onload = function () {
+        if (imageTex) imageTex.dispose();
+        imageTex = new THREE.Texture(img); prepTex(imageTex); imageTex.needsUpdate = true;
+        imageAspect = img.naturalWidth / img.naturalHeight; imageName = file.name;
+        S.source = 'image'; refreshSource(); refreshUI(); applyState();
+        setFileStatus('Mostrando “' + file.name + '” (' + img.naturalWidth + '×' + img.naturalHeight + ').');
+      };
+      img.onerror = function () { setFileStatus('No se pudo decodificar “' + file.name + '”.'); toast('No se pudo leer la imagen.'); };
+      img.src = url;
+    }, function () { setFileStatus('No se pudo leer el archivo.'); });
   }
   function fmtTime(t) { t = Math.max(0, t || 0); return Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); }
   function updateVideoTime() {
@@ -888,6 +945,9 @@
     projGeo: projGeo, ref: ref, centerY: centerY, samplePixels: samplePixels, screenToCanvas: screenToCanvas,
     renderNow: renderNow, uniforms: uniforms, video: video, srcCanvas: srcCanvas, stats: function () { return { fps: fps, lastRenderMs: lastRenderMs, info: renderer.info.render, mem: renderer.info.memory }; }
   };
+
+  window.addEventListener('error', function (e) { if (e.message) toast('Error: ' + e.message); });
+  window.addEventListener('unhandledrejection', function (e) { const m = e.reason && (e.reason.message || String(e.reason)); if (m && !/play\(\)/.test(m)) toast('Error: ' + m); });
 
   /* ======================= Arranque ======================= */
   (function autoQuality() {
