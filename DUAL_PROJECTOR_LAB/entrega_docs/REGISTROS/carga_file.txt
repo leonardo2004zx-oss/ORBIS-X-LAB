@@ -2,9 +2,9 @@ Navegador visible: 153.0.8010.12 · URL: file:///home/user/ORBIS-X-LAB/DUAL_PROJ
 PASA  · Clic en "Cargar imagen…" abre el selector de archivos — selector abierto (acepta: image/*)
 PASA  · La imagen aparece en la pantalla virtual: A muestra la mitad roja y B la mitad azul — color medio en A: rgb(218,105,105) · en B: rgb(105,126,221) · estado: "Mostrando “imagen_prueba.png” (1600×450)."
 PASA  · Clic en "Cargar video local…" abre el selector de archivos — selector abierto (acepta: video/*,.mp4,.webm,.mkv,.mov,.m4v,.ogv)
-PASA  · El video se reproduce en la pantalla virtual — tiempo 0.31 → 1.98 s; ancho 1280 px; 33 de 300 puntos de la pantalla cambiaron de imagen; estado: "Reproduciendo “video_prueba.webm” (1280×360), repartido entre A y B."
-PASA  · El video se reparte entre A y B (partes distintas, franja compartida idéntica) — diferencia en partes propias 147.5 · en la franja compartida 0.0
-PASA  · 3D activo y la rotación con el mouse cambia la vista — diferencia de imagen tras arrastrar: 290.3
+PASA  · El video se reproduce en la pantalla virtual — tiempo 0.32 → 2.00 s; ancho 1280 px; 31 de 300 puntos de la pantalla cambiaron de imagen; estado: "Reproduciendo “video_prueba.webm” (1280×360), repartido entre A y B."
+PASA  · El video se reparte entre A y B (partes distintas, franja compartida idéntica) — diferencia en partes propias 146.8 · en la franja compartida 0.0
+PASA  · 3D activo y la rotación con el mouse cambia la vista — diferencia de imagen tras arrastrar: 323.3
 PASA  · Controles de Edge Blending siguen funcionando — intensidad 1 → 0.3, superposición → 0.25
 PASA  · Si el visor bloquea el selector, aparece un aviso con alternativas — aviso visible
 PASA  · Alternativa: arrastrar y soltar la imagen la carga

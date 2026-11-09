@@ -48,6 +48,20 @@ La vista 2D y la 3D usan **el mismo material**, por eso muestran exactamente el 
 - Sin sombras, sin postprocesado, materiales Lambert, butacas instanciadas.
 - Sin bloqueo del puntero.
 
+## Encuadre, enfoque y calibración (v5)
+Tres conceptos separados, en controles separados:
+| Concepto | Qué cambia | Dónde | Uniforme |
+|---|---|---|---|
+| Encuadre del contenido (zoom/centrar) | qué parte de la foto se proyecta | 🔍 Encuadre | `uPhoto` |
+| Enfoque óptico (simulado) | nitidez del haz de cada proyector (disco de desenfoque) | 🔍 Encuadre (A y B) / 🎯 Calibrar (uno) | `uFocus` |
+| Nitidez digital | procesado de la señal (máscara de enfoque) | 🔍 Encuadre | `uSharp` |
+| Alineación geométrica | posición, giro y tamaño de cada proyector en la pared | 🎯 Calibrar | `uGA`, `uGB` |
+- `srcAt(s)` aplica el encuadre; el desenfoque toma 17 muestras solo si el foco ≠ 0 (no cuesta nada enfocado).
+- `calib(s, color)`: cuadrícula de 16×9 celdas por proyector y 5 puntos de referencia, con `fwidth` (`OES_standard_derivatives`) para líneas nítidas.
+- `alignError()` calcula, en metros sobre la pared, la separación entre la copia de A y la de B del mismo punto del panorama (3 puntos de la superposición).
+- Gestos de herramienta: `Pointer Events` + `Raycaster` contra el plano de la pared (sirve en 2D y 3D). En modo herramienta se desactiva `OrbitControls`.
+- `#viewport` (la vista) y las barras `#tooldock`/`#mbar` son hermanos en una columna flex: las barras nunca se superponen al lienzo.
+
 ## Versión para celular (v4)
 - `body.m` se activa con puntero táctil (`pointer: coarse`) o ancho ≤ 900 px. Cambia el diseño: barra táctil `#mbar`, panel como hoja lateral, barra superior oculta en horizontal baja.
 - OrbitControls con `touches = { ONE: ROTATE, TWO: DOLLY_PAN }`.

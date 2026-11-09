@@ -1,0 +1,23 @@
+Pixel 7 emulado (Chrome Android, táctil), horizontal 839×412
+PASA  · Foto real cargada desde el botón «🖼 Imagen» — "Mostrando “foto_real_cafe.jpg” (600×400)." · textura 600×400
+PASA  · «◌ Desenfocar» realmente desenfoca la imagen — nitidez medida 22.8 → 14.4 (63 %), foco A/B = 0.4/0.4
+PASA  · «◉ Enfocar» devuelve la nitidez original — nitidez 14.4 → 22.8 (original 22.8)
+PASA  · El enfoque es independiente del zoom y de la geometría — posición/tamaño de A y zoom de la foto sin cambios al desenfocar
+PASA  · «Nitidez digital +» realza los bordes (procesado, distinto del foco) — nitidez 22.8 → 43.5 (191 %)
+PASA  · El enfoque se ve también en la vista 3D — nitidez en 3D 20.3 → 16.9 → (auto-enfocar) 20.3
+PASA  · «+» amplía y «−» reduce la foto (cambia la escala real) — separación entre líneas en A: 52 px → (+ +, zoom 156 %) 81 px → (− − −, zoom 80 %) 42 px (proporcional al zoom)
+PASA  · Arrastrar con un dedo mueve la foto lo mismo que el dedo — dedo +60 px → la imagen se movió 60 px del lienzo (esperado 60), desplazamiento 12 %
+PASA  · Pellizcar amplía la foto — zoom 100 % → 300 %; la imagen cambió (dif 31.8)
+PASA  · «⌖ Centrar» y «⤢ Ajustar» restauran el encuadre — tras centrar: desplazamiento 0/0 (zoom 300 %); tras ajustar la imagen es idéntica a la original (dif 0.00)
+PASA  · «↯ Desalinear» produce imagen doble visible — error 0 → 56 mm; diferencia A/B en la franja compartida 0.0 → 14.6
+PASA  · El desalineado se ve también en 3D — cambio de la imagen 3D: 20.0
+PASA  · «⇄ Antes/Después» alterna entre el estado guardado y el actual — ANTES: error 0 mm (cartel visible); DESPUÉS: 56 mm; imagen después = actual (dif 0.00)
+PASA  · Realinear a mano con toques (arrastre + flechas + ⟳ + tamaño + foco) — tras arrastrar: X -0.0 cm, Y -0.0 cm; final: error 0.1 mm · diferencia A/B 14.6 → 0.0 · barra: "B: X -0.0 cm · Y -0.0 cm · 0.00° · 100.0 % · foco 0.0imagen doble: 0 mm ✔ alineado"
+PASA  · Pellizcar en Calibrar cambia el tamaño de la proyección seleccionada — zoom de B 100.0 % → 120.0 %
+PASA  · «⌖ Autoalinear» vuelve a superponer A y B — error 0.0 mm; diferencia A/B 1.3 (alineado original 0.0)
+PASA  · «↺ Restablecer» vuelve todo a los valores iniciales — {"e":4.440892098500626e-16,"f":[0,0],"ph":[1,0,0],"sh":0,"mode":"C"}
+PASA  · «▦ Cuadrícula» muestra y oculta la cuadrícula con puntos de referencia — cambio de imagen al ocultarla: 49.4
+PASA  · Los botones no tapan la vista (horizontal y vertical) — horiz. calibrar {"tooldock":"ok","mbar":"ok","vista":"839×347","frac":0.84,"over":0} · horiz. ver {"tooldock":"ok","mbar":"ok","vista":"839×347","frac":0.84,"over":0} · vert. ver {"tooldock":"ok","mbar":"ok","vista":"412×635","frac":0.76,"over":0} · vert. calibrar {"tooldock":"ok","mbar":"ok","vista":"412×454","frac":0.54,"over":0}
+PASA  · En vertical, las flechas mueven la proyección — X de B 0.0 → 5.0 cm
+PASA  · Consola sin errores — []
+21/21 pruebas pasaron.

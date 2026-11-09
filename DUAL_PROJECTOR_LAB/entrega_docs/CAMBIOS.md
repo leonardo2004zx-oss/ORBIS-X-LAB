@@ -2,7 +2,20 @@
 
 Rama: `ccr-c47ef91f-l1boq4` · PR #2 en `leonardo2004zx-oss/ORBIS-X-LAB`
 
-## v4 — ba93eb4 (versión actual): versión para celular
+## v5 — encuadre, enfoque y calibración (versión actual)
+Sin reconstruir la app: se agregó sobre la v4.
+- **Barra de herramientas debajo de la vista** (ya no tapa la imagen): *👁 Ver*, *🔍 Encuadre*, *🎯 Calibrar*. La vista (`#viewport`) ocupa el espacio libre y las barras van abajo; en celular, al usar una herramienta se oculta la barra general y aparece «✓ Listo».
+- **Encuadre del contenido** (no mueve los proyectores): zoom −/+, ⌖ Centrar, ⤢ Ajustar; arrastrar con un dedo mueve la foto y pellizcar la amplía. Shader: `srcAt()` aplica `uPhoto` (zoom, desplazamiento X/Y).
+- **Enfoque óptico simulado** por proyector (`P.focus`, uniforme `uFocus`): disco de desenfoque de 17 muestras. Botones ◌ Desenfocar / ◉ Enfocar / Auto-enfocar (A y B) y ◌/◉ foco por proyector en Calibrar; slider «Enfoque óptico (anillo)» en el panel.
+- **Nitidez digital** (`uSharp`, máscara de enfoque): procesado de la señal, separado del enfoque óptico.
+- **Calibración**: cuadrícula en píxeles de cada proyector (A naranja, B celeste) y 5 puntos de referencia; donde A y B coinciden se ve blanco, si no aparece la **imagen doble**. Lectura en la barra: posición, rotación, tamaño, foco y «imagen doble: N mm» (error calculado en la pared).
+- **Mover y alinear A o B por separado**: selector A/B, flechas (un toque = un paso; mantener = repetir), paso 5 cm / 1 cm / 2 mm, ⟲/⟳ (0,1°), ±tamaño (0,2 %), arrastre con un dedo y pellizco sobre la vista (2D o 3D).
+- **↯ Desalinear** (para practicar), **⌖ Autoalinear**, **↺ Restablecer**, **📌 Marcar «antes»** y **⇄ Antes/Después** (cartel «ANTES» abajo de la vista).
+- Modo A ahora incluye un desenfoque leve de B (foco 0,3), como un equipo sin ajustar.
+- Error corregido durante las pruebas: tocar ⇄ por segunda vez volvía a abrir la comparación en lugar de volver a «después».
+- Nuevas pruebas `tests/calibracion.js` (21) con fotos reales `tests/foto_real_cafe.jpg` y `tests/foto_real_cohete.jpg` (dominio público, de scikit-image) y `tests/barras_prueba.png`.
+
+## v4 — ba93eb4: versión para celular
 - Barra táctil inferior: modos A/B/C, 2D/3D, Técnica/Frontal, ⟲ Inicio, 🎬 Video, 🖼 Imagen, ⛶ pantalla completa, ⚙ Ajustes. Botones ≥ 44 px.
 - Panel de ajustes como hoja lateral desplegable (se abre con ⚙, se cierra con ✕). Incluye calidad gráfica y «ajustar sola».
 - Gestos: un dedo gira, dos dedos acercan/alejan y desplazan. En 2D el navegador conserva sus gestos (`touch-action` según la vista).

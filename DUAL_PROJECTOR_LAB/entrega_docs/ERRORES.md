@@ -1,5 +1,12 @@
 # ERRORES — DUAL PROJECTOR LAB
 
+## v5 — errores encontrados al probar
+- **⇄ Antes/Después no volvía a «después»** (CORREGIDO): `act()` cerraba la comparación antes de procesar cualquier botón; al tocar ⇄ otra vez, se cerraba y se volvía a abrir. Ahora ⇄ maneja la comparación por sí mismo.
+- **La vista se corría de costado en escritorio** al tocar un botón de la barra (CORREGIDO): el grupo de botones no hacía salto de línea y desplazaba el contenedor. Ahora los grupos se acomodan en varias filas y `#stage` usa `overflow: clip`.
+- **Cartel «ANTES» encima de los avisos** (CORREGIDO): se movió abajo de la vista.
+- **Franja levemente más clara en zonas oscuras de la superposición** (NO es un error): es el nivel de negro de los dos proyectores sumado; la rampa de fusión no puede atenuarlo, igual que en proyectores reales. Medido: la suma A+B en la franja es pareja (~680/765) en zonas claras.
+- Falsos negativos de la prueba (no de la app), corregidos en `tests/calibracion.js`: medir el desplazamiento en una franja más corta que el rango de búsqueda daba siempre 0; contar líneas finas en una imagen muy reducida no medía la escala (ahora se mide el período de barras anchas).
+
 ## 0. Publicación pública en GitHub Pages bloqueada (ABIERTO)
 - Intento: crear la rama `gh-pages` (solo `index.html`, `css/`, `js/`, `vendor/`, `.nojekyll`) y enviarla al repositorio público, ruta estándar para que GitHub publique `https://leonardo2004zx-oss.github.io/ORBIS-X-LAB/`.
 - Resultado: el sistema de permisos del entorno de Claude Code lo rechazó con el motivo «Create Public Surface». No se envió nada.

@@ -7,6 +7,13 @@
 4. Si aparece el aviso «Estás dentro de un visor integrado…», usar «Copiar enlace» y pegarlo en Chrome.
 5. Versión pública (GitHub Pages): pendiente de autorización; ver URL_PUBLICADA.md.
 
+## Encuadrar, enfocar y alinear (v5)
+1. Cargá una foto (🖼 Imagen).
+2. **🔍 Encuadre**: − / + (zoom de la foto), ⌖ Centrar, ⤢ Ajustar; arrastrá con un dedo para mover la foto y pellizcá para ampliarla. ◌ Desenfocar / ◉ Enfocar simulan el anillo de foco de los proyectores; «Nitidez digital» es un procesado aparte.
+3. **🎯 Calibrar**: elegí A o B, usá las flechas (o arrastrá sobre la vista) para moverlo, ⟲/⟳ para girarlo, ±tamaño, ◌/◉ foco. La cuadrícula muestra A en naranja y B en celeste: cuando coinciden se ven blancas. La barra indica «imagen doble: N mm».
+4. ↯ Desalinear para practicar, ⌖ Autoalinear, ↺ Restablecer, 📌 Marcar «antes» y ⇄ Antes/Después para comparar.
+5. En celular, «✓ Listo» vuelve a la barra general.
+
 ## Ejecutar (Windows, sin instalar nada)
 1. Copiar la carpeta `CODIGO_FUENTE` (o `DUAL_PROJECTOR_LAB`) a la PC, por ejemplo `C:\DUAL_PROJECTOR_LAB`.
 2. Doble clic en `INICIAR.bat`, o en `index.html`, o en `DUAL_PROJECTOR_LAB_un_archivo.html`.
@@ -40,6 +47,7 @@ node tests/verify.js                                   # 27 pruebas (abre index.
 node tests/verify.js http://localhost:8000/index.html  # las mismas por HTTP
 node tests/carga_archivos.js file:///RUTA/index.html - tests/capturas file
 node tests/movil.js http://localhost:8000/index.html tests/capturas   # 20 pruebas de celular (Pixel 7 emulado)
+node tests/calibracion.js http://localhost:8000/index.html tests/capturas   # 21 pruebas de encuadre, enfoque y calibración
 ```
 En Linux sin pantalla, anteponer `xvfb-run -a` a `carga_archivos.js` (usa navegador visible).
 Las capturas quedan en `tests/capturas/`.

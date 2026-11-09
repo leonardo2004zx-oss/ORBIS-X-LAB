@@ -45,7 +45,9 @@ button, select, input { font: inherit; color: inherit; }
 .wide { width: 100%; }
 select { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 
-#stage { position: relative; overflow: hidden; min-height: 0; background: #000; }
+#stage { position: relative; overflow: hidden; overflow: clip; min-height: 0; min-width: 0; background: #000; display: flex; flex-direction: column; }
+/* la vista ocupa el espacio libre; las barras de herramientas van debajo y nunca la tapan */
+#viewport { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 #gl { width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
 .hud { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; }
 .chip, .badge { background: rgba(10, 12, 20, .75); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; backdrop-filter: blur(4px); }
@@ -161,8 +163,9 @@ body.m #panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 
 body.m.sheet-open #panel { transform: none; }
 /* la animación solo después de arrancar, para que el panel no "pase" por la pantalla al cargar */
 body.m.ready #panel { transition: transform .22s ease; }
-body.m .mbar { display: flex; position: absolute; z-index: 8; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px));
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px)); gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+body.m .mbar { display: flex; flex: 0 0 auto; gap: 6px; overflow-x: auto; scrollbar-width: none; background: var(--panel);
+  border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+body.m.tool-on .mbar { display: none; }
 body.m .mbar::-webkit-scrollbar { display: none; }
 .mbtn, .mgroup button { flex: 0 0 auto; min-height: 46px; min-width: 46px; padding: 0 14px; border-radius: 12px; font-size: 15px; cursor: pointer;
   background: rgba(21, 24, 38, .9); border: 1px solid var(--line); color: var(--text); backdrop-filter: blur(6px); }
@@ -177,7 +180,7 @@ body.m #fps { display: none; }
 body.m .helpbox { inset: 50px 8px auto 8px; width: auto; }
 body.m .blocked { top: 48px; }
 /* vertical: la barra táctil se acomoda en dos filas para que todo quede a la vista */
-@media (orientation: portrait) { body.m .mbar { flex-wrap: wrap; justify-content: center; overflow: visible; } }
+@media (orientation: portrait) { body.m .mbar, body.m .dock { flex-wrap: wrap; justify-content: center; overflow-x: visible; } body.m .dock { max-height: 42vh; overflow-y: auto; } }
 /* pantalla horizontal baja: se oculta la barra superior para dar todo el alto al simulador */
 @media (max-height: 500px) { body.m #topbar { display: none; } }
 /* controles grandes para dedos */
@@ -202,6 +205,46 @@ body.m .blocked { top: 48px; }
   .brand small { display: none; }
   .hint { display: none; }
   body.panel-hidden #app { grid-template-columns: 1fr; }
+}
+
+/* ---------- Barra de herramientas (Ver / Encuadre / Calibrar) ---------- */
+.dock { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; background: var(--panel);
+  border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+.dock button, .dgroup button { flex: 0 0 auto; min-height: 40px; min-width: 40px; padding: 0 12px; border-radius: 10px; cursor: pointer; font-size: 14px;
+  background: var(--panel2); border: 1px solid var(--line); color: var(--text); white-space: nowrap; }
+.dock button:hover { border-color: #3a4166; }
+.dock button:active { transform: scale(.96); }
+.dgroup { flex: 0 0 auto; display: flex; gap: 2px; padding: 2px; border-radius: 12px; background: #0a0b12; border: 1px solid var(--line); }
+.dgroup button { border: 0; background: transparent; color: var(--muted); }
+.dgroup button.on { background: var(--panel2); color: var(--accent); box-shadow: inset 0 0 0 1px #3a4166; }
+.selp button.on.pa { color: var(--a); } .selp button.on.pb { color: var(--b); }
+.dpane { display: none; align-items: center; gap: 6px; flex: 0 0 auto; }
+body[data-tool="foto"] .dpane[data-pane="foto"], body[data-tool="cal"] .dpane[data-pane="cal"] { display: flex; }
+.dlabel { flex: 0 0 auto; font-size: 11.5px; line-height: 1.15; color: var(--muted); text-align: right; padding-left: 6px; border-left: 1px solid var(--line); margin-left: 4px; }
+.dlabel small { color: #6c7290; }
+.dinfo { flex: 0 0 auto; font: 12px/1.3 Consolas, ui-monospace, monospace; color: var(--text); padding: 0 6px; white-space: nowrap; }
+.dinfo .bad { color: #ff7d95; } .dinfo .good { color: var(--ok); }
+.dock button.cmp.on { background: #3a3018; border-color: var(--accent); color: var(--accent); }
+.dock button.on { border-color: var(--accent); color: var(--accent); }
+.dock .done { display: none; }
+body.m.tool-on .dock .done { display: inline-block; border-color: var(--ok); color: var(--ok); }
+body.m:not(.tool-on) .dock { display: none; }
+body.m .dock .dsel { display: none; }
+.cmpbadge { position: absolute; bottom: 10px; left: 50%; max-width: 92%; text-align: center; transform: translateX(-50%); z-index: 4; padding: 4px 16px; border-radius: 999px; font-weight: 700;
+  letter-spacing: .1em; background: rgba(58, 48, 24, .92); color: var(--accent); border: 1px solid var(--accent); pointer-events: none; }
+.mbtn.tool { border-color: #3a4166; }
+#hintTool { color: var(--accent); }
+@media (pointer: coarse) { .dock button, .dgroup button { min-height: 46px; min-width: 46px; font-size: 15px; } }
+body.m #hintTool:not([hidden]) { display: block; bottom: 6px; white-space: normal; text-align: center; }
+
+body:not(.m) .dock { flex-wrap: wrap; overflow-x: visible; }
+body:not(.m) .dpane { flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+@media (orientation: portrait) {
+  body.m .dpane { flex-wrap: wrap; justify-content: center; flex: 1 1 100%; min-width: 0; }
+  body.m .dock button, body.m .dgroup button { min-height: 44px; min-width: 44px; padding: 0 10px; font-size: 14px; }
+  body.m .dlabel { flex: 1 1 100%; text-align: center; border-left: 0; margin: 2px 0 0; padding: 0; }
+  body.m .dlabel br { display: none; }
+  body.m .dinfo { flex: 1 1 100%; text-align: center; white-space: normal; }
 }
 
 </style>
@@ -230,6 +273,7 @@ body.m .blocked { top: 48px; }
   </header>
 
   <main id="stage">
+   <div id="viewport">
     <canvas id="gl" aria-label="Vista del simulador"></canvas>
     <div id="labels2d" hidden></div>
     <div class="hud">
@@ -242,18 +286,8 @@ body.m .blocked { top: 48px; }
       (menú <b>⋮</b> → <b>Abrir en Chrome</b> o <b>Abrir en el navegador</b>).
       <span class="row2"><button id="wvCopy" class="btn small">Copiar enlace</button><button id="wvClose" class="btn small">Cerrar</button></span>
     </div>
-    <!-- Barra táctil (celular): modos, vistas, carga de archivos, pantalla completa y ajustes -->
-    <div id="mbar" class="mbar">
-      <div class="mgroup"><button data-mode="A">A</button><button data-mode="B">B</button><button data-mode="C">C</button></div>
-      <button id="mView" class="mbtn">2D</button>
-      <button id="mTech" class="mbtn">Técnica</button>
-      <button id="mReset" class="mbtn" title="Volver a la vista inicial">⟲ Inicio</button>
-      <div class="mbtn filebtn" id="mVideo">🎬 Video<input type="file" data-kind="video" aria-label="Cargar video" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.3gp"></div>
-      <div class="mbtn filebtn" id="mImage">🖼 Imagen<input type="file" data-kind="image" aria-label="Cargar imagen" accept="image/*"></div>
-      <button id="mFull" class="mbtn" title="Pantalla completa horizontal">⛶</button>
-      <button id="mPanel" class="mbtn accent">⚙ Ajustes</button>
-    </div>
     <div id="hint3d" class="hint">Arrastrá: girar · Rueda: acercar · Clic derecho: desplazar · W A S D / Q E: caminar (con la vista seleccionada)</div>
+    <div id="hintTool" class="hint" hidden></div>
     <div id="toast" class="toast" hidden></div>
     <div id="dropZone" class="dropzone" hidden>Soltá el video o la imagen acá</div>
     <div id="pickBlocked" class="blocked" role="alert" hidden>
@@ -284,6 +318,53 @@ body.m .blocked { top: 48px; }
     <div id="nogl" class="nogl" hidden>
       <h2>Este navegador no pudo iniciar WebGL</h2>
       <p>Actualizá Chrome o Edge y activá la “aceleración por hardware” en la configuración.</p>
+    </div>
+    <div id="compareBadge" class="cmpbadge" hidden>ANTES</div>
+   </div>
+    <!-- Herramientas: quedan DEBAJO de la vista (no la tapan) -->
+    <div id="tooldock" class="dock">
+      <div class="dgroup dsel" role="tablist" aria-label="Herramienta">
+        <button data-tool="ver" title="Girar y mirar la sala">👁 Ver</button>
+        <button data-tool="foto" title="Encuadre, zoom y enfoque de la foto">🔍 Encuadre</button>
+        <button data-tool="cal" title="Calibrar y alinear A y B">🎯 Calibrar</button>
+      </div>
+      <div class="dpane" data-pane="foto">
+        <span class="dlabel">Zoom de la foto<br><small>(contenido)</small></span>
+        <button data-act="phZoomOut" title="Reducir">−</button><button data-act="phZoomIn" title="Ampliar">+</button>
+        <button data-act="phCenter">⌖ Centrar</button><button data-act="phFit">⤢ Ajustar</button>
+        <span class="dlabel">Enfoque óptico<br><small>(simulado, A y B)</small></span>
+        <button data-act="blurBoth">◌ Desenfocar</button><button data-act="focusBoth">◉ Enfocar</button><button data-act="autoFocus">Auto-enfocar</button>
+        <span class="dlabel">Nitidez digital<br><small>(procesado)</small></span>
+        <button data-act="sharpMinus">−</button><button data-act="sharpPlus">+</button>
+        <button data-act="compare" class="cmp">⇄ Antes/Después</button><button data-act="reset">↺ Restablecer</button>
+        <span id="fotoInfo" class="dinfo"></span>
+      </div>
+      <div class="dpane" data-pane="cal">
+        <div class="dgroup selp"><button data-sel="0" class="pa">A</button><button data-sel="1" class="pb">B</button></div>
+        <button data-act="step" id="stepBtn">Paso 1 cm</button>
+        <button data-nudge="-1,0" title="Mover a la izquierda">◀</button><button data-nudge="0,1" title="Mover arriba">▲</button><button data-nudge="0,-1" title="Mover abajo">▼</button><button data-nudge="1,0" title="Mover a la derecha">▶</button>
+        <button data-act="rotL" title="Girar a la izquierda">⟲</button><button data-act="rotR" title="Girar a la derecha">⟳</button>
+        <button data-act="sizeMinus" title="Achicar la proyección">− tamaño</button><button data-act="sizePlus" title="Agrandar la proyección">+ tamaño</button>
+        <button data-act="focMinus" title="Desenfocar este proyector">◌ foco</button><button data-act="focPlus" title="Enfocar este proyector">◉ foco</button>
+        <button data-act="grid" id="gridBtn">▦ Cuadrícula</button>
+        <button data-act="misalign">↯ Desalinear</button><button data-act="autoAlign">⌖ Autoalinear</button><button data-act="reset">↺ Restablecer</button>
+        <button data-act="markBefore">📌 Marcar «antes»</button><button data-act="compare" class="cmp">⇄ Antes/Después</button>
+        <span id="calInfo" class="dinfo"></span>
+      </div>
+      <button data-tool="ver" class="done">✓ Listo</button>
+    </div>
+    <!-- Barra táctil (celular): modos, vistas, carga de archivos, pantalla completa y ajustes -->
+    <div id="mbar" class="mbar">
+      <div class="mgroup"><button data-mode="A">A</button><button data-mode="B">B</button><button data-mode="C">C</button></div>
+      <button id="mView" class="mbtn">2D</button>
+      <button id="mTech" class="mbtn">Técnica</button>
+      <button id="mReset" class="mbtn" title="Volver a la vista inicial">⟲ Inicio</button>
+      <div class="mbtn filebtn" id="mVideo">🎬 Video<input type="file" data-kind="video" aria-label="Cargar video" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.3gp"></div>
+      <div class="mbtn filebtn" id="mImage">🖼 Imagen<input type="file" data-kind="image" aria-label="Cargar imagen" accept="image/*"></div>
+      <button class="mbtn tool" data-tool="foto" title="Encuadre, zoom y enfoque de la foto">🔍 Encuadre</button>
+      <button class="mbtn tool" data-tool="cal" title="Calibrar y alinear A y B">🎯 Calibrar</button>
+      <button id="mFull" class="mbtn" title="Pantalla completa horizontal">⛶</button>
+      <button id="mPanel" class="mbtn accent">⚙ Ajustes</button>
     </div>
   </main>
 
@@ -318,6 +399,8 @@ body.m .blocked { top: 48px; }
         <div class="row2"><button id="vPlay" class="btn small">▶ Reproducir</button><button id="vMute" class="btn small">🔇</button></div>
         <input type="range" id="vSeek" min="0" max="1000" value="0"><span id="vTime" class="mono small">0:00</span>
       </div>
+      <h4>Encuadre y enfoque de la foto</h4>
+      <div id="photoCtl"></div>
       <label id="fitRow" class="inline" hidden>Ajuste a la pantalla
         <select id="fit"><option value="cover">Recortar (llenar)</option><option value="contain">Encajar completo</option><option value="stretch">Estirar</option></select>
       </label>
@@ -1768,7 +1851,7 @@ body.m .blocked { top: 48px; }
   const PERSON_H = 1.75;                        // m
 
   function defaultProj() {
-    return { on: true, dx: 0, dy: 0, dist: 3, zoom: 1, rot: 0, key: 0, bright: 1, r: 1, g: 1, b: 1 };
+    return { on: true, dx: 0, dy: 0, dist: 3, zoom: 1, rot: 0, key: 0, bright: 1, r: 1, g: 1, b: 1, focus: 0 };
   }
 
   const S = {
@@ -1789,6 +1872,12 @@ body.m .blocked { top: 48px; }
     source: 'sunset',
     fit: 'cover',
     P: [defaultProj(), defaultProj()],
+    photo: { zoom: 1, px: 0, py: 0 },   // encuadre del CONTENIDO (no mueve los proyectores)
+    sharp: 0,                          // nitidez digital (procesado de imagen, no es enfoque óptico)
+    tool: 'ver',                       // 'ver' | 'foto' | 'cal'
+    sel: 1,                            // proyector seleccionado al calibrar (0 = A, 1 = B)
+    calib: false,                      // cuadrícula y puntos de referencia
+    step: 0.01,                        // paso de los botones de alineación (m)
     tab: 0
   };
 
@@ -1821,6 +1910,7 @@ body.m .blocked { top: 48px; }
   /* ======================= Three.js básico ======================= */
   const canvas = document.getElementById('gl');
   const stage = document.getElementById('stage');
+  const vp = document.getElementById('viewport');   // área de la vista (las barras quedan fuera)
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: false, powerPreference: 'low-power', alpha: false });
@@ -1863,10 +1953,13 @@ body.m .blocked { top: 48px; }
     uGA: { value: new THREE.Vector4() }, uGB: { value: new THREE.Vector4() }, uKey: { value: new THREE.Vector2() },
     uCA: { value: new THREE.Vector4(1, 1, 1, 1) }, uCB: { value: new THREE.Vector4(1, 1, 1, 1) }, uOn: { value: new THREE.Vector2(1, 1) },
     uBlend: { value: 1 }, uGam: { value: 2.2 }, uCurve: { value: 1 }, uBlack: { value: 0.003 },
-    uEdges: { value: 0 }, uRef: { value: new THREE.Vector3(1, 1, 1) }, uAmb: { value: 0.0015 }
+    uEdges: { value: 0 }, uRef: { value: new THREE.Vector3(1, 1, 1) }, uAmb: { value: 0.0015 },
+    uFocus: { value: new THREE.Vector2(0, 0) }, uSharp: { value: 0 }, uPhoto: { value: new THREE.Vector3(1, 0, 0) },
+    uTexel: { value: new THREE.Vector2(1 / 1024, 1 / 512) }, uCalib: { value: 0 },
+    uPts: { value: [new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2()] }
   };
   const screenMat = new THREE.ShaderMaterial({
-    uniforms: uniforms, fog: false,
+    uniforms: uniforms, fog: false, extensions: { derivatives: true },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: [
       'uniform sampler2D uSrc; uniform vec2 uScale; uniform vec2 uOff; uniform vec2 uPlane;',
@@ -1874,19 +1967,47 @@ body.m .blocked { top: 48px; }
       'uniform vec4 uCA; uniform vec4 uCB; uniform vec2 uOn;',
       'uniform float uBlend; uniform float uGam; uniform float uCurve; uniform float uBlack;',
       'uniform float uEdges; uniform vec3 uRef; uniform float uAmb;',
+      'uniform vec2 uFocus; uniform float uSharp; uniform vec3 uPhoto; uniform vec2 uTexel; uniform float uCalib; uniform vec2 uPts[5];',
       'varying vec2 vUv;',
+      // muestra la fuente en coordenadas del panorama s (0..1), aplicando el encuadre del contenido (zoom y desplazamiento)
+      'vec3 srcAt(vec2 s){ vec2 q = (s - 0.5) / uPhoto.x + 0.5 - uPhoto.yz; vec2 m = q * uScale + uOff;',
+      '  return texture2D(uSrc, m).rgb * step(0.0,m.x)*step(m.x,1.0)*step(0.0,m.y)*step(m.y,1.0); }',
+      // superposición de calibración: cuadrícula en píxeles del proyector + puntos de referencia, en el color del proyector
+      'float gridLine(float x){ float f = abs(fract(x - 0.5) - 0.5); float w = max(fwidth(x), 1e-4); return 1.0 - smoothstep(0.5*w, 1.5*w, f); }',
+      'vec3 calib(vec2 s, vec3 c){',
+      '  float g = max(gridLine(s.x * uT * 16.0), gridLine(s.y * 9.0)) * 0.55;',
+      '  float pts = 0.0;',
+      '  for (int k = 0; k < 5; k++) { vec2 d = vec2((s.x - uPts[k].x) * uT * 16.0 / 9.0, s.y - uPts[k].y); float r = length(d); float w = max(fwidth(r), 1e-4);',
+      '    pts = max(pts, 1.0 - smoothstep(0.5*w, 1.8*w, abs(r - 0.05)));',
+      '    pts = max(pts, 1.0 - smoothstep(0.012, 0.012 + w, r));',
+      '    pts = max(pts, (1.0 - smoothstep(0.0, 1.5*w, abs(d.x))) * step(r, 0.085));',
+      '    pts = max(pts, (1.0 - smoothstep(0.0, 1.5*w, abs(d.y))) * step(r, 0.085)); }',
+      '  return c * max(g, pts);',
+      '}',
       'float inUnit(vec2 p){ return step(0.0,p.x)*step(p.x,1.0)*step(0.0,p.y)*step(p.y,1.0); }',
       // luz (lineal) que aporta un proyector al punto P de la pantalla
-      'vec3 proj(vec2 P, vec4 g, float key, vec4 c, float isB, out vec2 uv, out float ins, out vec2 sz){',
+      'vec3 proj(vec2 P, vec4 g, float key, vec4 c, float isB, out vec2 uv, out float ins, out vec2 sz, out vec2 sOut){',
       '  vec2 d = P - g.xy; float cs = cos(g.w), sn = sin(g.w);',
       '  d = vec2(cs*d.x + sn*d.y, -sn*d.x + cs*d.y);',
       '  float h = g.z * 0.5625; float v = d.y / h + 0.5;',
       '  float wk = g.z * (1.0 + key * (v - 0.5)); float u = d.x / wk + 0.5;',
       '  uv = vec2(u, v); sz = vec2(wk, h); ins = inUnit(uv);',
-      '  if (ins < 0.5) return vec3(0.0);',
       '  vec2 s = vec2((u + isB * (1.0 - uO)) / uT, v);',          // porción de la fuente que le toca
-      '  vec2 m = s * uScale + uOff;',
-      '  vec3 enc = texture2D(uSrc, m).rgb * inUnit(m);',
+      '  sOut = s;',
+      '  if (ins < 0.5) return vec3(0.0);',
+      // ENFOQUE ÓPTICO simulado: anillo de foco fuera de punto = disco de desenfoque (17 muestras)
+      '  float fr = isB > 0.5 ? uFocus.y : uFocus.x;',
+      '  vec3 enc;',
+      '  if (abs(fr) > 0.001) {',
+      '    vec2 rr = vec2(abs(fr) * 0.018 / uT, abs(fr) * 0.018 * 1.7778);',
+      '    enc = srcAt(s) * 0.2;',
+      '    for (int k = 0; k < 8; k++) { float a = float(k) * 0.7853982; vec2 d = vec2(cos(a), sin(a));',
+      '      enc += srcAt(s + d * rr) * 0.06 + srcAt(s + d * rr * 0.5) * 0.04; }',
+      '  } else { enc = srcAt(s); }',
+      // NITIDEZ DIGITAL (máscara de enfoque): procesado de la señal, no corrige un foco óptico
+      '  if (uSharp > 0.001) { vec2 ts = uTexel * 1.5 * uPhoto.x / max(uScale, vec2(1e-4));',
+      '    vec3 bl = (srcAt(s + vec2(ts.x, 0.0)) + srcAt(s - vec2(ts.x, 0.0)) + srcAt(s + vec2(0.0, ts.y)) + srcAt(s - vec2(0.0, ts.y))) * 0.25;',
+      '    enc = clamp(enc + uSharp * 2.5 * (enc - bl), 0.0, 1.0); }',
       '  float t = isB > 0.5 ? u / max(uO, 1e-4) : (1.0 - u) / max(uO, 1e-4);',
       '  t = clamp(t, 0.0, 1.0);',
       '  float w = mix(t, t*t*(3.0-2.0*t), uCurve);',
@@ -1899,13 +2020,19 @@ body.m .blocked { top: 48px; }
       '}',
       'void main(){',
       '  vec2 P = (vUv - 0.5) * uPlane;',
-      '  vec2 uva = vec2(0.0), uvb = vec2(0.0), sza = vec2(1.0), szb = vec2(1.0); float ia = 0.0, ib = 0.0;',
+      '  vec2 uva = vec2(0.0), uvb = vec2(0.0), sza = vec2(1.0), szb = vec2(1.0), sa = vec2(0.0), sb = vec2(0.0); float ia = 0.0, ib = 0.0;',
       '  vec3 L = vec3(0.0);',
-      '  if (uOn.x > 0.5) L += proj(P, uGA, uKey.x, uCA, 0.0, uva, ia, sza);',
-      '  if (uOn.y > 0.5) L += proj(P, uGB, uKey.y, uCB, 1.0, uvb, ib, szb);',
+      '  if (uOn.x > 0.5) L += proj(P, uGA, uKey.x, uCA, 0.0, uva, ia, sza, sa);',
+      '  if (uOn.y > 0.5) L += proj(P, uGB, uKey.y, uCB, 1.0, uvb, ib, szb, sb);',
       '  vec3 col = L * 0.9 + uAmb;',
       '  col = 1.0 - exp(-col * 1.7);',                                // curva de exposición (aprox. visual)
       '  col = pow(col, vec3(1.0/2.2));',
+      '  if (uCalib > 0.5) {',
+      '    vec3 ov = vec3(0.0);',
+      '    if (ia > 0.5) ov += calib(sa, vec3(1.0, 0.5, 0.1));',
+      '    if (ib > 0.5) ov += calib(sb, vec3(0.1, 0.75, 1.0));',
+      '    col = col * 0.5 + ov;',
+      '  }',
       '  float th = uPlane.x * 0.0018;',
       '  if (uEdges > 0.5) {',
       '    if (ia > 0.5) { float e = min(min(uva.x*sza.x,(1.0-uva.x)*sza.x), min(uva.y*sza.y,(1.0-uva.y)*sza.y));',
@@ -2124,7 +2251,7 @@ body.m .blocked { top: 48px; }
   function fit2D() {
     const pl = planeSize(), cy = centerY();
     const x0 = -pl.w / 2 - 2.4, x1 = pl.w / 2 + 0.3, y0 = -cy - 0.25, y1 = pl.h / 2 + 0.15;
-    const a = stage.clientWidth / Math.max(1, stage.clientHeight);
+    const a = vp.clientWidth / Math.max(1, vp.clientHeight);
     let w = x1 - x0, h = y1 - y0;
     if (w / h > a) h = w / a; else w = h * a;
     const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
@@ -2181,6 +2308,12 @@ body.m .blocked { top: 48px; }
     uniforms.uBlend.value = S.blend; uniforms.uGam.value = S.gamma; uniforms.uCurve.value = S.curve; uniforms.uBlack.value = S.black;
     uniforms.uEdges.value = S.edges ? 1 : 0;
     uniforms.uRef.value.set(R.w, R.h, S.showRef ? 1 : 0);
+    uniforms.uFocus.value.set(S.P[0].focus || 0, S.P[1].focus || 0);
+    uniforms.uSharp.value = S.sharp;
+    uniforms.uPhoto.value.set(S.photo.zoom, S.photo.px, S.photo.py);
+    uniforms.uCalib.value = S.calib ? 1 : 0;
+    calibPoints().forEach(function (p, k) { uniforms.uPts.value[k].set(p[0], p[1]); });
+    updateDockInfo();
     screenLight.intensity = 0.25 + 0.45 * ((S.P[0].on ? S.P[0].bright : 0) + (S.P[1].on ? S.P[1].bright : 0));
     updateSourceTransform();
     requestRender();
@@ -2206,6 +2339,9 @@ body.m .blocked { top: 48px; }
       uniforms.uSrc.value = imageTex;
     }
     updateSourceTransform();
+    const im = uniforms.uSrc.value.image;
+    const tw = im ? (im.videoWidth || im.width || 1024) : 1024, th = im ? (im.videoHeight || im.height || 512) : 512;
+    uniforms.uTexel.value.set(1 / tw, 1 / th);
     updateMediaUI();
     requestRender();
   }
@@ -2256,7 +2392,7 @@ body.m .blocked { top: 48px; }
   }
   let lastPortrait = null;
   function resize() {
-    const w = stage.clientWidth, h = stage.clientHeight;
+    const w = vp.clientWidth, h = vp.clientHeight;
     renderer.setPixelRatio(pixelRatio());
     renderer.setSize(w, h, false);
     camera.aspect = w / Math.max(1, h);
@@ -2269,7 +2405,7 @@ body.m .blocked { top: 48px; }
     fit2D(); requestRender();
   }
   window.addEventListener('resize', resize);
-  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(vp);
 
   function renderNow() {
     const t0 = performance.now();
@@ -2345,7 +2481,7 @@ body.m .blocked { top: 48px; }
   const lbl2d = document.getElementById('labels2d');
   function place2DLabels() {
     const R = ref(), cy = centerY(), pl = planeSize();
-    const W = stage.clientWidth, H = stage.clientHeight;
+    const W = vp.clientWidth, H = vp.clientHeight;
     const toPx = function (x, y) {
       return [(x - cam2d.left) / (cam2d.right - cam2d.left) * W, (cam2d.top - y) / (cam2d.top - cam2d.bottom) * H];
     };
@@ -2379,12 +2515,12 @@ body.m .blocked { top: 48px; }
     }
   };
   function misalign(p) {
-    Object.assign(p, { dx: 0.035, dy: -0.022, rot: 0.35, key: 0.012, zoom: 1.006, bright: 0.86, r: 1.07, g: 0.99, b: 0.88 });
+    Object.assign(p, { dx: 0.035, dy: -0.022, rot: 0.35, key: 0.012, zoom: 1.006, bright: 0.86, r: 1.07, g: 0.99, b: 0.88, focus: 0.3 });
   }
   function setMode(m) {
     S.mode = m;
     const d = requiredDist();
-    S.P.forEach(function (p) { Object.assign(p, { dx: 0, dy: 0, rot: 0, key: 0, zoom: 1, dist: d, bright: 1, r: 1, g: 1, b: 1 }); });
+    S.P.forEach(function (p) { Object.assign(p, { dx: 0, dy: 0, rot: 0, key: 0, zoom: 1, dist: d, bright: 1, r: 1, g: 1, b: 1, focus: 0 }); });
     if (m === 'A') { misalign(S.P[1]); S.blend = 0; S.gamma = 1; S.curve = 0; }
     if (m === 'B') { misalign(S.P[1]); S.blend = 1; S.gamma = 1; S.curve = 0; }
     if (m === 'C') { S.blend = 1; S.gamma = 2.2; S.curve = 1; if (S.overlap < 0.08) S.overlap = 0.15; }
@@ -2396,6 +2532,187 @@ body.m .blocked { top: 48px; }
     touchManual(); refreshUI(); applyState();
   }
   function touchManual() { if (S.mode !== 'B') { S.mode = 'B'; updateModeUI(); } }
+
+  /* ======================= Encuadre, enfoque y calibración ======================= */
+  // Puntos de referencia en coordenadas del panorama (s.x, v): 3 en el centro de la superposición y el centro de cada proyector
+  function calibPoints() {
+    const T = 2 - S.overlap, sx = (1 - S.overlap / 2) / T;
+    return [[sx, 0.2], [sx, 0.5], [sx, 0.8], [0.5 / T, 0.5], [(1.5 - S.overlap) / T, 0.5]];
+  }
+  // Dónde cae en la pared (m) el punto del panorama (s.x, v) proyectado por el proyector i; null si está fuera de su imagen
+  function worldOf(i, sx, v) {
+    const G = projGeo(i), T = 2 - S.overlap;
+    const u = sx * T - (i ? 1 - S.overlap : 0);
+    if (u < -1e-6 || u > 1 + 1e-6) return null;
+    const lx = (u - 0.5) * G.w * (1 + G.key * (v - 0.5)), ly = (v - 0.5) * G.h;
+    const cs = Math.cos(G.rot), sn = Math.sin(G.rot);
+    return [G.cx + cs * lx - sn * ly, G.cy + sn * lx + cs * ly];
+  }
+  // Error de alineación = separación entre las dos copias del mismo punto en la zona compartida («imagen doble»)
+  function alignError() {
+    let max = 0, n = 0;
+    calibPoints().slice(0, 3).forEach(function (p) {
+      const a = worldOf(0, p[0], p[1]), b = worldOf(1, p[0], p[1]);
+      if (a && b) { n++; max = Math.max(max, Math.hypot(a[0] - b[0], a[1] - b[1])); }
+    });
+    return n ? max : null;
+  }
+  function setTool(t) {
+    endCompare();
+    S.tool = t;
+    document.body.dataset.tool = t;
+    document.body.classList.toggle('tool-on', t !== 'ver');
+    document.querySelectorAll('[data-tool]').forEach(function (b) { b.classList.toggle('on', b.dataset.tool === t && !b.classList.contains('done')); });
+    controls.enabled = t === 'ver';
+    if (t === 'cal' && !before) markBefore(true);
+    if (t === 'cal' && !S.calibTouched) { S.calib = true; S.calibTouched = true; }
+    if (t === 'foto' && !before) markBefore(true);
+    const ht = $('hintTool');
+    ht.hidden = t === 'ver';
+    clearTimeout(setTool.ht); setTool.ht = setTimeout(function () { ht.hidden = true; }, 5000);   // la ayuda se oculta sola
+    ht.textContent = t === 'foto' ? 'Encuadre: arrastrá para mover la foto · pellizcá para ampliar o reducir'
+      : t === 'cal' ? 'Calibrar ' + (S.sel ? 'B' : 'A') + ': arrastrá para mover la proyección · pellizcá para cambiar su tamaño' : '';
+    $('hint3d').hidden = t !== 'ver' || S.view === '2d';
+    updateTouchAction();
+    setTimeout(resize, 30);
+    applyState();
+  }
+  function updateTouchAction() { canvas.style.touchAction = (S.view === '3d' || S.tool !== 'ver') ? 'none' : 'manipulation'; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function photoZoom(f) { S.photo.zoom = clamp(S.photo.zoom * f, 0.25, 8); }
+  function focusStep(p, dir) { // dir +1 = enfocar (hacia 0), -1 = desenfocar
+    const f = p.focus || 0;
+    if (dir > 0) p.focus = Math.abs(f) <= 0.1 ? 0 : f - Math.sign(f) * 0.1;
+    else p.focus = clamp((f >= 0 ? f + 0.1 : f - 0.1), -1, 1);
+    p.focus = Math.round(p.focus * 100) / 100;
+  }
+  const STEPS = [0.05, 0.01, 0.002];
+  function act(a) {
+    if (a !== 'compare') endCompare();   // ⇄ maneja la comparación él mismo (antes se reabría al tocarlo de nuevo)
+    const p = S.P[S.sel];
+    switch (a) {
+      case 'phZoomIn': photoZoom(1.25); break;
+      case 'phZoomOut': photoZoom(1 / 1.25); break;
+      case 'phCenter': S.photo.px = 0; S.photo.py = 0; break;
+      case 'phFit': S.photo = { zoom: 1, px: 0, py: 0 }; break;
+      case 'blurBoth': S.P.forEach(function (q) { focusStep(q, -1); }); break;
+      case 'focusBoth': S.P.forEach(function (q) { focusStep(q, +1); }); break;
+      case 'autoFocus': S.P.forEach(function (q) { q.focus = 0; }); toast('Auto-enfoque: A y B enfocados.'); break;
+      case 'sharpPlus': S.sharp = clamp(Math.round((S.sharp + 0.2) * 10) / 10, 0, 1); break;
+      case 'sharpMinus': S.sharp = clamp(Math.round((S.sharp - 0.2) * 10) / 10, 0, 1); break;
+      case 'step': S.step = STEPS[(STEPS.indexOf(S.step) + 1) % STEPS.length]; break;
+      case 'rotL': p.rot = clamp(p.rot + 0.1, -3, 3); touchManual(); break;
+      case 'rotR': p.rot = clamp(p.rot - 0.1, -3, 3); touchManual(); break;
+      case 'sizePlus': p.zoom = clamp(p.zoom * 1.002, 0.8, 1.2); touchManual(); break;
+      case 'sizeMinus': p.zoom = clamp(p.zoom / 1.002, 0.8, 1.2); touchManual(); break;
+      case 'focPlus': focusStep(p, +1); break;
+      case 'focMinus': focusStep(p, -1); break;
+      case 'grid': S.calib = !S.calib; break;
+      case 'misalign': Object.assign(S.P[1], { dx: S.P[1].dx + 0.04, dy: S.P[1].dy - 0.025, rot: S.P[1].rot + 0.6, zoom: S.P[1].zoom * 1.01, focus: 0.3 });
+        touchManual(); toast('B desalineado: buscá la imagen doble en la cuadrícula.'); break;
+      case 'autoAlign': autoAlign(); toast('Autoalineado: A y B vuelven a coincidir.'); return;
+      case 'reset': resetAll(); return;
+      case 'markBefore': markBefore(); return;
+      case 'compare': toggleCompare(); return;
+    }
+    refreshUI(); applyState();
+  }
+  function nudge(dx, dy) { endCompare(); const p = S.P[S.sel]; p.dx = clamp(p.dx + dx * S.step, -0.5, 0.5); p.dy = clamp(p.dy + dy * S.step, -0.5, 0.5); touchManual(); refreshUI(); applyState(); }
+  function resetAll() {
+    endCompare();
+    const keepSel = S.sel;
+    setMode('C');
+    S.photo = { zoom: 1, px: 0, py: 0 }; S.sharp = 0; S.sel = keepSel;
+    refreshUI(); applyState();
+    toast('Restablecido: geometría, enfoque y encuadre en sus valores iniciales.');
+  }
+  // ---- Antes / después ----
+  const CMP_KEYS = ['overlap', 'blend', 'gamma', 'curve', 'sharp'];
+  let before = null, comparing = null;
+  function snap() { const o = { P: JSON.parse(JSON.stringify(S.P)), photo: Object.assign({}, S.photo), mode: S.mode }; CMP_KEYS.forEach(function (k) { o[k] = S[k]; }); return o; }
+  function restore(o) { S.P = JSON.parse(JSON.stringify(o.P)); S.photo = Object.assign({}, o.photo); S.mode = o.mode; CMP_KEYS.forEach(function (k) { S[k] = o[k]; }); }
+  function markBefore(silent) { endCompare(); before = snap(); if (!silent) toast('Estado «antes» guardado. Ajustá y después tocá ⇄ para comparar.'); }
+  function toggleCompare() {
+    if (comparing) { endCompare(); return; }
+    if (!before) { toast('Primero marcá un estado «antes» (📌).'); return; }
+    comparing = snap(); restore(before);
+    $('compareBadge').hidden = false; $('compareBadge').textContent = 'ANTES — tocá ⇄ para volver a DESPUÉS';
+    $('hintTool').hidden = true;
+    document.querySelectorAll('.cmp').forEach(function (b) { b.classList.add('on'); });
+    refreshSource(); refreshUI(); applyState();
+  }
+  function endCompare() {
+    if (!comparing) return;
+    restore(comparing); comparing = null;
+    $('compareBadge').hidden = true;
+    document.querySelectorAll('.cmp').forEach(function (b) { b.classList.remove('on'); });
+    refreshSource(); refreshUI(); applyState();
+  }
+  // ---- lecturas en la barra ----
+  function updateDockInfo() {
+    const fi = $('fotoInfo'), ci = $('calInfo');
+    if (!fi || !ci) return;
+    fi.innerHTML = 'zoom ' + Math.round(S.photo.zoom * 100) + ' % · despl. ' + Math.round(S.photo.px * 100) + ' / ' + Math.round(S.photo.py * 100) + ' %<br>foco A ' +
+      (S.P[0].focus || 0).toFixed(1) + ' · B ' + (S.P[1].focus || 0).toFixed(1) + ' · nitidez ' + Math.round(S.sharp * 100) + ' %';
+    const p = S.P[S.sel], e = alignError();
+    ci.innerHTML = (S.sel ? 'B' : 'A') + ': X ' + cm(p.dx) + ' · Y ' + cm(p.dy) + ' · ' + p.rot.toFixed(2) + '° · ' + (p.zoom * 100).toFixed(1) + ' % · foco ' + (p.focus || 0).toFixed(1) +
+      '<br>' + (e === null ? 'sin zona compartida' : 'imagen doble: <span class="' + (e < 0.003 ? 'good' : 'bad') + '">' + (e * 1000).toFixed(0) + ' mm</span>' + (e < 0.003 ? ' ✔ alineado' : ''));
+    $('stepBtn').textContent = 'Paso ' + (S.step >= 0.01 ? (S.step * 100) + ' cm' : (S.step * 1000) + ' mm');
+    $('gridBtn').classList.toggle('on', S.calib);
+    document.querySelectorAll('[data-sel]').forEach(function (b) { b.classList.toggle('on', +b.dataset.sel === S.sel); });
+  }
+  // ---- gestos sobre la vista en modo Encuadre / Calibrar ----
+  const ray = new THREE.Raycaster(), wallPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), ndc = new THREE.Vector2();
+  function wallPoint(x, y) { // punto de la pared (m) bajo el dedo, en la vista actual
+    const r = canvas.getBoundingClientRect();
+    ndc.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height * 2 - 1));
+    ray.setFromCamera(ndc, S.view === '2d' ? cam2d : camera);
+    const hit = new THREE.Vector3();
+    return ray.ray.intersectPlane(wallPlane, hit) ? hit : null;
+  }
+  const ptrs = new Map(); let gesture = null;
+  function gestureState() {
+    const pts = Array.from(ptrs.values());
+    if (pts.length === 1) return { n: 1, w: wallPoint(pts[0].x, pts[0].y) };
+    const a = pts[0], b = pts[1];
+    return { n: 2, w: wallPoint((a.x + b.x) / 2, (a.y + b.y) / 2), d: Math.hypot(a.x - b.x, a.y - b.y) };
+  }
+  canvas.addEventListener('pointerdown', function (e) {
+    if (S.tool === 'ver') return;
+    endCompare();
+    canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    gesture = gestureState();
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (S.tool === 'ver' || !ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const g = gestureState();
+    if (!gesture || g.n !== gesture.n) { gesture = g; return; }
+    if (g.w && gesture.w) {
+      const dx = g.w.x - gesture.w.x, dy = g.w.y - gesture.w.y, R = ref(), Wc = R.w * (2 - S.overlap);
+      if (S.tool === 'foto') { S.photo.px += dx / Wc / S.photo.zoom; S.photo.py += dy / R.h / S.photo.zoom; }
+      else { const p = S.P[S.sel]; p.dx = clamp(p.dx + dx, -0.5, 0.5); p.dy = clamp(p.dy + dy, -0.5, 0.5); touchManual(); }
+    }
+    if (g.n === 2 && gesture.d > 10) {
+      const f = g.d / gesture.d;
+      if (S.tool === 'foto') photoZoom(f);
+      else { const p = S.P[S.sel]; p.zoom = clamp(p.zoom * Math.pow(f, 0.25), 0.8, 1.2); }   // tamaño fino: pellizco suavizado
+    }
+    gesture = g;
+    applyState(); refreshSlidersSoon();
+  });
+  function endPtr(e) { ptrs.delete(e.pointerId); gesture = ptrs.size ? gestureState() : null; }
+  canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
+  canvas.addEventListener('wheel', function (e) {
+    if (S.tool === 'ver') return;
+    e.preventDefault();
+    const f = Math.exp(-e.deltaY * 0.0015);
+    if (S.tool === 'foto') photoZoom(f); else { const p = S.P[S.sel]; p.zoom = clamp(p.zoom * Math.pow(f, 0.25), 0.8, 1.2); }
+    applyState(); refreshSlidersSoon();
+  }, { passive: false });
+  let slTimer = 0;
+  function refreshSlidersSoon() { clearTimeout(slTimer); slTimer = setTimeout(function () { sliders.forEach(function (s) { s.refresh(); }); }, 120); }
 
   /* ======================= Interfaz ======================= */
   const $ = function (id) { return document.getElementById(id); };
@@ -2537,6 +2854,7 @@ body.m .blocked { top: 48px; }
       h('Alineación geométrica básica');
       slider(box, { id: 'r' + i, label: 'Rotación', min: -3, max: 3, step: 0.01, reset: 0, calib: true, get: function () { return P().rot; }, set: function (v) { P().rot = v; }, fmt: function (v) { return v.toFixed(2) + '°'; } });
       slider(box, { id: 'k' + i, label: 'Trapecio vertical (keystone)', min: -0.1, max: 0.1, step: 0.001, reset: 0, calib: true, get: function () { return P().key; }, set: function (v) { P().key = v; }, fmt: function (v) { return (v * 100).toFixed(1) + ' %'; } });
+      slider(box, { id: 'f' + i, label: 'Enfoque óptico (anillo, 0 = nítido)', min: -1, max: 1, step: 0.01, reset: 0, calib: true, get: function () { return P().focus || 0; }, set: function (v) { P().focus = v; }, fmt: function (v) { return (v > 0 ? '+' : '') + v.toFixed(2); } });
       h('Brillo y color');
       slider(box, { id: 'b' + i, label: 'Brillo', min: 0, max: 1.5, step: 0.01, reset: 1, calib: true, get: function () { return P().bright; }, set: function (v) { P().bright = v; }, fmt: pct });
       ['r', 'g', 'b'].forEach(function (c, ci) {
@@ -2547,6 +2865,24 @@ body.m .blocked { top: 48px; }
       box.appendChild(br);
     });
 
+    // herramientas
+    document.querySelectorAll('[data-tool]').forEach(function (b) { b.addEventListener('click', function () { setTool(b.dataset.tool); }); });
+    document.querySelectorAll('[data-act]').forEach(function (b) { b.addEventListener('click', function () { act(b.dataset.act); }); });
+    document.querySelectorAll('[data-sel]').forEach(function (b) { b.addEventListener('click', function () { S.sel = +b.dataset.sel; setTool('cal'); }); });
+    // flechas: un toque = un paso; mantener apretado = repetir
+    document.querySelectorAll('[data-nudge]').forEach(function (b) {
+      const d = b.dataset.nudge.split(',').map(Number); let t1 = 0, t2 = 0;
+      const stop = function () { clearTimeout(t1); clearInterval(t2); };
+      b.addEventListener('pointerdown', function (e) { e.preventDefault(); nudge(d[0], d[1]); t1 = setTimeout(function () { t2 = setInterval(function () { nudge(d[0], d[1]); }, 70); }, 380); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { b.addEventListener(ev, stop); });
+      b.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nudge(d[0], d[1]); } });
+    });
+    // panel: encuadre y enfoque
+    const ph = $('photoCtl');
+    slider(ph, { id: 'phZoom', label: 'Zoom de la foto (contenido)', min: 0.25, max: 8, step: 0.01, reset: 1, get: function () { return S.photo.zoom; }, set: function (v) { S.photo.zoom = v; }, fmt: function (v) { return Math.round(v * 100) + ' %'; } });
+    slider(ph, { id: 'phX', label: 'Desplazar foto horizontal', min: -1, max: 1, step: 0.005, reset: 0, get: function () { return S.photo.px; }, set: function (v) { S.photo.px = v; }, fmt: pct });
+    slider(ph, { id: 'phY', label: 'Desplazar foto vertical', min: -1, max: 1, step: 0.005, reset: 0, get: function () { return S.photo.py; }, set: function (v) { S.photo.py = v; }, fmt: pct });
+    slider(ph, { id: 'sharp', label: 'Nitidez digital (procesado)', min: 0, max: 1, step: 0.05, reset: 0, get: function () { return S.sharp; }, set: function (v) { S.sharp = v; }, fmt: pct });
     $('help').addEventListener('click', function () { $('helpBox').hidden = !$('helpBox').hidden; });
     $('helpBox').addEventListener('click', function () { $('helpBox').hidden = true; });
   }
@@ -2579,7 +2915,8 @@ body.m .blocked { top: 48px; }
     S.view = v; lbl2d.hidden = v !== '2d'; $('hint3d').hidden = v === '2d';
     if (v === '2d') fit2D();
     // En 3D el canvas usa los gestos (girar/zoom); en 2D el navegador conserva sus gestos normales
-    canvas.style.touchAction = v === '3d' ? 'none' : 'manipulation';
+    updateTouchAction();
+    $('hint3d').hidden = v === '2d' || S.tool !== 'ver';
     updateTopbar(); requestRender();
   }
 
@@ -2804,6 +3141,16 @@ body.m .blocked { top: 48px; }
   window.DPL = {
     S: S, apply: function () { refreshSource(); refreshUI(); applyState(); }, setMode: setMode, setView: setView, camPreset: camPreset,
     projGeo: projGeo, ref: ref, centerY: centerY, samplePixels: samplePixels, screenToCanvas: screenToCanvas,
+    // lee una franja de píxeles (fracciones del lienzo, y desde arriba) justo después de renderizar: para medir nitidez y desplazamientos
+    readRect: function (fx, fy, fw, fh) {
+      renderNow();
+      const gl = renderer.getContext(), c = renderer.domElement;
+      const x = Math.floor(fx * c.width), w = Math.max(1, Math.floor(fw * c.width)), h = Math.max(1, Math.floor(fh * c.height));
+      const y = Math.floor((1 - fy - fh) * c.height);
+      const px = new Uint8Array(w * h * 4); gl.readPixels(x, y, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return { w: w, h: h, data: Array.from(px), cw: c.width, ch: c.height };
+    },
+    setTool: setTool, act: act, nudge: nudge, alignError: alignError, worldOf: worldOf, calibPoints: calibPoints,
     camState: function () { return { pos: camera.position.toArray(), target: controls.target.toArray(), dist: camera.position.distanceTo(controls.target) }; },
     srcSize: function () { const im = uniforms.uSrc.value.image; return im ? [im.videoWidth || im.width, im.videoHeight || im.height] : null; },
     renderNow: renderNow, uniforms: uniforms, video: video, srcCanvas: srcCanvas, stats: function () { return { fps: fps, lastRenderMs: lastRenderMs, info: renderer.info.render, mem: renderer.info.memory }; }
@@ -2829,6 +3176,7 @@ body.m .blocked { top: 48px; }
   applyState();
   camPreset('front', true);
   setView('3d');
+  setTool('ver');
   requestAnimationFrame(loop);
   document.body.classList.add('ready');
 })();

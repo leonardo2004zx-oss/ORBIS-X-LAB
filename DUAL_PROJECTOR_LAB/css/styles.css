@@ -42,7 +42,9 @@ button, select, input { font: inherit; color: inherit; }
 .wide { width: 100%; }
 select { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 
-#stage { position: relative; overflow: hidden; min-height: 0; background: #000; }
+#stage { position: relative; overflow: hidden; overflow: clip; min-height: 0; min-width: 0; background: #000; display: flex; flex-direction: column; }
+/* la vista ocupa el espacio libre; las barras de herramientas van debajo y nunca la tapan */
+#viewport { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 #gl { width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
 .hud { position: absolute; top: 10px; left: 10px; display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; }
 .chip, .badge { background: rgba(10, 12, 20, .75); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; backdrop-filter: blur(4px); }
@@ -158,8 +160,9 @@ body.m #panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 
 body.m.sheet-open #panel { transform: none; }
 /* la animación solo después de arrancar, para que el panel no "pase" por la pantalla al cargar */
 body.m.ready #panel { transition: transform .22s ease; }
-body.m .mbar { display: flex; position: absolute; z-index: 8; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px));
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px)); gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+body.m .mbar { display: flex; flex: 0 0 auto; gap: 6px; overflow-x: auto; scrollbar-width: none; background: var(--panel);
+  border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+body.m.tool-on .mbar { display: none; }
 body.m .mbar::-webkit-scrollbar { display: none; }
 .mbtn, .mgroup button { flex: 0 0 auto; min-height: 46px; min-width: 46px; padding: 0 14px; border-radius: 12px; font-size: 15px; cursor: pointer;
   background: rgba(21, 24, 38, .9); border: 1px solid var(--line); color: var(--text); backdrop-filter: blur(6px); }
@@ -174,7 +177,7 @@ body.m #fps { display: none; }
 body.m .helpbox { inset: 50px 8px auto 8px; width: auto; }
 body.m .blocked { top: 48px; }
 /* vertical: la barra táctil se acomoda en dos filas para que todo quede a la vista */
-@media (orientation: portrait) { body.m .mbar { flex-wrap: wrap; justify-content: center; overflow: visible; } }
+@media (orientation: portrait) { body.m .mbar, body.m .dock { flex-wrap: wrap; justify-content: center; overflow-x: visible; } body.m .dock { max-height: 42vh; overflow-y: auto; } }
 /* pantalla horizontal baja: se oculta la barra superior para dar todo el alto al simulador */
 @media (max-height: 500px) { body.m #topbar { display: none; } }
 /* controles grandes para dedos */
@@ -199,4 +202,44 @@ body.m .blocked { top: 48px; }
   .brand small { display: none; }
   .hint { display: none; }
   body.panel-hidden #app { grid-template-columns: 1fr; }
+}
+
+/* ---------- Barra de herramientas (Ver / Encuadre / Calibrar) ---------- */
+.dock { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: thin; background: var(--panel);
+  border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+.dock button, .dgroup button { flex: 0 0 auto; min-height: 40px; min-width: 40px; padding: 0 12px; border-radius: 10px; cursor: pointer; font-size: 14px;
+  background: var(--panel2); border: 1px solid var(--line); color: var(--text); white-space: nowrap; }
+.dock button:hover { border-color: #3a4166; }
+.dock button:active { transform: scale(.96); }
+.dgroup { flex: 0 0 auto; display: flex; gap: 2px; padding: 2px; border-radius: 12px; background: #0a0b12; border: 1px solid var(--line); }
+.dgroup button { border: 0; background: transparent; color: var(--muted); }
+.dgroup button.on { background: var(--panel2); color: var(--accent); box-shadow: inset 0 0 0 1px #3a4166; }
+.selp button.on.pa { color: var(--a); } .selp button.on.pb { color: var(--b); }
+.dpane { display: none; align-items: center; gap: 6px; flex: 0 0 auto; }
+body[data-tool="foto"] .dpane[data-pane="foto"], body[data-tool="cal"] .dpane[data-pane="cal"] { display: flex; }
+.dlabel { flex: 0 0 auto; font-size: 11.5px; line-height: 1.15; color: var(--muted); text-align: right; padding-left: 6px; border-left: 1px solid var(--line); margin-left: 4px; }
+.dlabel small { color: #6c7290; }
+.dinfo { flex: 0 0 auto; font: 12px/1.3 Consolas, ui-monospace, monospace; color: var(--text); padding: 0 6px; white-space: nowrap; }
+.dinfo .bad { color: #ff7d95; } .dinfo .good { color: var(--ok); }
+.dock button.cmp.on { background: #3a3018; border-color: var(--accent); color: var(--accent); }
+.dock button.on { border-color: var(--accent); color: var(--accent); }
+.dock .done { display: none; }
+body.m.tool-on .dock .done { display: inline-block; border-color: var(--ok); color: var(--ok); }
+body.m:not(.tool-on) .dock { display: none; }
+body.m .dock .dsel { display: none; }
+.cmpbadge { position: absolute; bottom: 10px; left: 50%; max-width: 92%; text-align: center; transform: translateX(-50%); z-index: 4; padding: 4px 16px; border-radius: 999px; font-weight: 700;
+  letter-spacing: .1em; background: rgba(58, 48, 24, .92); color: var(--accent); border: 1px solid var(--accent); pointer-events: none; }
+.mbtn.tool { border-color: #3a4166; }
+#hintTool { color: var(--accent); }
+@media (pointer: coarse) { .dock button, .dgroup button { min-height: 46px; min-width: 46px; font-size: 15px; } }
+body.m #hintTool:not([hidden]) { display: block; bottom: 6px; white-space: normal; text-align: center; }
+
+body:not(.m) .dock { flex-wrap: wrap; overflow-x: visible; }
+body:not(.m) .dpane { flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+@media (orientation: portrait) {
+  body.m .dpane { flex-wrap: wrap; justify-content: center; flex: 1 1 100%; min-width: 0; }
+  body.m .dock button, body.m .dgroup button { min-height: 44px; min-width: 44px; padding: 0 10px; font-size: 14px; }
+  body.m .dlabel { flex: 1 1 100%; text-align: center; border-left: 0; margin: 2px 0 0; padding: 0; }
+  body.m .dlabel br { display: none; }
+  body.m .dinfo { flex: 1 1 100%; text-align: center; white-space: normal; }
 }

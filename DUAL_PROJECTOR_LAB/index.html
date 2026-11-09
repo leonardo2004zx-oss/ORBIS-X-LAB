@@ -35,6 +35,7 @@
   </header>
 
   <main id="stage">
+   <div id="viewport">
     <canvas id="gl" aria-label="Vista del simulador"></canvas>
     <div id="labels2d" hidden></div>
     <div class="hud">
@@ -47,18 +48,8 @@
       (menú <b>⋮</b> → <b>Abrir en Chrome</b> o <b>Abrir en el navegador</b>).
       <span class="row2"><button id="wvCopy" class="btn small">Copiar enlace</button><button id="wvClose" class="btn small">Cerrar</button></span>
     </div>
-    <!-- Barra táctil (celular): modos, vistas, carga de archivos, pantalla completa y ajustes -->
-    <div id="mbar" class="mbar">
-      <div class="mgroup"><button data-mode="A">A</button><button data-mode="B">B</button><button data-mode="C">C</button></div>
-      <button id="mView" class="mbtn">2D</button>
-      <button id="mTech" class="mbtn">Técnica</button>
-      <button id="mReset" class="mbtn" title="Volver a la vista inicial">⟲ Inicio</button>
-      <div class="mbtn filebtn" id="mVideo">🎬 Video<input type="file" data-kind="video" aria-label="Cargar video" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.3gp"></div>
-      <div class="mbtn filebtn" id="mImage">🖼 Imagen<input type="file" data-kind="image" aria-label="Cargar imagen" accept="image/*"></div>
-      <button id="mFull" class="mbtn" title="Pantalla completa horizontal">⛶</button>
-      <button id="mPanel" class="mbtn accent">⚙ Ajustes</button>
-    </div>
     <div id="hint3d" class="hint">Arrastrá: girar · Rueda: acercar · Clic derecho: desplazar · W A S D / Q E: caminar (con la vista seleccionada)</div>
+    <div id="hintTool" class="hint" hidden></div>
     <div id="toast" class="toast" hidden></div>
     <div id="dropZone" class="dropzone" hidden>Soltá el video o la imagen acá</div>
     <div id="pickBlocked" class="blocked" role="alert" hidden>
@@ -89,6 +80,53 @@
     <div id="nogl" class="nogl" hidden>
       <h2>Este navegador no pudo iniciar WebGL</h2>
       <p>Actualizá Chrome o Edge y activá la “aceleración por hardware” en la configuración.</p>
+    </div>
+    <div id="compareBadge" class="cmpbadge" hidden>ANTES</div>
+   </div>
+    <!-- Herramientas: quedan DEBAJO de la vista (no la tapan) -->
+    <div id="tooldock" class="dock">
+      <div class="dgroup dsel" role="tablist" aria-label="Herramienta">
+        <button data-tool="ver" title="Girar y mirar la sala">👁 Ver</button>
+        <button data-tool="foto" title="Encuadre, zoom y enfoque de la foto">🔍 Encuadre</button>
+        <button data-tool="cal" title="Calibrar y alinear A y B">🎯 Calibrar</button>
+      </div>
+      <div class="dpane" data-pane="foto">
+        <span class="dlabel">Zoom de la foto<br><small>(contenido)</small></span>
+        <button data-act="phZoomOut" title="Reducir">−</button><button data-act="phZoomIn" title="Ampliar">+</button>
+        <button data-act="phCenter">⌖ Centrar</button><button data-act="phFit">⤢ Ajustar</button>
+        <span class="dlabel">Enfoque óptico<br><small>(simulado, A y B)</small></span>
+        <button data-act="blurBoth">◌ Desenfocar</button><button data-act="focusBoth">◉ Enfocar</button><button data-act="autoFocus">Auto-enfocar</button>
+        <span class="dlabel">Nitidez digital<br><small>(procesado)</small></span>
+        <button data-act="sharpMinus">−</button><button data-act="sharpPlus">+</button>
+        <button data-act="compare" class="cmp">⇄ Antes/Después</button><button data-act="reset">↺ Restablecer</button>
+        <span id="fotoInfo" class="dinfo"></span>
+      </div>
+      <div class="dpane" data-pane="cal">
+        <div class="dgroup selp"><button data-sel="0" class="pa">A</button><button data-sel="1" class="pb">B</button></div>
+        <button data-act="step" id="stepBtn">Paso 1 cm</button>
+        <button data-nudge="-1,0" title="Mover a la izquierda">◀</button><button data-nudge="0,1" title="Mover arriba">▲</button><button data-nudge="0,-1" title="Mover abajo">▼</button><button data-nudge="1,0" title="Mover a la derecha">▶</button>
+        <button data-act="rotL" title="Girar a la izquierda">⟲</button><button data-act="rotR" title="Girar a la derecha">⟳</button>
+        <button data-act="sizeMinus" title="Achicar la proyección">− tamaño</button><button data-act="sizePlus" title="Agrandar la proyección">+ tamaño</button>
+        <button data-act="focMinus" title="Desenfocar este proyector">◌ foco</button><button data-act="focPlus" title="Enfocar este proyector">◉ foco</button>
+        <button data-act="grid" id="gridBtn">▦ Cuadrícula</button>
+        <button data-act="misalign">↯ Desalinear</button><button data-act="autoAlign">⌖ Autoalinear</button><button data-act="reset">↺ Restablecer</button>
+        <button data-act="markBefore">📌 Marcar «antes»</button><button data-act="compare" class="cmp">⇄ Antes/Después</button>
+        <span id="calInfo" class="dinfo"></span>
+      </div>
+      <button data-tool="ver" class="done">✓ Listo</button>
+    </div>
+    <!-- Barra táctil (celular): modos, vistas, carga de archivos, pantalla completa y ajustes -->
+    <div id="mbar" class="mbar">
+      <div class="mgroup"><button data-mode="A">A</button><button data-mode="B">B</button><button data-mode="C">C</button></div>
+      <button id="mView" class="mbtn">2D</button>
+      <button id="mTech" class="mbtn">Técnica</button>
+      <button id="mReset" class="mbtn" title="Volver a la vista inicial">⟲ Inicio</button>
+      <div class="mbtn filebtn" id="mVideo">🎬 Video<input type="file" data-kind="video" aria-label="Cargar video" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.3gp"></div>
+      <div class="mbtn filebtn" id="mImage">🖼 Imagen<input type="file" data-kind="image" aria-label="Cargar imagen" accept="image/*"></div>
+      <button class="mbtn tool" data-tool="foto" title="Encuadre, zoom y enfoque de la foto">🔍 Encuadre</button>
+      <button class="mbtn tool" data-tool="cal" title="Calibrar y alinear A y B">🎯 Calibrar</button>
+      <button id="mFull" class="mbtn" title="Pantalla completa horizontal">⛶</button>
+      <button id="mPanel" class="mbtn accent">⚙ Ajustes</button>
     </div>
   </main>
 
@@ -123,6 +161,8 @@
         <div class="row2"><button id="vPlay" class="btn small">▶ Reproducir</button><button id="vMute" class="btn small">🔇</button></div>
         <input type="range" id="vSeek" min="0" max="1000" value="0"><span id="vTime" class="mono small">0:00</span>
       </div>
+      <h4>Encuadre y enfoque de la foto</h4>
+      <div id="photoCtl"></div>
       <label id="fitRow" class="inline" hidden>Ajuste a la pantalla
         <select id="fit"><option value="cover">Recortar (llenar)</option><option value="contain">Encajar completo</option><option value="stretch">Estirar</option></select>
       </label>
