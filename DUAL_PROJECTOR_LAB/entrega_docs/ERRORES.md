@@ -1,5 +1,15 @@
 # ERRORES — DUAL PROJECTOR LAB
 
+## 0. Publicación pública en GitHub Pages bloqueada (ABIERTO)
+- Intento: crear la rama `gh-pages` (solo `index.html`, `css/`, `js/`, `vendor/`, `.nojekyll`) y enviarla al repositorio público, ruta estándar para que GitHub publique `https://leonardo2004zx-oss.github.io/ORBIS-X-LAB/`.
+- Resultado: el sistema de permisos del entorno de Claude Code lo rechazó con el motivo «Create Public Surface». No se envió nada.
+- Además, desde este entorno no se puede abrir `*.github.io` (el proxy de red lo rechaza), así que tampoco se podría verificar la URL publicada sin habilitar ese host.
+- Qué hace falta: que el usuario autorice explícitamente esa acción (regla de permiso para el envío a `gh-pages`), o que active GitHub Pages él mismo: repositorio → Settings → Pages → «Deploy from a branch» → rama `ccr-c47ef91f-l1boq4`, carpeta `/ (root)`, y abrir `https://leonardo2004zx-oss.github.io/ORBIS-X-LAB/DUAL_PROJECTOR_LAB/`.
+
+## 0b. Botones de carga en el celular: causa más probable
+En Android, cuando una página se abre **dentro de otra app** (el visor de Claude, de una red social, etc.) se usa un *WebView*. En un WebView, `<input type="file">` solo abre la galería si la app anfitriona implementa `onShowFileChooser`; si no, el toque no hace nada y la página no recibe ningún error. Eso coincide con lo informado: el 3D y la rotación funcionan, pero los botones no.
+Mitigación en v4: (1) si el navegador se identifica como WebView (`; wv)` en el agente de usuario, o apps conocidas) aparece un aviso para abrir el enlace en Chrome con botón «Copiar enlace»; (2) si al tocar el botón la página no pierde el foco ni se oculta en 1,5 s, aparece un aviso específico de celular. En Chrome de Android real se espera que funcione, pero **no se probó en un teléfono físico**.
+
 ## 1. Los botones «Cargar video local» y «Cargar imagen» no abren el selector (ABIERTO en el entorno del usuario)
 
 **Síntoma (informado por el usuario):** al pulsar los botones no aparece el selector de archivos. La sala 3D y la rotación funcionan.

@@ -48,6 +48,14 @@ La vista 2D y la 3D usan **el mismo material**, por eso muestran exactamente el 
 - Sin sombras, sin postprocesado, materiales Lambert, butacas instanciadas.
 - Sin bloqueo del puntero.
 
+## Versión para celular (v4)
+- `body.m` se activa con puntero táctil (`pointer: coarse`) o ancho ≤ 900 px. Cambia el diseño: barra táctil `#mbar`, panel como hoja lateral, barra superior oculta en horizontal baja.
+- OrbitControls con `touches = { ONE: ROTATE, TWO: DOLLY_PAN }`.
+- `resize()` recalcula el ángulo de cámara (50° horizontal / 72° vertical) y re-encuadra al girar.
+- `adaptQuality()` mide el tiempo entre cuadros seguidos y baja la calidad si va lenta.
+- Carga: `handleFile()` única; imágenes por `FileReader` → `data:` y reducción en canvas si superan la textura máxima; video por `blob:` (reintento `data:`), con lienzo reducido para resoluciones grandes (`setupVideoTexture()` / `drawVideoFrame()`).
+- `isInAppWebView()` detecta WebView de Android y muestra `#wvBanner`.
+
 ## Funciones implementadas
 - Sala de cine 3D: pantalla, dos proyectores con soporte, haces de luz, butacas, sillón, persona de 1,75 m, tiras LED.
 - Vistas: frontal 3D, técnica 3D (haces de color y contornos), desde el sillón, 2D de calibración. Recorrido con mouse y W A S D / Q E.

@@ -1,5 +1,12 @@
 # INSTRUCCIONES — DUAL PROJECTOR LAB
 
+## Abrir desde el celular (Android)
+1. Abrir **https://claude.ai/artifact/GiqKcVsBmUsEG7sc6aYj76** en **Chrome** (no dentro de la app de Claude ni de otra app). Requiere haber iniciado sesión en claude.ai con la cuenta dueña, salvo que se comparta desde «Compartir».
+2. Girar el teléfono (horizontal) o tocar ⛶. Un dedo gira, dos dedos acercan.
+3. 🖼 Imagen / 🎬 Video abren la galería. ⚙ Ajustes despliega los controles de A, B y Edge Blending.
+4. Si aparece el aviso «Estás dentro de un visor integrado…», usar «Copiar enlace» y pegarlo en Chrome.
+5. Versión pública (GitHub Pages): pendiente de autorización; ver URL_PUBLICADA.md.
+
 ## Ejecutar (Windows, sin instalar nada)
 1. Copiar la carpeta `CODIGO_FUENTE` (o `DUAL_PROJECTOR_LAB`) a la PC, por ejemplo `C:\DUAL_PROJECTOR_LAB`.
 2. Doble clic en `INICIAR.bat`, o en `index.html`, o en `DUAL_PROJECTOR_LAB_un_archivo.html`.
@@ -32,6 +39,7 @@ Requiere Node.js 18+ y Playwright (`npm i playwright` y `npx playwright install 
 node tests/verify.js                                   # 27 pruebas (abre index.html por file://)
 node tests/verify.js http://localhost:8000/index.html  # las mismas por HTTP
 node tests/carga_archivos.js file:///RUTA/index.html - tests/capturas file
+node tests/movil.js http://localhost:8000/index.html tests/capturas   # 20 pruebas de celular (Pixel 7 emulado)
 ```
 En Linux sin pantalla, anteponer `xvfb-run -a` a `carga_archivos.js` (usa navegador visible).
 Las capturas quedan en `tests/capturas/`.

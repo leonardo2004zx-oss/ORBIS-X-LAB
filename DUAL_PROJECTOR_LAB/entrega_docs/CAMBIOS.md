@@ -2,7 +2,21 @@
 
 Rama: `ccr-c47ef91f-l1boq4` · PR #2 en `leonardo2004zx-oss/ORBIS-X-LAB`
 
-## v3 — 7248143 (versión actual)
+## v4 — ba93eb4 (versión actual): versión para celular
+- Barra táctil inferior: modos A/B/C, 2D/3D, Técnica/Frontal, ⟲ Inicio, 🎬 Video, 🖼 Imagen, ⛶ pantalla completa, ⚙ Ajustes. Botones ≥ 44 px.
+- Panel de ajustes como hoja lateral desplegable (se abre con ⚙, se cierra con ✕). Incluye calidad gráfica y «ajustar sola».
+- Gestos: un dedo gira, dos dedos acercan/alejan y desplazan. En 2D el navegador conserva sus gestos (`touch-action` según la vista).
+- Pantalla completa con intento de bloqueo en horizontal (`screen.orientation.lock`), con aviso si el visor no lo permite.
+- Botón «⟲ Vista inicial» también en escritorio.
+- Al girar el teléfono se re-encuadra la cámara; en vertical se abre el ángulo (72°) en vez de alejar la cámara. En vertical la barra se acomoda en dos filas.
+- Calidad adaptable: si durante una interacción 25 cuadros tardan > 50 ms, baja un nivel (Alta→Media→Baja) y avisa.
+- Carga de archivos: un mismo manejador para todos los `<input type=file data-kind>`; detector de bloqueo también por `visibilitychange` (Android); aviso de WebView; extensiones `.3gp`, `.heic`.
+- Fotos grandes (ej. 24 MP) se reducen al tamaño máximo de textura (4096, o 2048 en calidad baja). Videos de más de 1080p (720p en baja) se dibujan en un lienzo reducido en vez de subir 4K a la GPU en cada cuadro.
+- Mensajes de error claros: códec no compatible (HEVC/H.265), archivo dañado, HEIC no compatible, pantalla completa no permitida.
+- Nueva prueba `tests/movil.js` (20 pruebas, Pixel 7 emulado con toques reales del protocolo de Chrome).
+- `tests/verify.js`: los selectores de modo ahora apuntan a `#panel [data-mode]` (hay botones de modo duplicados en la barra táctil).
+
+## v3 — 7248143
 Respecto de v2. Solo se tocó la carga de archivos; el simulador 3D/2D no cambió.
 - **Botones de carga:** el `<input type="file">` real ahora está *dentro* de cada botón, transparente y del mismo tamaño. El clic del usuario cae directamente sobre el input (sin `label` ni `.click()` por código).
 - **Detector de bloqueo:** si el selector no se abre, aparece un aviso (`#pickBlocked`) con alternativas.
