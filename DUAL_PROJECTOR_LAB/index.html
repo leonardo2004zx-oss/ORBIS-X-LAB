@@ -2,7 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07080d">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Dual Projector Lab</title>
 <meta name="description" content="Simulador de Edge Blending con dos proyectores formando una pantalla gigante.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 20%22%3E%3Crect width=%2220%22 height=%2218%22 rx=%223%22 fill=%22%23ffa050%22/%3E%3Crect x=%2212%22 width=%2220%22 height=%2218%22 rx=%223%22 fill=%22%234fb8ff%22 opacity=%22.85%22/%3E%3C/svg%3E">
@@ -19,6 +21,7 @@
       <button id="btn2d" class="btn">Vista 2D</button>
       <button id="btnFT" class="btn">Vista técnica</button>
       <button id="btnSeat" class="btn">🛋 Sillón</button>
+      <button id="btnReset" class="btn" title="Volver a la vista inicial">⟲ Vista inicial</button>
       <label class="q">Calidad
         <select id="quality">
           <option value="low">Baja (PC liviana)</option>
@@ -39,16 +42,36 @@
       <span id="viewName" class="chip">Vista</span>
       <span id="fps" class="chip mono">– fps</span>
     </div>
+    <div id="wvBanner" class="wvbanner" role="alert" hidden>
+      <b>Estás dentro de un visor integrado de una app.</b> Si los botones de video o imagen no abren la galería, abrí este enlace directamente en Chrome
+      (menú <b>⋮</b> → <b>Abrir en Chrome</b> o <b>Abrir en el navegador</b>).
+      <span class="row2"><button id="wvCopy" class="btn small">Copiar enlace</button><button id="wvClose" class="btn small">Cerrar</button></span>
+    </div>
+    <!-- Barra táctil (celular): modos, vistas, carga de archivos, pantalla completa y ajustes -->
+    <div id="mbar" class="mbar">
+      <div class="mgroup"><button data-mode="A">A</button><button data-mode="B">B</button><button data-mode="C">C</button></div>
+      <button id="mView" class="mbtn">2D</button>
+      <button id="mTech" class="mbtn">Técnica</button>
+      <button id="mReset" class="mbtn" title="Volver a la vista inicial">⟲ Inicio</button>
+      <div class="mbtn filebtn" id="mVideo">🎬 Video<input type="file" data-kind="video" aria-label="Cargar video" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.3gp"></div>
+      <div class="mbtn filebtn" id="mImage">🖼 Imagen<input type="file" data-kind="image" aria-label="Cargar imagen" accept="image/*"></div>
+      <button id="mFull" class="mbtn" title="Pantalla completa horizontal">⛶</button>
+      <button id="mPanel" class="mbtn accent">⚙ Ajustes</button>
+    </div>
     <div id="hint3d" class="hint">Arrastrá: girar · Rueda: acercar · Clic derecho: desplazar · W A S D / Q E: caminar (con la vista seleccionada)</div>
     <div id="toast" class="toast" hidden></div>
     <div id="dropZone" class="dropzone" hidden>Soltá el video o la imagen acá</div>
     <div id="pickBlocked" class="blocked" role="alert" hidden>
       <b>El visor donde abriste la página no dejó abrir el selector de archivos.</b>
       <p>No es un error de la aplicación: algunos visores integrados lo bloquean. Podés cargar el archivo de otra forma:</p>
-      <ol>
+      <ol id="pbDesk">
         <li><b>Arrastrá</b> el video o la imagen desde el Explorador de Windows y soltalo sobre esta vista.</li>
         <li>O copialo en el Explorador (<b>Ctrl+C</b>), hacé clic acá y pegalo con <b>Ctrl+V</b>.</li>
         <li>O abrí la versión local: carpeta <b>DUAL_PROJECTOR_LAB</b> → doble clic en <b>INICIAR.bat</b> (se abre en Chrome/Edge, donde el botón funciona).</li>
+      </ol>
+      <ol id="pbMobile" hidden>
+        <li>Abrí este mismo enlace directamente en <b>Chrome</b>: menú <b>⋮</b> → <b>Abrir en Chrome</b>. Los visores dentro de otras apps (por ejemplo, el de Claude o el de una red social) suelen bloquear la galería.</li>
+        <li>En Chrome, tocá de nuevo <b>🎬 Video</b> o <b>🖼 Imagen</b>.</li>
       </ol>
       <button id="pickBlockedClose" class="btn small">Entendido</button>
     </div>
@@ -69,7 +92,13 @@
     </div>
   </main>
 
-  <aside id="panel">
+  <aside id="panel" aria-label="Ajustes">
+    <div class="sheethead"><b>Ajustes</b><button id="panelClose" class="btn small">✕ Cerrar</button></div>
+    <section class="mobile-only">
+      <h3>Calidad gráfica</h3>
+      <select id="quality2" class="wide"><option value="low">Baja (más fluida)</option><option value="medium">Media</option><option value="high">Alta</option></select>
+      <label class="check"><input type="checkbox" id="autoQ" checked> Ajustar sola si va lenta</label>
+    </section>
     <section>
       <h3>Modo de unión</h3>
       <div class="seg modes">
@@ -85,8 +114,8 @@
       <select id="source" class="wide"></select>
       <div class="row2">
         <!-- El <input type="file"> real cubre todo el botón: el clic del usuario cae directamente sobre él -->
-        <div id="btnLoadVideo" class="btn small filebtn">🎬 Cargar video local…<input type="file" id="fileVideo" title="Elegir un video" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.ogv"></div>
-        <div id="btnLoadImage" class="btn small filebtn">🖼 Cargar imagen…<input type="file" id="fileImage" title="Elegir una imagen" accept="image/*"></div>
+        <div id="btnLoadVideo" class="btn small filebtn">🎬 Cargar video local…<input type="file" id="fileVideo" data-kind="video" title="Elegir un video" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v,.ogv"></div>
+        <div id="btnLoadImage" class="btn small filebtn">🖼 Cargar imagen…<input type="file" id="fileImage" data-kind="image" title="Elegir una imagen" accept="image/*"></div>
       </div>
       <p id="fileStatus" class="desc">También podés arrastrar el archivo sobre la vista o pegarlo con Ctrl+V.</p>
       <div id="videoCtl" hidden>

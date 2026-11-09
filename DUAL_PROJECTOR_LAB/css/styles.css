@@ -139,6 +139,59 @@ input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 
 body.panel-hidden #app { grid-template-columns: 1fr 0; }
 body.panel-hidden #panel { display: none; }
 
+/* ---------- Celular / táctil (clase body.m la pone app.js) ---------- */
+.mbar, .sheethead, .mobile-only, .wvbanner { display: none; }
+.wvbanner { position: absolute; top: 48px; left: 8px; right: 8px; z-index: 6; background: rgba(14, 16, 26, .97); border: 1px solid var(--warn);
+  border-radius: var(--r); padding: 10px 12px; font-size: 13px; }
+body.m #app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; height: 100vh; height: 100dvh; min-height: 0; }
+body.m #topbar { padding: 6px 10px; gap: 6px; }
+body.m #topbar .views { display: none; }
+body.m .brand small { display: none; }
+body.m .hint { display: none; }
+body.m .wvbanner:not([hidden]) { display: block; }
+body.m .mobile-only { display: block; }
+body.m .sheethead { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 2;
+  background: var(--panel); padding: 10px 0; border-bottom: 1px solid var(--line); }
+body.m #panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 92vw); z-index: 30; border-left: 1px solid var(--line); border-top: 0;
+  transform: translateX(105%); overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 max(14px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) 14px; box-shadow: -10px 0 30px rgba(0,0,0,.5); }
+body.m.sheet-open #panel { transform: none; }
+/* la animación solo después de arrancar, para que el panel no "pase" por la pantalla al cargar */
+body.m.ready #panel { transition: transform .22s ease; }
+body.m .mbar { display: flex; position: absolute; z-index: 8; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px));
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px)); gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+body.m .mbar::-webkit-scrollbar { display: none; }
+.mbtn, .mgroup button { flex: 0 0 auto; min-height: 46px; min-width: 46px; padding: 0 14px; border-radius: 12px; font-size: 15px; cursor: pointer;
+  background: rgba(21, 24, 38, .9); border: 1px solid var(--line); color: var(--text); backdrop-filter: blur(6px); }
+.mbtn.accent { border-color: var(--accent); color: var(--accent); }
+.mgroup { flex: 0 0 auto; display: flex; gap: 2px; padding: 2px; border-radius: 14px; background: rgba(10, 12, 20, .85); border: 1px solid var(--line); }
+.mgroup button { border: 0; min-width: 44px; background: transparent; font-weight: 700; color: var(--muted); }
+.mgroup button.on[data-mode="A"] { background: #3a1b22; color: #ff9fb1; }
+.mgroup button.on[data-mode="B"] { background: #3a3018; color: var(--accent); }
+.mgroup button.on[data-mode="C"] { background: #173a28; color: var(--ok); }
+body.m .hud { top: calc(8px + env(safe-area-inset-top, 0px)); }
+body.m #fps { display: none; }
+body.m .helpbox { inset: 50px 8px auto 8px; width: auto; }
+body.m .blocked { top: 48px; }
+/* vertical: la barra táctil se acomoda en dos filas para que todo quede a la vista */
+@media (orientation: portrait) { body.m .mbar { flex-wrap: wrap; justify-content: center; overflow: visible; } }
+/* pantalla horizontal baja: se oculta la barra superior para dar todo el alto al simulador */
+@media (max-height: 500px) { body.m #topbar { display: none; } }
+/* controles grandes para dedos */
+@media (pointer: coarse) {
+  .btn, .btn.small, select { min-height: 44px; }
+  .seg button { min-height: 44px; }
+  .ctl { margin: 12px 0; }
+  input[type=range] { height: 32px; }
+  input[type=range]::-webkit-slider-thumb { width: 26px; height: 26px; margin-top: -11px; }
+  input[type=range]::-moz-range-thumb { width: 22px; height: 22px; }
+  .check { min-height: 40px; }
+  .check input { width: 22px; height: 22px; }
+  .switch span { width: 46px; height: 26px; }
+  .switch span::after { width: 22px; height: 22px; }
+  .switch input:checked + span::after { left: 22px; }
+}
+
 @media (max-width: 860px) {
   #app { grid-template-columns: 1fr; grid-template-rows: auto 56vh 1fr; height: auto; min-height: 100vh; }
   #panel { border-left: 0; border-top: 1px solid var(--line); overflow: visible; padding: 4px 16px 24px; }

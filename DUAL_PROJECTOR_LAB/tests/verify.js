@@ -71,12 +71,12 @@ const diff = (a, b) => mean(a.map((p, i) => (Math.abs(p[0] - b[i][0]) + Math.abs
   await page.click('#btn2d'); await page.waitForTimeout(200);
 
   // ---------- 3. A y B muestran partes DIFERENTES de la misma escena ----------
-  await page.click('[data-mode="C"]');
+  await page.click('#panel [data-mode="C"]');
   await page.evaluate(() => { DPL.S.blend = 0; DPL.apply(); }); // sin rampa para comparar contenido puro
   const o = await page.evaluate(() => DPL.S.overlap);
   const partDiffs = [];
   for (const src of ['sunset', 'city', 'grid']) {
-  await page.selectOption('#source', src); await page.click('[data-mode="C"]');
+  await page.selectOption('#source', src); await page.click('#panel [data-mode="C"]');
   await page.evaluate(() => { DPL.S.blend = 0; DPL.apply(); });
   const r = await page.evaluate((o) => {
     const vs = [0.2, 0.35, 0.5, 0.65, 0.8];
@@ -111,13 +111,13 @@ const diff = (a, b) => mean(a.map((p, i) => (Math.abs(p[0] - b[i][0]) + Math.abs
     const bright = L.filter(v => v > base + 12).length;
     return { base: +base.toFixed(1), max: +max.toFixed(1), min: +min.toFixed(1), brightPts: bright };
   }
-  await page.click('[data-mode="A"]'); await page.waitForTimeout(150);
+  await page.click('#panel [data-mode="A"]'); await page.waitForTimeout(150);
   const sA = bandStats(await seamProfile());
   await page.screenshot({ path: path.join(SHOTS, '05_modoA_gris_union_visible.png') });
-  await page.click('[data-mode="B"]'); await page.waitForTimeout(150);
+  await page.click('#panel [data-mode="B"]'); await page.waitForTimeout(150);
   const sB = bandStats(await seamProfile());
   await page.screenshot({ path: path.join(SHOTS, '06_modoB_rampa_lineal.png') });
-  await page.click('[data-mode="C"]'); await page.waitForTimeout(150);
+  await page.click('#panel [data-mode="C"]'); await page.waitForTimeout(150);
   const sC = bandStats(await seamProfile());
   await page.screenshot({ path: path.join(SHOTS, '07_modoC_gris_fusion.png') });
   check('Modo A: la unión se ve más brillante', sA.max - sA.base > 25, JSON.stringify(sA));
@@ -125,7 +125,7 @@ const diff = (a, b) => mean(a.map((p, i) => (Math.abs(p[0] - b[i][0]) + Math.abs
   check('Modo C: transición casi invisible (variación < 6 niveles)', sC.max - sC.min < 6, JSON.stringify(sC));
 
   // Slider de superposición (control real): en modo A, la franja brillante se ensancha
-  await page.click('[data-mode="A"]');
+  await page.click('#panel [data-mode="A"]');
   await page.fill('#sOverlap', '0.05'); await page.waitForTimeout(150);
   const narrow = bandStats(await seamProfile());
   await page.fill('#sOverlap', '0.3'); await page.waitForTimeout(150);
@@ -133,7 +133,7 @@ const diff = (a, b) => mean(a.map((p, i) => (Math.abs(p[0] - b[i][0]) + Math.abs
   check('El control de superposición cambia el ancho de la franja', wide.brightPts > narrow.brightPts * 2, 'puntos brillantes con 5 %: ' + narrow.brightPts + ', con 30 %: ' + wide.brightPts);
   // Slider de intensidad de blending
   await page.fill('#sOverlap', '0.15');
-  await page.click('[data-mode="C"]');
+  await page.click('#panel [data-mode="C"]');
   await page.fill('#sBlend', '0'); await page.waitForTimeout(150);
   const b0 = bandStats(await seamProfile());
   await page.fill('#sBlend', '1'); await page.waitForTimeout(150);
@@ -143,7 +143,7 @@ const diff = (a, b) => mean(a.map((p, i) => (Math.abs(p[0] - b[i][0]) + Math.abs
   check('Mover un control de calibración pasa a Modo B (manual)', modeAfter === 'B', 'modo actual: ' + modeAfter);
 
   // ---------- 5. Controles de cada proyector ----------
-  await page.click('[data-mode="C"]');
+  await page.click('#panel [data-mode="C"]');
   await page.selectOption('#source', 'grid'); await page.waitForTimeout(150);
   await page.click('[data-tab="1"]');
   const probe = await page.evaluate(() => { const p = []; for (let k = 0; k < 40; k++) p.push(T.pt(1, 0.3 + k * 0.01, 0.5)); return p; });
@@ -173,7 +173,7 @@ const diff = (a, b) => mean(a.map((p, i) => (Math.abs(p[0] - b[i][0]) + Math.abs
   check('Apagar B deja su zona sin imagen', l4 < 30, 'luminancia ' + l4.toFixed(1));
   await page.click('#on1 + span');
   await page.click('[data-tab="0"]');
-  await page.click('[data-mode="C"]');
+  await page.click('#panel [data-mode="C"]');
 
   // ---------- 6. Tamaños de pantalla ----------
   await page.click('[data-size="300"]'); await page.waitForTimeout(200);

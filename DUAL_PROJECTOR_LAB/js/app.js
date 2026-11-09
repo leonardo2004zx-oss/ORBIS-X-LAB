@@ -89,6 +89,8 @@
   controls.dampingFactor = 0.12;
   controls.maxPolarAngle = Math.PI * 0.95;
   controls.screenSpacePanning = true;
+  controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+  controls.zoomSpeed = 1.1;
 
   const scene2d = new THREE.Scene();
   const cam2d = new THREE.OrthographicCamera(-1, 1, 1, -1, -10, 10);
@@ -502,11 +504,18 @@
     const dpr = window.devicePixelRatio || 1;
     return S.quality === 'low' ? Math.min(dpr, 1) * 0.6 : S.quality === 'medium' ? Math.min(dpr, 1) : Math.min(dpr, 2);
   }
+  let lastPortrait = null;
   function resize() {
     const w = stage.clientWidth, h = stage.clientHeight;
     renderer.setPixelRatio(pixelRatio());
     renderer.setSize(w, h, false);
-    camera.aspect = w / Math.max(1, h); camera.updateProjectionMatrix();
+    camera.aspect = w / Math.max(1, h);
+    camera.fov = camera.aspect < 1 ? 72 : 50;   // en vertical se abre el ángulo en vez de alejar la cámara
+    camera.updateProjectionMatrix();
+    // al girar el teléfono, se vuelve a encuadrar la pantalla para la nueva orientación
+    const portrait = h > w;
+    if (lastPortrait !== null && portrait !== lastPortrait && typeof camPreset === 'function' && document.body.classList.contains('ready')) camPreset(S.cam, true);
+    lastPortrait = portrait;
     fit2D(); requestRender();
   }
   window.addEventListener('resize', resize);
@@ -531,11 +540,27 @@
     if (S.view === '3d') { if (controls.update()) dirty = true; if (walk(now)) dirty = true; }
     const playing = S.source === 'video' && !video.paused && !video.ended;
     const vInterval = S.quality === 'low' ? 1000 / 24 : 1000 / 30;
-    if (playing && now - lastVideoT >= vInterval) { lastVideoT = now; dirty = true; updateVideoTime(); }
+    if (playing && now - lastVideoT >= vInterval) { lastVideoT = now; dirty = true; drawVideoFrame(); updateVideoTime(); }
     if (!dirty) return;
     dirty = false;
     renderNow();
     frames++;
+    adaptQuality(now);
+  }
+  // Calidad adaptable: si durante una interacción continua los cuadros tardan > 50 ms, baja un nivel
+  let lastFrameT = 0, slow = 0, fast = 0, adaptOn = true;
+  function adaptQuality(now) {
+    const dt = now - lastFrameT; lastFrameT = now;
+    if (!adaptOn || dt > 250) return;            // solo cuenta cuadros seguidos (girando, video)
+    if (dt > 50) { slow++; fast = 0; } else { fast++; if (fast > 30) slow = Math.max(0, slow - 1); }
+    if (slow >= 25 && S.quality !== 'low') {
+      slow = 0; setQuality(S.quality === 'high' ? 'medium' : 'low');
+      toast('Calidad reducida automáticamente para que vaya más fluido (' + (S.quality === 'low' ? 'Baja' : 'Media') + ').');
+    }
+  }
+  function setQuality(q) {
+    S.quality = q; $('quality').value = q; $('quality2').value = q;
+    resize(); refreshSource(); applyState();
   }
   // indicador de rendimiento: en reposo no se dibuja nada (0 % de GPU)
   setInterval(function () {
@@ -653,8 +678,26 @@
     $('btn2d').addEventListener('click', function () { setView(S.view === '3d' ? '2d' : '3d'); });
     $('btnFT').addEventListener('click', function () { if (S.view === '2d') setView('3d'); camPreset(S.cam === 'tech' ? 'front' : 'tech'); });
     $('btnSeat').addEventListener('click', function () { if (S.view === '2d') setView('3d'); camPreset('seat'); });
-    $('quality').value = S.quality;
-    $('quality').addEventListener('change', function () { S.quality = $('quality').value; resize(); refreshSource(); applyState(); });
+    $('quality').value = S.quality; $('quality2').value = S.quality;
+    $('quality').addEventListener('change', function () { setQuality($('quality').value); });
+    $('quality2').addEventListener('change', function () { setQuality($('quality2').value); });
+    $('autoQ').addEventListener('change', function () { adaptOn = $('autoQ').checked; });
+    // Vista inicial
+    function resetView() { setView('3d'); camPreset('front'); }
+    $('btnReset').addEventListener('click', resetView);
+    // Barra táctil del celular
+    $('mReset').addEventListener('click', resetView);
+    $('mView').addEventListener('click', function () { setView(S.view === '3d' ? '2d' : '3d'); });
+    $('mTech').addEventListener('click', function () { if (S.view === '2d') setView('3d'); camPreset(S.cam === 'tech' ? 'front' : 'tech'); });
+    $('mPanel').addEventListener('click', function () { setSheet(!document.body.classList.contains('sheet-open')); });
+    $('panelClose').addEventListener('click', function () { setSheet(false); });
+    $('mFull').addEventListener('click', toggleFullscreen);
+    $('wvClose').addEventListener('click', function () { $('wvBanner').hidden = true; });
+    $('wvCopy').addEventListener('click', function () {
+      const u = location.href.split('#')[0];
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(function () { toast('Enlace copiado. Pegalo en Chrome.'); }, function () { toast(u); });
+      else toast(u);
+    });
     $('btnPanel').addEventListener('click', function () { document.body.classList.toggle('panel-hidden'); setTimeout(resize, 50); });
 
     // contenido
@@ -674,10 +717,10 @@
     });
     // Botones de archivo: el <input type="file"> real cubre el botón, así que el clic del usuario
     // lo activa directamente (no hay .click() por código, que algunos marcos protegidos bloquean).
-    ['fileVideo', 'fileImage'].forEach(function (id) {
-      const inp = $(id);
-      inp.addEventListener('click', function () { watchPicker(inp); setFileStatus('Abriendo el selector de archivos…'); });
-      inp.addEventListener('change', function () { pickerDone(); const f = inp.files && inp.files[0]; if (f) handleFile(f, id === 'fileVideo' ? 'video' : 'image'); inp.value = ''; });
+    document.querySelectorAll('input[type=file][data-kind]').forEach(function (inp) {
+      const kind = inp.dataset.kind;
+      inp.addEventListener('click', function () { watchPicker(inp); setFileStatus('Abriendo ' + (kind === 'image' ? 'la galería / selector de imágenes…' : 'el selector de videos…')); });
+      inp.addEventListener('change', function () { pickerDone(); const f = inp.files && inp.files[0]; if (f) handleFile(f, kind); inp.value = ''; });
       inp.addEventListener('cancel', function () { pickerDone(); setFileStatus('Selección cancelada.'); });
     });
     $('pickBlockedClose').addEventListener('click', function () { $('pickBlocked').hidden = true; });
@@ -700,7 +743,7 @@
     $('vPlay').addEventListener('click', function () { if (video.paused) video.play(); else video.pause(); });
     $('vMute').addEventListener('click', function () { video.muted = !video.muted; updateMediaUI(); });
     $('vSeek').addEventListener('input', function () { if (video.duration) video.currentTime = $('vSeek').value / 1000 * video.duration; });
-    ['play', 'pause', 'seeked', 'loadeddata'].forEach(function (ev) { video.addEventListener(ev, function () { if (videoTex) videoTex.needsUpdate = true; updateMediaUI(); requestRender(); }); });
+    ['play', 'pause', 'seeked', 'loadeddata'].forEach(function (ev) { video.addEventListener(ev, function () { if (videoTex === rawVideoTex && videoTex) videoTex.needsUpdate = true; drawVideoFrame(); updateMediaUI(); requestRender(); }); });
 
     // pantalla
     const sz = $('sizes');
@@ -778,12 +821,41 @@
     $('btn2d').classList.toggle('on', S.view === '2d');
     $('btnFT').textContent = S.cam === 'tech' ? 'Vista frontal' : 'Vista técnica';
     $('btnSeat').classList.toggle('on', S.cam === 'seat' && S.view === '3d');
+    $('mView').textContent = S.view === '3d' ? '2D' : '3D';
+    $('mTech').textContent = S.cam === 'tech' && S.view === '3d' ? 'Frontal' : 'Técnica';
     $('viewName').textContent = S.view === '2d' ? 'Vista 2D de calibración' : (S.cam === 'tech' ? 'Vista técnica 3D' : S.cam === 'seat' ? 'Vista desde el sillón' : 'Vista frontal 3D');
   }
   function setView(v) {
     S.view = v; lbl2d.hidden = v !== '2d'; $('hint3d').hidden = v === '2d';
     if (v === '2d') fit2D();
+    // En 3D el canvas usa los gestos (girar/zoom); en 2D el navegador conserva sus gestos normales
+    canvas.style.touchAction = v === '3d' ? 'none' : 'manipulation';
     updateTopbar(); requestRender();
+  }
+
+  /* ---------- celular ---------- */
+  function setSheet(open) { document.body.classList.toggle('sheet-open', !!open); $('mPanel').classList.toggle('on', !!open); }
+  function isMobileLayout() {
+    return window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 900;
+  }
+  function applyLayoutClass() {
+    const m = isMobileLayout(), was = document.body.classList.contains('m');
+    document.body.classList.toggle('m', m);
+    if (m !== was) { setSheet(false); setTimeout(resize, 30); }
+  }
+  function toggleFullscreen() {
+    const d = document, el = d.documentElement;
+    const isFs = d.fullscreenElement || d.webkitFullscreenElement;
+    if (isFs) { (d.exitFullscreen || d.webkitExitFullscreen).call(d); return; }
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req) { toast('Este navegador no permite pantalla completa. Girá el teléfono para verlo en horizontal.'); return; }
+    Promise.resolve(req.call(el, { navigationUI: 'hide' })).then(function () {
+      if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function () { toast('Girá el teléfono para verlo en horizontal.'); });
+    }).catch(function () { toast('No se pudo activar la pantalla completa en este visor. Probá desde Chrome, o girá el teléfono.'); });
+  }
+  function isInAppWebView() {
+    const ua = navigator.userAgent || '';
+    return /; wv\)/.test(ua) || /FBAN|FBAV|Instagram|Line\/|Twitter|TikTok|Snapchat/i.test(ua);
   }
 
   /* ---------- video / imagen local ---------- */
@@ -795,21 +867,27 @@
     pickerDone();
     const w = { blurred: false };
     w.onBlur = function () { w.blurred = true; };
+    w.onVis = function () { if (document.visibilityState === 'hidden') w.blurred = true; };
     window.addEventListener('blur', w.onBlur);
+    document.addEventListener('visibilitychange', w.onVis);
     w.timer = setTimeout(function () {
-      if (pickWatch === w && !w.blurred && document.hasFocus()) {
+      if (pickWatch === w && !w.blurred && document.hasFocus() && document.visibilityState === 'visible') {
+        const mob = document.body.classList.contains('m');
+        $('pbDesk').hidden = mob; $('pbMobile').hidden = !mob;
         $('pickBlocked').hidden = false;
-        setFileStatus('El selector de archivos no se abrió en este visor. Arrastrá el archivo sobre la vista o pegalo con Ctrl+V.');
+        setSheet(false);
+        setFileStatus(mob ? 'La galería no se abrió en este visor. Abrí el enlace directamente en Chrome.' : 'El selector de archivos no se abrió en este visor. Arrastrá el archivo sobre la vista o pegalo con Ctrl+V.');
       }
     }, 1500);
     pickWatch = w;
   }
   function pickerDone() {
     if (!pickWatch) return;
-    clearTimeout(pickWatch.timer); window.removeEventListener('blur', pickWatch.onBlur); pickWatch = null;
+    clearTimeout(pickWatch.timer); window.removeEventListener('blur', pickWatch.onBlur);
+    document.removeEventListener('visibilitychange', pickWatch.onVis); pickWatch = null;
   }
-  function isVideoFile(f) { return /^video\//.test(f.type) || /\.(mp4|webm|mkv|mov|m4v|ogv|avi)$/i.test(f.name); }
-  function isImageFile(f) { return /^image\//.test(f.type) || /\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(f.name); }
+  function isVideoFile(f) { return /^video\//.test(f.type) || /\.(mp4|webm|mkv|mov|m4v|ogv|avi|3gp)$/i.test(f.name); }
+  function isImageFile(f) { return /^image\//.test(f.type) || /\.(png|jpe?g|gif|webp|bmp|avif|heic|heif)$/i.test(f.name); }
   function handleFile(f, expected) {
     $('pickBlocked').hidden = true;
     const mb = (f.size / 1048576).toFixed(1) + ' MB';
@@ -823,23 +901,45 @@
     r.onerror = fail;
     r.readAsDataURL(file);
   }
-  let videoObjURL = null;
+  let videoObjURL = null, rawVideoTex = null, vidCanvas = null, vidCanvasTex = null, vidCtx = null;
+  function videoPixelLimit() { return S.quality === 'low' ? 1280 * 720 : S.quality === 'medium' ? 1920 * 1080 : 3840 * 2160; }
+  function setupVideoTexture() {
+    const vw = video.videoWidth, vh = video.videoHeight, lim = videoPixelLimit();
+    if (vw * vh > lim * 1.05) {
+      const k = Math.sqrt(lim / (vw * vh));
+      if (!vidCanvas) { vidCanvas = document.createElement('canvas'); vidCtx = vidCanvas.getContext('2d'); vidCanvasTex = new THREE.CanvasTexture(vidCanvas); prepTex(vidCanvasTex); }
+      vidCanvas.width = Math.round(vw * k); vidCanvas.height = Math.round(vh * k);
+      videoTex = vidCanvasTex;
+    } else {
+      if (!rawVideoTex) { rawVideoTex = new THREE.VideoTexture(video); prepTex(rawVideoTex); }
+      videoTex = rawVideoTex;
+    }
+    drawVideoFrame();
+  }
+  // Solo hace trabajo en el modo reducido; la VideoTexture normal se actualiza sola
+  function drawVideoFrame() {
+    if (videoTex && videoTex === vidCanvasTex && video.readyState >= 2) {
+      vidCtx.drawImage(video, 0, 0, vidCanvas.width, vidCanvas.height); vidCanvasTex.needsUpdate = true;
+    }
+  }
   function loadVideo(file, useDataURL) {
     videoName = file.name;
     if (videoObjURL) { URL.revokeObjectURL(videoObjURL); videoObjURL = null; }
     video.loop = true; video.muted = true;
     video.onloadedmetadata = function () {
-      if (!videoTex) { videoTex = new THREE.VideoTexture(video); prepTex(videoTex); }
+      setupVideoTexture();
       S.source = 'video'; refreshSource(); refreshUI(); applyState();
       video.play().then(function () {
-        setFileStatus('Reproduciendo “' + file.name + '” (' + video.videoWidth + '×' + video.videoHeight + '), repartido entre A y B.');
+        setFileStatus('Reproduciendo “' + file.name + '” (' + video.videoWidth + '×' + video.videoHeight + (videoTex === vidCanvasTex ? ', reducido a ' + vidCanvas.width + '×' + vidCanvas.height + ' para fluidez' : '') + '), repartido entre A y B.');
       }).catch(function () { setFileStatus('Video listo: pulsá ▶ Reproducir.'); });
     };
     video.onerror = function () {
       // Si el visor no permite videos desde blob:, se reintenta con una URL data: (archivos de hasta 120 MB)
       if (!useDataURL && file.size < 120 * 1048576) { loadVideo(file, true); return; }
-      setFileStatus('El navegador no pudo reproducir “' + file.name + '”. Probá con MP4 (H.264) o WebM.');
-      toast('No se pudo reproducir ese video. Probá con MP4 (H.264) o WebM.');
+      const code = video.error ? video.error.code : 0;
+      const why = code === 4 ? 'el formato o códec no es compatible con este navegador (los videos HEVC/H.265 de algunos celulares no se pueden reproducir en todos los equipos)' : code === 3 ? 'el archivo está dañado o no se pudo decodificar' : 'no se pudo leer el archivo';
+      setFileStatus('No se pudo reproducir “' + file.name + '”: ' + why + '. Probá con MP4 (H.264) o WebM.');
+      toast('No se pudo reproducir ese video: ' + why + '.');
     };
     if (useDataURL) {
       readAsDataURL(file, function (url) { video.src = url; video.load(); }, function () { setFileStatus('No se pudo leer el archivo.'); });
@@ -854,12 +954,23 @@
       const img = new Image();
       img.onload = function () {
         if (imageTex) imageTex.dispose();
-        imageTex = new THREE.Texture(img); prepTex(imageTex); imageTex.needsUpdate = true;
+        const maxSide = Math.min(renderer.capabilities.maxTextureSize || 4096, S.quality === 'low' ? 2048 : 4096);
+        let srcImg = img;
+        if (Math.max(img.naturalWidth, img.naturalHeight) > maxSide) {
+          const k = maxSide / Math.max(img.naturalWidth, img.naturalHeight), c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); srcImg = c;
+        }
+        imageTex = new THREE.Texture(srcImg); prepTex(imageTex); imageTex.needsUpdate = true;
         imageAspect = img.naturalWidth / img.naturalHeight; imageName = file.name;
         S.source = 'image'; refreshSource(); refreshUI(); applyState();
         setFileStatus('Mostrando “' + file.name + '” (' + img.naturalWidth + '×' + img.naturalHeight + ').');
       };
-      img.onerror = function () { setFileStatus('No se pudo decodificar “' + file.name + '”.'); toast('No se pudo leer la imagen.'); };
+      img.onerror = function () {
+        const heic = /\.(heic|heif)$/i.test(file.name) || /hei[cf]/i.test(file.type);
+        const why = heic ? 'las fotos HEIC no se pueden mostrar en todos los navegadores; elegí una JPG o PNG' : 'el navegador no pudo decodificar la imagen';
+        setFileStatus('No se pudo mostrar “' + file.name + '”: ' + why + '.'); toast('No se pudo mostrar la imagen: ' + why + '.');
+      };
       img.src = url;
     }, function () { setFileStatus('No se pudo leer el archivo.'); });
   }
@@ -943,6 +1054,8 @@
   window.DPL = {
     S: S, apply: function () { refreshSource(); refreshUI(); applyState(); }, setMode: setMode, setView: setView, camPreset: camPreset,
     projGeo: projGeo, ref: ref, centerY: centerY, samplePixels: samplePixels, screenToCanvas: screenToCanvas,
+    camState: function () { return { pos: camera.position.toArray(), target: controls.target.toArray(), dist: camera.position.distanceTo(controls.target) }; },
+    srcSize: function () { const im = uniforms.uSrc.value.image; return im ? [im.videoWidth || im.width, im.videoHeight || im.height] : null; },
     renderNow: renderNow, uniforms: uniforms, video: video, srcCanvas: srcCanvas, stats: function () { return { fps: fps, lastRenderMs: lastRenderMs, info: renderer.info.render, mem: renderer.info.memory }; }
   };
 
@@ -955,6 +1068,9 @@
     S.quality = (cores <= 2 || mem <= 4) ? 'low' : 'medium';
     const q = new URLSearchParams(location.search).get('q'); if (q) S.quality = q;
   })();
+  applyLayoutClass();
+  window.addEventListener('resize', applyLayoutClass);
+  if (isInAppWebView()) $('wvBanner').hidden = false;
   buildUI();
   S.P.forEach(function (p) { p.dist = requiredDist(); });
   resize();
