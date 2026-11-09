@@ -10,7 +10,7 @@ Aplicar en todos los proyectos de este repositorio.
 - Si no se puede generar un enlace funcional: explicar el impedimento, ofrecer una forma comprobada de ejecutarla y NO declarar el proyecto terminado.
 
 ## 2. Entrega para revisión externa (ChatGPT)
-Generar `ENTREGA_CHATGPT/` y comprimirla en `ENTREGA_CHATGPT.zip`, con enlace de descarga:
+Generar `ENTREGA_CHATGPT/` y comprimirla en `ENTREGA_CHATGPT.zip`. **Entregar SIEMPRE el ZIP directamente al usuario como archivo adjunto en la conversación. NO subir el ZIP a GitHub** (está en `.gitignore`).
 - `CODIGO_FUENTE/` (todos los archivos completos), `INFORME_TECNICO.md`, `ERRORES.md`, `PRUEBAS.md`, `CAMBIOS.md`, `INSTRUCCIONES.md`.
 (En DUAL_PROJECTOR_LAB: documentos en `entrega_docs/`, generar con `python tools/crear_entrega.py`.)
 
@@ -19,4 +19,4 @@ Ejecutar la app, probar las funciones principales, revisar la consola, comprobar
 no reemplazar funciones que ya andan por versiones incompletas, e informar qué pruebas no se pudieron ejecutar.
 
 ## 4. Formato de la respuesta final (empezar exactamente así)
-🌐 ENLACE PARA PROBAR · 📦 DESCARGA PARA CHATGPT · 🧪 PRUEBAS · 🔧 CORRECCIONES · ⚠️ PENDIENTES
+🌐 ENLACE PARA PROBAR · 📦 ZIP PARA CHATGPT (adjunto, no en GitHub) · 🧪 PRUEBAS · 🔧 CORRECCIONES · ⚠️ PENDIENTES
