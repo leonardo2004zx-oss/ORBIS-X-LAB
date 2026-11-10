@@ -172,10 +172,11 @@
 
     _crackle(i3) {
       const x = this.p[i3], y = this.p[i3 + 1], z = this.p[i3 + 2];
-      const k = 3 + (Math.random() * 3 | 0);
+      const k = 4 + (Math.random() * 4 | 0);
       for (let j = 0; j < k; j++) {
-        this.spawn(x + rnd(-1.5, 1.5), y + rnd(-1.5, 1.5), z + rnd(-1.5, 1.5), rnd(-4, 4), rnd(-4, 4), rnd(-4, 4),
-          [1.0, 0.86, 0.55], rnd(0.05, 0.13), rnd(1.6, 2.6), 2, 0, 0);
+        // huevos de dragón: destellos breves y desfasados alrededor de la estrella
+        this.spawn(x + rnd(-2.5, 2.5), y + rnd(-2.5, 2.5), z + rnd(-2.5, 2.5), rnd(-6, 6), rnd(-6, 6), rnd(-6, 6),
+          [1.0, rnd(0.75, 0.92), rnd(0.4, 0.6)], rnd(0.07, 0.22), rnd(2.8, 4.2), 2, 0.1, F.FLICKER);
       }
       if (this.onCrackle && this._crackleBudget >= 1) { this._crackleBudget -= 1; this.onCrackle(x, y, z); }
     }

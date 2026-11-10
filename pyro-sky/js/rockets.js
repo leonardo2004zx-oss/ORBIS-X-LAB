@@ -34,7 +34,7 @@
       audio: {
         fusePitch: 1.0,
         launch: { thump: 75, bass: 0.55, noise: 0.75, f0: 500, f1: 2600, len: 0.55, echo: 0.12 },
-        ascent: { kind: 'hiss', f0: 3400, f1: 1500, gain: 0.32 },
+        ascent: { kind: 'hiss', f0: 3400, f1: 1500, gain: 0.46 },
         burst: { crack: 1.0, crackHz: 1900, bodyHz: 3800, body: 0.65, bodyGain: 0.9, sub: 50, bass: 1.0, subLen: 0.55,
           rumble: 1.8, rumbleGain: 0.35, reverb: 0.8, echo: 0.38, tail: { kind: 'sizzle', gain: 0.35, delay: 0.12 } },
       },
@@ -100,6 +100,96 @@
         emitDirs(g, pos, sphereDirs(N(g, 40)), 12 * sc, [0.7, 0.85, 1.0], { ttl: 0.9, size: 1.5, drag: 2, grav: 0.1, flags: F.FLICKER });
         g.world.flash(pos, [0.35, 0.55, 1.0], 4 * sc, 3);
         g.smokeCloud(pos, 45 * sc, 8);
+      },
+    },
+    /* ------------------------------------------------------------ */
+    {
+      id: 'crisantemo', name: 'Crisantemo Crepitante', short: 'Crepitante',
+      caliber: 90, height: 160, sound: 'Chisporroteo · ráfaga de crujidos',
+      desc: 'Pétalos verde lima que, al apagarse, revientan en cientos de huevos de dragón.',
+      swatch: ['#b8ff3a', '#ffe08a', '#e6e2c8'],
+      look: { body: 0x2f6b1f, stripe: 0xf4e9b0, nose: 0xb8ff3a, len: 2.3, r: 0.18, fins: 3, stick: true },
+      fuse: 1.0, ascentTime: 2.2,
+      tail: { rate: 240, col: [0.85, 1.0, 0.35], size: 0.8, spread: 1.8, life: 0.45, smoke: 0.8 },
+      flash: [0.6, 1.0, 0.3],
+      audio: {
+        fusePitch: 1.1,
+        launch: { thump: 85, bass: 0.5, noise: 0.7, f0: 700, f1: 3200, len: 0.5, echo: 0.12 },
+        ascent: { kind: 'hiss', f0: 6200, f1: 4200, gain: 0.34 },
+        burst: { crack: 0.8, crackHz: 1500, bodyHz: 2600, body: 0.6, bodyGain: 0.85, sub: 46, bass: 0.9, subLen: 0.6,
+          rumble: 1.6, rumbleGain: 0.3, reverb: 0.75, echo: 0.3, tail: { kind: 'crackle', gain: 0.9, delay: 1.25, rate: 1.0, reverb: 0.7 } },
+      },
+      burst(g, pos, sc) {
+        const lime = [0.62, 1.0, 0.16];
+        emitDirs(g, pos, sphereDirs(N(g, 170)), 52 * sc, lime, { ttl: 1.35, size: 2.0, drag: 1.3, grav: 0.3, c2: [1.0, 0.9, 0.45], flags: F.TRAIL | F.CRACKLE, trail: 22, tc: [0.8, 0.85, 0.3], sj: 0.12 });
+        emitDirs(g, pos, sphereDirs(N(g, 60)), 22 * sc, [1.0, 0.85, 0.4], { ttl: 1.0, size: 1.6, drag: 1.8, grav: 0.2, flags: F.GLITTER });
+        g.world.flash(pos, [0.55, 1.0, 0.25], 4.5 * sc, 2.4);
+        g.after(1.3, () => g.world.flash(pos, [1.0, 0.85, 0.5], 2.5 * sc, 5));
+        g.smokeCloud(pos, 60 * sc, 12);
+      },
+    },
+    /* ------------------------------------------------------------ */
+    {
+      id: 'palmera', name: 'Palmera Titán', short: 'Palmera',
+      caliber: 150, height: 210, sound: 'Rugido grave · trueno que retumba',
+      desc: 'Carcasa pesada: sube rugiendo con cola de cometa y abre nueve hojas de palmera.',
+      swatch: ['#ff9f2e', '#ff4d1a', '#ffd27a'],
+      look: { body: 0x5a1a10, stripe: 0xff9f2e, nose: 0x1a1a1f, len: 3.4, r: 0.3, fins: 4, stick: true },
+      fuse: 1.6, ascentTime: 3.2,
+      tail: { rate: 420, col: [1.0, 0.58, 0.18], size: 1.6, spread: 1.2, life: 0.9, smoke: 1.4 },
+      flash: [1.0, 0.5, 0.15],
+      audio: {
+        fusePitch: 0.75, fuseGain: 1.3,
+        launch: { thump: 42, bass: 1.3, noise: 0.9, f0: 180, f1: 900, len: 1.1, echo: 0.35, brown: true },
+        ascent: { kind: 'roar', f0: 700, f1: 380, gain: 0.55 },
+        burst: { crack: 0.7, crackHz: 1100, bodyHz: 2200, body: 1.3, bodyGain: 1.15, sub: 30, bass: 1.6, subLen: 1.3,
+          rumble: 5.0, rumbleGain: 0.85, reverb: 1.0, echo: 0.8, tail: { kind: 'sizzle', gain: 0.45, delay: 0.3, rate: 0.7 } },
+      },
+      burst(g, pos, sc) {
+        const arms = 9, a0 = Math.random() * TAU;
+        for (let k = 0; k < arms; k++) {
+          const a = a0 + k / arms * TAU, el = rnd(0.15, 0.55);
+          const d = [Math.cos(a) * Math.cos(el), Math.sin(el), Math.sin(a) * Math.cos(el)];
+          // cada hoja: un cometa grueso + chispas que lo siguen
+          const sp = 78 * sc;
+          g.fx.spawn(pos.x, pos.y, pos.z, d[0] * sp, d[1] * sp, d[2] * sp, [1.0, 0.6, 0.2], 2.8, 4.2, 1.05, 0.5,
+            F.TRAIL | F.LATEFADE, { trail: 120 * g.quality.trail, tc: [1.0, 0.5, 0.12], c2: [1.0, 0.3, 0.05], param: -1.8 });
+          for (let j = 0; j < Math.round(10 * g.quality.density); j++) {
+            const s2 = sp * rnd(0.55, 0.95);
+            g.fx.spawn(pos.x, pos.y, pos.z, d[0] * s2 + rnd(-4, 4), d[1] * s2 + rnd(-4, 4), d[2] * s2 + rnd(-4, 4), [1.0, 0.45, 0.12], rnd(1.6, 2.4), 1.6, 1.1, 0.5, F.TRAIL | F.FLICKER, { trail: 18 * g.quality.trail, tc: [0.9, 0.35, 0.08] });
+          }
+        }
+        emitDirs(g, pos, sphereDirs(N(g, 50)), 18 * sc, [1.0, 0.82, 0.45], { ttl: 1.2, size: 2, drag: 1.5, grav: 0.2, flags: F.GLITTER });
+        g.world.flash(pos, [1.0, 0.5, 0.15], 8 * sc, 1.6);
+        g.smokeCloud(pos, 90 * sc, 20);
+      },
+    },
+    /* ------------------------------------------------------------ */
+    {
+      id: 'saturno', name: 'Saturno Estrobo', short: 'Saturno',
+      caliber: 100, height: 180, sound: 'Zumbido eléctrico · tic-tic estroboscópico',
+      desc: 'Sube zumbando; abre un planeta magenta con anillo turquesa y queda titilando.',
+      swatch: ['#ff3fb4', '#2ef2c8', '#d6ffe9'],
+      look: { body: 0x3b1e5a, stripe: 0x2ef2c8, nose: 0xff3fb4, len: 2.4, r: 0.2, fins: 6, stick: false },
+      fuse: 1.2, ascentTime: 2.7,
+      tail: { rate: 200, col: [1.0, 0.35, 0.75], size: 0.9, spread: 3.2, life: 0.5, smoke: 0.7 },
+      flash: [0.9, 0.3, 0.8],
+      audio: {
+        fusePitch: 0.95,
+        launch: { thump: 65, bass: 0.7, noise: 0.6, f0: 400, f1: 1800, len: 0.6, echo: 0.15 },
+        ascent: { kind: 'hum', f0: 120, f1: 230, gain: 0.32, rate: 26 },
+        burst: { crack: 0.9, crackHz: 2200, bodyHz: 3000, body: 0.8, bodyGain: 0.9, sub: 56, bass: 1.0, subLen: 0.7,
+          rumble: 2.2, rumbleGain: 0.4, reverb: 0.9, echo: 0.45, tail: { kind: 'strobe', gain: 0.55, delay: 0.7 } },
+      },
+      burst(g, pos, sc) {
+        const mag = [1.0, 0.18, 0.62], teal = [0.14, 0.95, 0.75];
+        emitDirs(g, pos, sphereDirs(N(g, 180)), 34 * sc, mag, { ttl: 2.0, size: 2.2, drag: 1.4, grav: 0.15, c2: [0.7, 0.1, 0.9], flags: F.FLICKER, sj: 0.03 });
+        const n = randomTilt();
+        emitDirs(g, pos, ringDirs(N(g, 160), ...n), 70 * sc, teal, { ttl: 2.1, size: 2.3, drag: 1.25, grav: 0.12, c2: [0.1, 0.6, 1.0], flags: F.TRAIL, trail: 12, sj: 0.015 });
+        // estrellas estroboscópicas que quedan titilando
+        g.after(0.55, () => emitDirs(g, pos, sphereDirs(N(g, 120)), 40 * sc, [0.75, 1.0, 0.85], { ttl: 3.3, size: 2.4, drag: 1.6, grav: 0.35, flags: F.STROBE, param: rnd(28, 40), sj: 0.35 }));
+        g.world.flash(pos, [0.9, 0.25, 0.8], 5 * sc, 2.2);
+        g.smokeCloud(pos, 65 * sc, 12);
       },
     },
   ];

@@ -181,7 +181,7 @@
   $('showClear').addEventListener('click', () => { show.seq = []; saveShow(); renderSeq(); });
   $('showDemo').addEventListener('click', () => {
     const ids = CATALOG.map(c => c.id);
-    show.seq = [0, 0, 1, 2, 2, 1, 0, 2, 1, 1, 0, 2].map(i => ids[i % ids.length]).concat(ids);
+    show.seq = [0, 2, 1, 3, 5, 0, 0, 2, 4, 1, 3, 5, 2, 2, 4].map(i => ids[i % ids.length]).concat(ids);
     saveShow(); renderSeq(); toast('Ejemplo cargado');
   });
   $('showStop').addEventListener('click', stopShow);
