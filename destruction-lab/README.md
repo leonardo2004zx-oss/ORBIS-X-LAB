@@ -1,22 +1,27 @@
 # Destruction Lab 3D
 
-Ciudad 3D destructible con física real en el navegador (Three.js r160 + Rapier 0.12, cargados desde jsDelivr).
+Ciudad 3D destructible con física en el navegador (Three.js r160 + Rapier 0.12, cargados desde jsDelivr).
 
-- **Meteorito**: tocá un punto; el impacto fragmenta las piezas cercanas, empuja todo en el radio, deja cráter y la roca queda como cuerpo físico.
-- **Explosión**: potencia 1–10 (radio y fuerza).
-- **Terremoto**: el suelo es un cuerpo cinemático que se mueve de verdad; intensidad 1–10. Desde ~5 aparece fatiga estructural (se rompen piezas de los pisos bajos primero).
-- **Lluvia de meteoritos**: botón «Lluvia» en el panel del meteorito (12 impactos seguidos).
-- **Tornado**: embudo animado que recorre la ciudad, arrastra, levanta y rompe piezas; tocá el suelo para guiarlo. Fuerza 1–10.
-- **Tsunami**: una ola llega desde el fondo de la vista, empuja y hace flotar autos, árboles y escombros, rompe bloques en la cresta y luego se retira. Altura 1–10.
-- **Tormenta eléctrica**: cielo oscuro, lluvia y rayos que buscan lo más alto (o tocá para que caiga uno), con trueno e incendio.
-- **Incendios**: las explosiones fuertes, los meteoritos y los rayos dejan fuego y humo durante varios segundos.
-- **Detener**: apaga todos los desastres activos.
-- **Construir**: tocá el suelo para levantar un edificio de 2–14 pisos.
-- **Reiniciar**: recrea el mundo físico sin recargar la página.
-- **Ajustes**: calidad (baja/media/alta), límite de escombros y de partículas, sombras, sonido.
+## Ciudad
+Unas 1200 piezas físicas en calidad media (unas 700 en baja): torres de hormigón, rascacielos de vidrio que se angostan arriba, edificios de ladrillo, edificios escalonados y en L, con equipos de aire, tanques de agua y antenas en los techos. Avenidas, calles transversales, un río con un **puente destructible** (tablero apoyado en pilares), tráfico que circula (autos, taxis, furgonetas, colectivos y camiones), autos estacionados, farolas, árboles y parques. Todo es un cuerpo rígido real que se puede romper, empujar o arrastrar.
 
-Los edificios están hechos de bloques físicos independientes (InstancedMesh, una llamada de dibujo). Al romperse, un bloque se divide en 4–8 escombros físicos; cuando se supera el límite, los más viejos desaparecen.
+## Desastres (todos se pueden combinar)
+- **Meteorito**: estela de fuego y humo, impacto con destello, bola de fuego, onda expansiva, cráter con roca fundida y eyecciones incandescentes. Modo **Lluvia** con cantidad configurable.
+- **Explosión**: potencia 1–10; desde 8 se forma un hongo de humo.
+- **Tornado**: fuerza y duración; con fuerza 8–10 es un tornado gigante que levanta autos y escombros. Se guía tocando el suelo.
+- **Terremoto**: el suelo es un cuerpo cinemático que se mueve de verdad. Se toca para elegir el epicentro; desde intensidad 5 se abren grietas y desde 8 hay sacudidas verticales. Tiene duración.
+- **Tsunami**: entra por el borde más cercano al punto tocado, empuja y hace flotar objetos y después se retira.
+- **Tormenta eléctrica**: lluvia, rayos que buscan lo más alto, truenos e incendios.
+- **Volcán**: el cono emerge empujando lo que hay encima, después hace erupción con columna de cenizas, fuente de lava, bombas de lava físicas que explotan al caer y una colada que incendia y derrite lo que toca.
+- **Agujero negro**: atrae y hace girar todo lo cercano, arranca piezas de los edificios, se traga lo que cruza el horizonte y al final colapsa con una onda expansiva.
 
-Controles: arrastrar = girar · pellizcar/rueda = zoom · dos dedos/clic derecho = desplazar · tocar = usar la herramienta. Teclado: 1–8 herramientas, R reinicia.
+Las físicas son aproximaciones simplificadas pensadas para verse bien y correr en un celular, no simulaciones exactas.
 
-Uso local: `python3 -m http.server` en la raíz y abrir `/destruction-lab/`.
+## Cine
+Sacudida de cámara según la distancia, iluminación dinámica (destellos, luz de lava, relámpagos), sonido sintetizado (impactos, derrumbes, viento, agua, truenos, lava), **cámara lenta** (botón de reloj de arena o tecla L) y **ciclo de día y noche** (botón de sol/luna o Ajustes), con ventanas y farolas encendidas de noche.
+
+## Rendimiento
+Calidad baja/media/alta, límites de escombros y de partículas, resolución dinámica y piezas que se duermen solas cuando quedan quietas.
+
+## Código
+`src/` tiene el código por secciones; `python3 build.py` las une en `index.html` (la página publicada). Para probar localmente: `python3 -m http.server` en la raíz y abrir `/destruction-lab/`.
