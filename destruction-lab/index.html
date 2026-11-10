@@ -53,7 +53,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.panel { pointer-events: auto; width: 100%; max-width: 560px; box-sizing: border-box; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: grid; gap: 8px; }
+.panel { pointer-events: auto; width: 100%; max-width: 600px; box-sizing: border-box; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: grid; gap: 8px; }
 .hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
 .hint strong { color: var(--fg); font-weight: 600; }
 .ctl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -65,16 +65,19 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
 .pill-btn { pointer-events: auto; font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); }
 .pill-btn.stop { background: var(--hot); color: #2a0b00; }
 
-.toolbar { pointer-events: auto; width: 100%; max-width: 560px; box-sizing: border-box; display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 5px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.toolbar { pointer-events: auto; width: 100%; max-width: 860px; box-sizing: border-box; display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 5px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .tool { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 2px 6px; border-radius: 10px; color: var(--muted); }
 .tool svg { width: 22px; height: 22px; }
 .tool span { font-family: var(--display); font-weight: 600; font-size: 12.5px; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .tool .short { display: none; }
-@media (max-width: 480px) { .tool .long { display: none; } .tool .short { display: block; } }
+@media (max-width: 1100px) { .tool .long { display: none; } .tool .short { display: block; } }
 .tool[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .tool.reset { color: var(--fg); }
 .tool .live { position: absolute; }
-.tool.quaking:not([aria-pressed="true"]) { color: var(--hot); }
+.tool { position: relative; }
+.tool.running::after { content: ""; position: absolute; top: 5px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--hot); box-shadow: 0 0 0 2px var(--panel-solid); }
+.tool.running:not([aria-pressed="true"]) { color: var(--hot); }
+.tool.stop-all { color: var(--hot); }
 
 .toast { position: fixed; z-index: 8; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); background: var(--panel-solid); border: 1px solid var(--line); padding: 8px 14px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
 .toast.show { opacity: 1; }
@@ -103,7 +106,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
 
 .err { position: fixed; z-index: 30; left: 0; right: 0; top: 0; background: #5a1408; color: #ffe2d8; font-size: 12px; padding: 8px 16px; padding-top: calc(8px + env(safe-area-inset-top, 0px)); white-space: pre-wrap; max-height: 40vh; overflow: auto; }
 
-@media (max-width: 480px) { .toolbar { gap: 2px; padding: 4px; } .tool { padding-left: 0; padding-right: 0; } .tool span { letter-spacing: 0; font-size: 12px; } }
+@media (max-width: 720px) { .toolbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; padding: 4px; } .tool { padding: 5px 0 4px; } .tool svg { width: 20px; height: 20px; } .tool span { letter-spacing: 0; font-size: 12px; } .tool.running::after { right: 6px; } }
 @media (min-width: 900px) { .hud-bottom { align-items: center; } }
 </style>
 
@@ -131,6 +134,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
     <p class="hint" id="hint"></p>
     <div class="ctl" data-for="meteor" hidden>
       <div class="slider"><label for="meteor-size">Tamaño</label><input id="meteor-size" type="range" min="1" max="10" value="5"><output id="meteor-size-out">5</output></div>
+      <button class="pill-btn" id="shower-btn">Lluvia</button>
     </div>
     <div class="ctl" data-for="blast" hidden>
       <div class="slider"><label for="blast-power">Potencia</label><input id="blast-power" type="range" min="1" max="10" value="5"><output id="blast-power-out">5</output></div>
@@ -138,6 +142,18 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
     <div class="ctl" data-for="quake" hidden>
       <div class="slider"><label for="quake-int">Intensidad</label><input id="quake-int" type="range" min="1" max="10" value="4"><output id="quake-int-out">4</output></div>
       <button class="pill-btn" id="quake-btn">Iniciar</button>
+    </div>
+    <div class="ctl" data-for="tornado" hidden>
+      <div class="slider"><label for="tornado-str">Fuerza</label><input id="tornado-str" type="range" min="1" max="10" value="6"><output id="tornado-str-out">6</output></div>
+      <button class="pill-btn" id="tornado-btn">Iniciar</button>
+    </div>
+    <div class="ctl" data-for="tsunami" hidden>
+      <div class="slider"><label for="tsunami-h">Altura</label><input id="tsunami-h" type="range" min="1" max="10" value="6"><output id="tsunami-h-out">6</output></div>
+      <button class="pill-btn" id="tsunami-btn">Lanzar ola</button>
+    </div>
+    <div class="ctl" data-for="storm" hidden>
+      <div class="slider"><label for="storm-rate">Rayos</label><input id="storm-rate" type="range" min="1" max="10" value="5"><output id="storm-rate-out">5</output></div>
+      <button class="pill-btn" id="storm-btn">Iniciar</button>
     </div>
     <div class="ctl" data-for="build" hidden>
       <div class="slider"><label for="build-floors">Pisos</label><input id="build-floors" type="range" min="2" max="14" value="6"><output id="build-floors-out">6</output></div>
@@ -156,8 +172,20 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
     <button class="tool" data-tool="quake" aria-pressed="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l2-5 3 10 3-14 3 13 2-4h4"/></svg><span class="long">Terremoto</span><span class="short">Sismo</span>
     </button>
+    <button class="tool" data-tool="tornado" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 4h18M5 8h14M7 12h9M9 16h5M11 20h2"/></svg><span class="long">Tornado</span><span class="short">Tornado</span>
+    </button>
+    <button class="tool" data-tool="tsunami" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18c2 0 2-1.5 4-1.5S8 18 10 18s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M3 14c1-5 5-9 10-9-2 2-3 4-2 6 1 1.5 3 1.5 4 0"/></svg><span class="long">Tsunami</span><span class="short">Tsunami</span>
+    </button>
+    <button class="tool" data-tool="storm" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15a5 5 0 1 1 1.5-9.8A6 6 0 0 1 19 9a3.5 3.5 0 0 1-1 6.8"/><path d="M13 12l-3 5h4l-3 5"/></svg><span class="long">Tormenta</span><span class="short">Rayos</span>
+    </button>
     <button class="tool" data-tool="build" aria-pressed="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 21V8h7v13M11 21V3h9v18M2 21h20"/><path d="M14 7h3M14 11h3M14 15h3M7 12h1M7 16h1"/></svg><span class="long">Construir</span><span class="short">Crear</span>
+    </button>
+    <button class="tool stop-all" id="btn-stop" aria-label="Detener todos los desastres">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg><span class="long">Detener</span><span class="short">Parar</span>
     </button>
     <button class="tool reset" id="btn-reset" aria-label="Reiniciar ciudad">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span class="long">Reiniciar</span><span class="short">Reset</span>
@@ -265,6 +293,7 @@ const camera = new THREE.PerspectiveCamera(55, 1, 1, 800);
     fragmentShader: 'uniform vec3 top; uniform vec3 mid; uniform vec3 bot; varying vec3 vP; void main(){ float h = vP.y; vec3 c = h > 0.0 ? mix(mid, top, pow(h, 0.55)) : mix(mid, bot, min(1.0, -h*4.0)); gl_FragColor = vec4(c,1.0); }',
   });
   scene.add(new THREE.Mesh(g, m));
+  scene.userData.skyMat = m;
 }
 
 const hemi = new THREE.HemisphereLight(0xe2eeff, 0x6a5b48, 1.15);
@@ -420,6 +449,7 @@ class Particles {
     this.pos = new Float32Array(max * 3); this.col = new Float32Array(max * 3);
     this.size = new Float32Array(max); this.alpha = new Float32Array(max);
     this.vel = new Float32Array(max * 3); this.life = new Float32Array(max); this.maxLife = new Float32Array(max);
+    this.orb = new Float32Array(max * 3); this.orbOn = new Uint8Array(max);
     this.grow = new Float32Array(max); this.drag = new Float32Array(max); this.grav = new Float32Array(max); this.a0 = new Float32Array(max);
     const g = new THREE.BufferGeometry();
     this.aPos = new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage);
@@ -448,7 +478,13 @@ class Particles {
     this.vel[j] = vx; this.vel[j + 1] = vy; this.vel[j + 2] = vz;
     this.col[j] = r; this.col[j + 1] = g; this.col[j + 2] = b;
     this.life[i] = life; this.maxLife[i] = life; this.size[i] = size; this.a0[i] = alpha;
-    this.grow[i] = grow; this.drag[i] = drag; this.grav[i] = grav;
+    this.grow[i] = grow; this.drag[i] = drag; this.grav[i] = grav; this.orbOn[i] = 0;
+  }
+  // particle that spins around the tornado axis while rising
+  emitOrbit(r, a, w, vy, life, size, cr, cg, cb, alpha) {
+    const i = this.next;
+    this.emit(0, 0.5, 0, 0, vy, 0, life, size, cr, cg, cb, alpha, 0.8, 0, 0);
+    this.orbOn[i] = 1; this.orb[i * 3] = r; this.orb[i * 3 + 1] = a; this.orb[i * 3 + 2] = w;
   }
   setLimit(n) { this.limit = Math.max(50, Math.min(this.max, n)); if (this.next >= this.limit) this.next = 0; for (let i = this.limit; i < this.max; i++) { this.life[i] = 0; this.alpha[i] = 0; } }
   clear() { this.life.fill(0); this.alpha.fill(0); }
@@ -459,9 +495,17 @@ class Particles {
       any++;
       this.life[i] -= dt;
       const j = i * 3, k = Math.max(0, 1 - this.drag[i] * dt);
+      if (this.orbOn[i]) {
+        const y = (this.pos[j + 1] += this.vel[j + 1] * dt);
+        const a = (this.orb[j + 1] += this.orb[j + 2] * dt);
+        const r = this.orb[j] * (0.3 + Math.min(1.7, y / 26)) * funnel.scale.x;
+        this.pos[j] = funnel.position.x + Math.cos(a) * r; this.pos[j + 2] = funnel.position.z + Math.sin(a) * r;
+        if (tornado.fade < 0.02) this.life[i] = Math.min(this.life[i], 0.3);
+      } else {
       this.vel[j] *= k; this.vel[j + 1] = this.vel[j + 1] * k - this.grav[i] * dt; this.vel[j + 2] *= k;
       this.pos[j] += this.vel[j] * dt; this.pos[j + 1] += this.vel[j + 1] * dt; this.pos[j + 2] += this.vel[j + 2] * dt;
       if (this.pos[j + 1] < 0.1) { this.pos[j + 1] = 0.1; this.vel[j + 1] *= -0.25; this.vel[j] *= 0.6; this.vel[j + 2] *= 0.6; }
+      }
       this.size[i] += this.grow[i] * dt;
       const t = this.life[i] / this.maxLife[i];
       this.alpha[i] = this.life[i] <= 0 ? 0 : this.a0[i] * Math.min(1, t * 2.2) * Math.min(1, (1 - t) * 12 + 0.15);
@@ -489,6 +533,8 @@ const Sfx = {
       let last = 0;
       for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.04 * w) / 1.04; d[i] = w * 0.5 + last * 3; }
       this.noise = buf;
+      this.loops = {};
+      this.makeLoop('wind', 'bandpass', 420, 0.7); this.makeLoop('water', 'lowpass', 520, 0.6); this.makeLoop('rain', 'highpass', 2600, 0.4);
       // continuous rumble for earthquakes
       const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
       const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 75;
@@ -529,6 +575,23 @@ const Sfx = {
     const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = rnd(250, 900); bp.Q.value = 0.9;
     const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12 + 0.18 * Math.min(1, v), t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
     n.connect(bp); bp.connect(g); g.connect(this.master);
+  },
+  makeLoop(name, type, freq, q) {
+    const c = this.ctx, src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
+    const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = c.createGain(); g.gain.value = 0; src.connect(f); f.connect(g); g.connect(this.master); src.start(0, Math.random());
+    this.loops[name] = g;
+  },
+  loop(name, level) { if (!this.ctx || !this.loops) return; const g = this.loops[name]; if (g && Math.abs(g.gain.value - level) > 0.005) g.gain.setTargetAtTime(settings.sound ? level : 0, this.ctx.currentTime, 0.3); },
+  thunder(delay) {
+    if (!this.ok()) return;
+    const c = this.ctx, t = c.currentTime + delay;
+    const n = this.noiseSrc(t, 0.3); const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1200;
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.7, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    n.connect(hp); hp.connect(g); g.connect(this.master);
+    const n2 = this.noiseSrc(t + 0.05, 3.2); const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 160;
+    const g2 = c.createGain(); g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(1.0, t + 0.15); g2.gain.exponentialRampToValueAtTime(0.001, t + 3.1);
+    n2.connect(lp); lp.connect(g2); g2.connect(this.master);
   },
   rumble(level) { if (this.rumbleGain) this.rumbleGain.gain.setTargetAtTime(settings.sound ? level : 0, this.ctx.currentTime, 0.25); },
 };
@@ -702,15 +765,18 @@ let shake = 0;
 
 function blast(P, power, radius, opts = {}) {
   const vmax = 3.4 * power;
-  Sfx.boom(Math.min(1, power / 10));
+  if (!opts.silent) Sfx.boom(Math.min(1, power / 10));
   shake = Math.min(2.2, shake + 0.25 + power * 0.07);
   flashLight.position.set(P.x, P.y + 3, P.z);
   flashLight.intensity = 900 + power * 500;
+  if (!opts.noFire && !opts.silent && power >= 4) addFire(P, 5 + power * 0.8, 0.55 + power * 0.07);
   // fireball
+  if (!opts.noFireball) {
   const fb = new THREE.Mesh(fireballGeo, new THREE.MeshBasicMaterial({ color: 0xffb35a, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   fb.position.copy(P); scene.add(fb);
   const maxR = radius * 0.55;
   effects.push({ t: 0, dur: 0.6, update(e, k) { const s = maxR * (0.25 + 0.75 * Math.sqrt(k)); fb.scale.setScalar(s); fb.material.opacity = 0.95 * (1 - k); fb.material.color.setHSL(0.09 - k * 0.06, 1, 0.65 - k * 0.3); }, end() { scene.remove(fb); fb.material.dispose(); } });
+  }
   // shock ring
   const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xfff0d0, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide }));
   ring.position.set(P.x, Math.max(0.15, P.y * 0.2), P.z); scene.add(ring);
@@ -867,6 +933,316 @@ function quakeStep(dt) {
   }
 }
 
+/* ------------------------------------------------------------------ shared helpers for disasters */
+function pickDown(x, z) {
+  raycaster.set(new THREE.Vector3(x, 120, z), new THREE.Vector3(0, -1, 0));
+  blocks.mesh.boundingSphere = null;
+  const hits = raycaster.intersectObject(blocks.mesh, false);
+  return hits.length ? hits[0].point : new THREE.Vector3(x, 0, z);
+}
+const dynItems = () => blocks.items.concat(debris.items, props);
+
+/* ------------------------------------------------------------------ fires that keep burning after impacts */
+const fires = [];
+function addFire(P, life = 9, size = 1) {
+  if (fires.length >= 12) fires.shift();
+  fires.push({ x: P.x, y: Math.max(0.2, P.y), z: P.z, life, max: life, size });
+}
+function updateFires(dt) {
+  for (let i = fires.length - 1; i >= 0; i--) {
+    const f = fires[i];
+    f.life -= dt;
+    if (f.life <= 0) { fires.splice(i, 1); continue; }
+    const k = Math.min(1, f.life / 2.5) * f.size;
+    if (Math.random() < 0.9 * k) fire.emit(f.x + rnd(-1, 1) * f.size, f.y + 0.2, f.z + rnd(-1, 1) * f.size, rnd(-0.4, 0.4), rnd(2, 4), rnd(-0.4, 0.4), rnd(0.4, 0.8), rnd(0.9, 1.7) * f.size, 1, rnd(0.35, 0.6), 0.08, 0.9, -0.6, 0.5, -1);
+    if (Math.random() < 0.45 * k) { const g = rnd(0.12, 0.22); dust.emit(f.x + rnd(-0.6, 0.6), f.y + 1.5, f.z + rnd(-0.6, 0.6), rnd(-0.3, 0.6), rnd(2, 3.5), rnd(-0.3, 0.6), rnd(3, 5), rnd(1.5, 2.5) * f.size, g, g, g + 0.02, 0.55, 1.6, 0.2, -0.3); }
+    if (i === 0 && Math.random() < 0.05) flashLight.intensity = Math.max(flashLight.intensity, 0);
+  }
+}
+
+/* ------------------------------------------------------------------ meteor shower */
+const shower = [];
+function startShower(n = 12) {
+  for (let i = 0; i < n; i++) shower.push({ t: i * rnd(0.25, 0.45) + rnd(0, 0.2), x: rnd(-42, 42), z: rnd(-28, 28), size: Math.round(rnd(2, 6)) });
+  toast('Lluvia de meteoritos');
+}
+function updateShower(dt) {
+  for (let i = shower.length - 1; i >= 0; i--) {
+    shower[i].t -= dt;
+    if (shower[i].t <= 0) { const s = shower.splice(i, 1)[0]; launchMeteor(pickDown(s.x, s.z), s.size); }
+  }
+}
+
+/* ------------------------------------------------------------------ tornado */
+const tornado = { on: false, strength: 6, pos: new THREE.Vector3(-45, 0, -25), target: null, vel: new THREE.Vector3(), t: 0, fade: 0 };
+function makeFunnelMat(speed, color, op) {
+  return new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    uniforms: { uTime: { value: 0 }, uOpacity: { value: 0 }, uSpeed: { value: speed }, uColor: { value: new THREE.Color(color) }, uMax: { value: op } },
+    vertexShader: `varying vec2 vUv; uniform float uTime;
+      void main(){ vUv = uv; vec3 p = position; float h = uv.y;
+        p.x += sin(h * 5.0 + uTime * 1.9) * 1.4 * h; p.z += cos(h * 4.3 + uTime * 1.5) * 1.2 * h;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }`,
+    fragmentShader: `varying vec2 vUv; uniform float uTime; uniform float uOpacity; uniform float uSpeed; uniform vec3 uColor; uniform float uMax;
+      void main(){ float a1 = sin(vUv.x * 31.4159 + vUv.y * 16.0 - uTime * uSpeed) * 0.5 + 0.5;
+        float a2 = sin(vUv.x * 56.5487 - vUv.y * 23.0 - uTime * uSpeed * 1.4) * 0.5 + 0.5;
+        float edge = smoothstep(0.0, 0.06, vUv.y) * (1.0 - smoothstep(0.82, 1.0, vUv.y));
+        float a = (0.3 + 0.55 * a1 * a2) * edge * uMax * uOpacity;
+        gl_FragColor = vec4(uColor * (0.7 + 0.4 * a1), a); }`,
+  });
+}
+const funnel = new THREE.Group();
+{
+  const g1 = new THREE.CylinderGeometry(11, 1.6, 48, 40, 16, true); g1.translate(0, 24, 0);
+  const g2 = new THREE.CylinderGeometry(7, 0.9, 46, 32, 16, true); g2.translate(0, 23, 0);
+  funnel.add(new THREE.Mesh(g1, makeFunnelMat(7, 0x7d8085, 0.8)));
+  funnel.add(new THREE.Mesh(g2, makeFunnelMat(11, 0x5f6266, 0.9)));
+  const cloud = new THREE.Mesh(new THREE.CylinderGeometry(26, 14, 5, 40, 1, false), makeFunnelMat(2.5, 0x4c5058, 0.9));
+  cloud.position.y = 49; funnel.add(cloud);
+  funnel.children.forEach((m) => (m.renderOrder = 2));
+  funnel.visible = false; scene.add(funnel);
+}
+function tornadoRadius() { return 6 + tornado.strength * 1.15; }
+function setTornado(on, at) {
+  tornado.on = on;
+  if (on) {
+    if (at) tornado.pos.set(at.x, 0, at.z);
+    else if (tornado.fade < 0.05) { const a = rnd(0, Math.PI * 2); tornado.pos.set(Math.cos(a) * 50, 0, Math.sin(a) * 34); }
+    tornado.target = null; toast('Tornado en curso');
+  }
+  refreshRunning();
+}
+function tornadoUpdate(dt) {
+  tornado.fade += ((tornado.on ? 1 : 0) - tornado.fade) * Math.min(1, dt * (tornado.on ? 0.9 : 1.6));
+  funnel.visible = tornado.fade > 0.01;
+  if (!funnel.visible) { Sfx.loop('wind', 0); return; }
+  tornado.t += dt;
+  if (!tornado.target || Math.hypot(tornado.target.x - tornado.pos.x, tornado.target.z - tornado.pos.z) < 3) tornado.target = new THREE.Vector3(rnd(-42, 42), 0, rnd(-30, 30));
+  tmpV.set(tornado.target.x - tornado.pos.x, 0, tornado.target.z - tornado.pos.z).normalize().multiplyScalar(3 + tornado.strength * 0.3);
+  tornado.vel.lerp(tmpV, Math.min(1, dt * 0.7));
+  tornado.pos.addScaledVector(tornado.vel, dt);
+  const sc = 0.5 + tornado.strength * 0.075;
+  funnel.position.set(tornado.pos.x + Math.sin(tornado.t * 1.3) * 0.7, 0, tornado.pos.z + Math.cos(tornado.t * 1.1) * 0.7);
+  funnel.scale.set(sc, 0.75 + tornado.strength * 0.035, sc);
+  funnel.children.forEach((m, i) => { m.material.uniforms.uTime.value = tornado.t; m.material.uniforms.uOpacity.value = tornado.fade; m.rotation.y -= dt * (i === 2 ? 0.4 : 2.5 + i); });
+  const R = tornadoRadius(), n = Math.round(5 * tornado.fade);
+  for (let i = 0; i < n; i++) {
+    const g = rnd(0.38, 0.5);
+    dust.emitOrbit(rnd(0.25, 0.7) * R, rnd(0, 6.28), rnd(2.5, 4.5), rnd(4, 11), rnd(2.5, 4.5), rnd(1.6, 3.2), g + 0.05, g + 0.02, g - 0.02, 0.6);
+  }
+  if (Math.random() < tornado.fade) {
+    const a = rnd(0, 6.28), r = rnd(1, R * 0.8), g = rnd(0.42, 0.52);
+    dust.emit(funnel.position.x + Math.cos(a) * r, 0.5, funnel.position.z + Math.sin(a) * r, Math.cos(a) * 4, rnd(0.5, 2), Math.sin(a) * 4, rnd(1.5, 3), rnd(2.5, 4), g + 0.06, g + 0.03, g, 0.5, 1.6, 1);
+  }
+  Sfx.loop('wind', tornado.fade * (0.3 + tornado.strength * 0.06));
+  const dCam = camera.position.distanceTo(funnel.position);
+  if (dCam < 60) shake = Math.max(shake, tornado.fade * 0.08 * (1 - dCam / 60) * tornado.strength / 5);
+}
+const tornadoBreak = [];
+function tornadoForces(dt) {
+  if (tornado.fade < 0.05) return;
+  const s = tornado.strength, R = tornadoRadius(), core = R * 0.4;
+  const px = funnel.position.x, pz = funnel.position.z;
+  for (const it of dynItems()) {
+    if (it.dead) continue;
+    const t = it.body.translation();
+    const dx = t.x - px, dz = t.z - pz, d = Math.hypot(dx, dz);
+    if (d > R || t.y > 50) continue;
+    const f = (1 - d / R) * tornado.fade, inv = 1 / Math.max(0.3, d);
+    const tx = -dz * inv, tz = dx * inv, ix = -dx * inv, iz = -dz * inv;
+    const heavy = it.kind === 'block' ? 0.75 : 1.25;
+    const at = (9 + s * 2.4) * f * heavy, ar = (4 + s * 0.9) * f * heavy * (t.y > 25 ? -0.6 : 1);
+    const lift = 9.81 * (0.45 + s * 0.1) * f * f * heavy * (t.y < 30 ? 1 : 0.25);
+    const m = it.body.mass() * dt;
+    it.body.applyImpulse({ x: (tx * at + ix * ar) * m, y: lift * m, z: (tz * at + iz * ar) * m }, true);
+    if (it.kind === 'block' && d < core && Math.random() < 0.05 * s * dt * f * 6) tornadoBreak.push(it);
+  }
+  let n = 0;
+  while (tornadoBreak.length) { const it = tornadoBreak.pop(); if (n++ < 3) fragment(it, funnel.position, 3 + s * 0.4); }
+  tornadoBreak.length = 0;
+}
+
+/* ------------------------------------------------------------------ tsunami */
+const tsunami = { phase: 'idle', height: 6, front: -200, depth: 0, crest: 0, t: 0, dir: new THREE.Vector2(0, 1), speed: 10, start: -95, end: 95 };
+const waterMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  uniforms: { uDir: { value: tsunami.dir }, uFront: { value: -200 }, uDepth: { value: 0 }, uCrest: { value: 0 }, uTime: { value: 0 }, uSun: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() }, uDark: { value: 0 } },
+  vertexShader: `uniform vec2 uDir; uniform float uFront, uDepth, uCrest, uTime; varying float vFoam; varying vec3 vW;
+    void main(){ vec4 w = modelMatrix * vec4(position, 1.0); float s = dot(w.xz, uDir);
+      float behind = 1.0 - smoothstep(uFront - 1.0, uFront + 2.5, s);
+      float crest = uCrest * exp(-pow((s - (uFront - 4.0)) / 6.0, 2.0));
+      float rip = sin(w.x * 0.33 + uTime * 1.8) * 0.18 + sin(w.z * 0.27 - uTime * 1.4) * 0.18 + sin((w.x + w.z) * 0.9 + uTime * 3.0) * 0.06;
+      float h = behind * (uDepth + rip * min(1.0, uDepth)) + crest;
+      w.y = h - (1.0 - behind) * 4.0; vFoam = clamp(crest / max(0.5, uCrest), 0.0, 1.0) + (0.5 + 0.5 * sin(w.x * 1.7 + w.z * 1.3 + uTime * 4.0)) * 0.12;
+      vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform vec3 uSun; uniform float uDark; varying float vFoam; varying vec3 vW;
+    void main(){ vec3 n = normalize(cross(dFdx(vW), dFdy(vW))); if (n.y < 0.0) n = -n;
+      float l = clamp(dot(n, uSun), 0.0, 1.0); vec3 deep = vec3(0.10, 0.27, 0.30); vec3 shallow = vec3(0.30, 0.47, 0.44);
+      vec3 c = mix(deep, shallow, l); c = mix(c, vec3(0.92, 0.95, 0.96), smoothstep(0.35, 0.95, vFoam));
+      vec3 v = normalize(cameraPosition - vW); vec3 hlf = normalize(uSun + v); c += pow(max(dot(n, hlf), 0.0), 60.0) * 0.6;
+      c *= 1.0 - uDark * 0.55; gl_FragColor = vec4(c, 0.86); }`,
+});
+const water = new THREE.Mesh(new THREE.PlaneGeometry(240, 240, 140, 140), waterMat);
+water.rotation.x = -Math.PI / 2; water.visible = false; water.renderOrder = 3; scene.add(water);
+function waterLevelAt(x, z) {
+  const s = x * tsunami.dir.x + z * tsunami.dir.y, F = tsunami.front;
+  if (s > F + 2.5) return -10;
+  const behind = 1 - THREE.MathUtils.smoothstep(s, F - 1, F + 2.5);
+  return behind * tsunami.depth + tsunami.crest * Math.exp(-(((s - (F - 4)) / 6) ** 2));
+}
+function launchTsunami() {
+  if (tsunami.phase !== 'idle') { toast('Ya hay una ola en camino'); return; }
+  tmpV.set(camera.position.x - controls.target.x, 0, camera.position.z - controls.target.z).normalize();
+  tsunami.dir.set(tmpV.x, tmpV.z);
+  tsunami.phase = 'advance'; tsunami.front = tsunami.start; tsunami.t = 0;
+  tsunami.speed = 9 + tsunami.height * 0.7;
+  water.visible = true; toast('¡Tsunami en camino!');
+  refreshRunning();
+}
+function tsunamiUpdate(dt) {
+  if (tsunami.phase === 'idle') { Sfx.loop('water', 0); return; }
+  tsunami.t += dt;
+  const H = tsunami.height;
+  if (tsunami.phase === 'advance') {
+    tsunami.front += tsunami.speed * dt;
+    tsunami.depth += (0.8 + H * 0.45 - tsunami.depth) * Math.min(1, dt * 0.8);
+    tsunami.crest += (1 + H * 0.85 - tsunami.crest) * Math.min(1, dt * 1.2);
+    if (tsunami.front > tsunami.end) { tsunami.phase = 'recede'; tsunami.t = 0; }
+  } else {
+    tsunami.depth *= Math.exp(-dt * 0.35); tsunami.crest *= Math.exp(-dt * 1.5);
+    if (tsunami.depth < 0.05) { tsunami.phase = 'idle'; water.visible = false; tsunami.front = -200; refreshRunning(); }
+  }
+  waterMat.uniforms.uFront.value = tsunami.front; waterMat.uniforms.uDepth.value = tsunami.depth;
+  waterMat.uniforms.uCrest.value = tsunami.crest; waterMat.uniforms.uTime.value += dt;
+  water.position.set(controls.target.x * 0.5, 0, controls.target.z * 0.5);
+  // spray along the breaking crest
+  if (tsunami.phase === 'advance') {
+    const px = -tsunami.dir.y, pz = tsunami.dir.x;
+    const n = 4 + Math.round(H * 0.8);
+    for (let i = 0; i < n; i++) {
+      const u = rnd(-70, 70), s = tsunami.front - rnd(1, 5);
+      const x = tsunami.dir.x * s + px * u, z = tsunami.dir.y * s + pz * u;
+      const y = waterLevelAt(x, z);
+      dust.emit(x, y + rnd(0, 0.8), z, tsunami.dir.x * rnd(4, 9) + rnd(-1, 1), rnd(2, 6 + H * 0.4), tsunami.dir.y * rnd(4, 9) + rnd(-1, 1), rnd(0.8, 1.6), rnd(1, 2.6), 0.9, 0.94, 0.96, 0.75, 1.5, 0.6, 9.8);
+    }
+  }
+  const lvl = tsunami.phase === 'advance' ? 1 : Math.min(1, tsunami.depth);
+  Sfx.loop('water', lvl * (0.3 + H * 0.05));
+  const dFront = Math.abs(camera.position.x * tsunami.dir.x + camera.position.z * tsunami.dir.y - tsunami.front);
+  if (tsunami.phase === 'advance' && dFront < 50) shake = Math.max(shake, 0.04 * H / 5 * (1 - dFront / 50));
+}
+const waveBreak = [];
+function tsunamiForces(dt) {
+  if (tsunami.phase === 'idle') return;
+  const H = tsunami.height, F = tsunami.front, dx = tsunami.dir.x, dz = tsunami.dir.y;
+  const flow = tsunami.phase === 'advance' ? tsunami.speed : -2.5;
+  for (const it of dynItems()) {
+    if (it.dead) continue;
+    const t = it.body.translation();
+    const s = t.x * dx + t.z * dz;
+    if (s > F + 2.5) continue;
+    const level = waterLevelAt(t.x, t.z);
+    const hy = it.sy ? it.sy / 2 : 0.8;
+    const sub = THREE.MathUtils.clamp((level - (t.y - hy)) / (2 * hy), 0, 1);
+    if (sub <= 0) continue;
+    const v = it.body.linvel();
+    const nearFront = THREE.MathUtils.clamp(1 - (F - s) / 25, 0.25, 1);
+    const k = (it.kind === 'block' ? 1.1 : 1.8) * sub;
+    const fx = dx * flow * nearFront, fz = dz * flow * nearFront;
+    let ax = (fx - v.x) * k, az = (fz - v.z) * k;
+    const buoy = 9.81 * sub * (it.kind === 'block' ? 0.6 : it.kind === 'debris' ? 0.85 : 1.35);
+    let ay = buoy - v.y * 0.8 * sub;
+    if (tsunami.phase === 'advance' && s > F - 9) { const p = (5 + H * 1.6) * sub; ax += dx * p; az += dz * p; if (it.kind === 'block' && Math.random() < H * 0.06 * dt * sub) waveBreak.push(it); }
+    const m = it.body.mass() * dt;
+    it.body.applyImpulse({ x: ax * m, y: ay * m, z: az * m }, true);
+  }
+  let n = 0;
+  while (waveBreak.length) { const it = waveBreak.pop(); if (n++ < 3) fragment(it, null, 2 + H * 0.3); }
+  waveBreak.length = 0;
+}
+
+/* ------------------------------------------------------------------ thunderstorm */
+const storm = { on: false, rate: 5, dark: 0, next: 1.5 };
+const SKY0 = { top: new THREE.Color(0x3f78c4), mid: new THREE.Color(0xd6e3ee), bot: new THREE.Color(0xa9b4bc), fog: new THREE.Color(0xcbd7e2) };
+const SKY1 = { top: new THREE.Color(0x1c2129), mid: new THREE.Color(0x4a525d), bot: new THREE.Color(0x30353c), fog: new THREE.Color(0x48505a) };
+let skyFlash = 0;
+const RAIN_N = 1100;
+const rainGeo = new THREE.BufferGeometry();
+const rainPos = new Float32Array(RAIN_N * 6);
+rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3).setUsage(THREE.DynamicDrawUsage));
+const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xb8c6d6, transparent: true, opacity: 0, depthWrite: false }));
+rain.frustumCulled = false; rain.visible = false; scene.add(rain);
+for (let i = 0; i < RAIN_N; i++) { rainPos[i * 6] = rnd(-60, 60); rainPos[i * 6 + 1] = rnd(0, 60); rainPos[i * 6 + 2] = rnd(-60, 60); }
+function setStorm(on) { storm.on = on; if (on) { storm.next = 1.2; toast('Tormenta eléctrica'); } refreshRunning(); }
+function strike(P) {
+  const top = new THREE.Vector3(P.x + rnd(-12, 12), 85, P.z + rnd(-12, 12));
+  const pts = [top];
+  const N = 14;
+  for (let i = 1; i < N; i++) { const k = i / N; pts.push(new THREE.Vector3().lerpVectors(top, P, k).add(new THREE.Vector3(rnd(-2.2, 2.2), rnd(-1, 1), rnd(-2.2, 2.2)))); }
+  pts.push(P.clone());
+  const group = new THREE.Group();
+  const addBolt = (points, r, glowR) => {
+    const path = new THREE.CurvePath();
+    for (let i = 0; i < points.length - 1; i++) path.add(new THREE.LineCurve3(points[i], points[i + 1]));
+    const core = new THREE.Mesh(new THREE.TubeGeometry(path, points.length * 2, r, 4, false), new THREE.MeshBasicMaterial({ color: 0xf4f7ff, transparent: true, fog: false }));
+    const glow = new THREE.Mesh(new THREE.TubeGeometry(path, points.length * 2, glowR, 6, false), new THREE.MeshBasicMaterial({ color: 0x8fb4ff, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    group.add(core, glow);
+  };
+  addBolt(pts, 0.14, 0.7);
+  for (let b = 0; b < 2; b++) {
+    const from = pts[3 + Math.floor(Math.random() * 6)];
+    const br = [from]; let p = from.clone();
+    for (let i = 0; i < 5; i++) { p = p.clone().add(new THREE.Vector3(rnd(-3, 3), -rnd(3, 6), rnd(-3, 3))); br.push(p); }
+    addBolt(br, 0.07, 0.35);
+  }
+  scene.add(group);
+  effects.push({ t: 0, dur: 0.45, update(e, k) { const on = k < 0.12 || (k > 0.22 && k < 0.32) || (k > 0.45 && k < 0.5); group.children.forEach((m, i) => (m.material.opacity = (on ? 1 : 0.15) * (i % 2 ? 0.35 : 1) * (1 - k))); }, end() { scene.remove(group); group.children.forEach((m) => { m.geometry.dispose(); m.material.dispose(); }); } });
+  skyFlash = 1;
+  flashLight.color.setHex(0xc8d8ff);
+  blast(P, 2.6 + storm.rate * 0.3, 3 + storm.rate * 0.35, { silent: true, noCrater: P.y > 2.5, noFireball: true });
+  flashLight.position.set(P.x, P.y + 6, P.z); flashLight.intensity = 6000;
+  addFire(P, rnd(7, 12), 0.9);
+  const dist = camera.position.distanceTo(P);
+  Sfx.thunder(Math.min(1.5, dist / 340));
+  for (let i = 0; i < 20; i++) fire.emit(P.x, P.y + 0.3, P.z, rnd(-6, 6), rnd(2, 9), rnd(-6, 6), rnd(0.2, 0.5), rnd(0.25, 0.5), 0.7, 0.8, 1, 1, 0, 0.5, 9.8);
+}
+function stormUpdate(dt) {
+  storm.dark += ((storm.on ? 1 : 0) - storm.dark) * Math.min(1, dt * 0.8);
+  const d = storm.dark;
+  skyFlash *= Math.exp(-dt * 9);
+  const sky = scene.userData.skyMat.uniforms;
+  for (const k of ['top', 'mid', 'bot']) sky[k].value.copy(SKY0[k]).lerp(SKY1[k], d).lerp(new THREE.Color(0xdfe6ff), skyFlash * 0.7);
+  scene.fog.color.copy(SKY0.fog).lerp(SKY1.fog, d);
+  scene.fog.near = 110 - d * 50; scene.fog.far = 300 - d * 120;
+  hemi.intensity = 1.15 * (1 - 0.55 * d) + skyFlash * 2.5;
+  sun.intensity = 2.7 * (1 - 0.8 * d);
+  waterMat.uniforms.uDark.value = d;
+  if (flashLight.intensity < 50 && flashLight.color.getHex() !== 0xffa24a) flashLight.color.setHex(0xffa24a);
+  rain.visible = d > 0.02;
+  if (rain.visible) {
+    rain.material.opacity = 0.45 * d;
+    const cx = camera.position.x * 0.6 + controls.target.x * 0.4, cz = camera.position.z * 0.6 + controls.target.z * 0.4;
+    for (let i = 0; i < RAIN_N; i++) {
+      const j = i * 6;
+      rainPos[j + 1] -= 38 * dt; rainPos[j] += 4 * dt;
+      if (rainPos[j + 1] < 0 || Math.abs(rainPos[j] - cx) > 60 || Math.abs(rainPos[j + 2] - cz) > 60) { rainPos[j] = cx + rnd(-60, 60); rainPos[j + 1] = rnd(30, 60); rainPos[j + 2] = cz + rnd(-60, 60); }
+      rainPos[j + 3] = rainPos[j] - 0.25; rainPos[j + 4] = rainPos[j + 1] + 1.6; rainPos[j + 5] = rainPos[j + 2];
+    }
+    rainGeo.attributes.position.needsUpdate = true;
+  }
+  Sfx.loop('rain', d * 0.35);
+  if (storm.on && d > 0.5) {
+    storm.next -= dt;
+    if (storm.next <= 0) {
+      storm.next = rnd(0.5, 2.2) * (11 - storm.rate) / 5;
+      // lightning prefers tall things: sample a few spots, keep the highest
+      let best = null;
+      for (let i = 0; i < 4; i++) { const p = pickDown(rnd(-40, 40), rnd(-30, 30)); if (!best || p.y > best.y) best = p; }
+      strike(best);
+    }
+  }
+}
+
 /* ------------------------------------------------------------------ camera controls (touch + mouse) */
 const controls = {
   target: new THREE.Vector3(0, 7, 0), radius: 62, theta: 0.75, phi: 1.02,
@@ -937,7 +1313,7 @@ el.addEventListener('pointercancel', endPointer);
 el.addEventListener('wheel', (e) => { e.preventDefault(); controls.zoom(Math.exp(e.deltaY * 0.0012)); }, { passive: false });
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
-  const map = { '1': 'camera', '2': 'meteor', '3': 'blast', '4': 'quake', '5': 'build' };
+  const map = { '1': 'camera', '2': 'meteor', '3': 'blast', '4': 'quake', '5': 'tornado', '6': 'tsunami', '7': 'storm', '8': 'build' };
   if (map[e.key]) setTool(map[e.key]);
   if (e.key === 'r' || e.key === 'R') resetCity();
 });
@@ -969,6 +1345,9 @@ const HINTS = {
   meteor: '<strong>Tocá un punto</strong> de la ciudad para lanzar un meteorito. Arrastrá para girar la cámara.',
   blast: '<strong>Tocá dónde detonar</strong> la explosión. La potencia cambia el radio y la fuerza.',
   quake: 'Elegí la intensidad e <strong>iniciá el terremoto</strong>. Podés cambiarla mientras tiembla.',
+  tornado: '<strong>Iniciá el tornado</strong> y tocá el suelo para guiarlo. Si tocás con el tornado apagado, nace en ese punto.',
+  tsunami: '<strong>Lanzá la ola</strong>: llega desde el fondo de la vista. Girá la cámara para elegir de qué lado viene.',
+  storm: '<strong>Iniciá la tormenta</strong>: los rayos buscan lo más alto. También podés <strong>tocar</strong> para que caiga un rayo.',
   build: '<strong>Tocá el suelo</strong> para levantar un edificio nuevo y probar su resistencia.',
 };
 function setTool(t) {
@@ -992,10 +1371,29 @@ function setQuake(on) {
   const b = $('#quake-btn');
   b.textContent = on ? 'Detener' : 'Iniciar';
   b.classList.toggle('stop', on);
-  document.querySelector('.tool[data-tool="quake"]').classList.toggle('quaking', on);
+  refreshRunning();
   if (on) { quake.wakeT = 0; toast('Terremoto en curso'); }
 }
 $('#quake-btn').addEventListener('click', () => { Sfx.init(); setQuake(!quake.on); });
+bindSlider('tornado-str', (v) => (tornado.strength = v));
+bindSlider('tsunami-h', (v) => (tsunami.height = v));
+bindSlider('storm-rate', (v) => (storm.rate = v));
+$('#tornado-btn').addEventListener('click', () => { Sfx.init(); setTornado(!tornado.on); });
+$('#tsunami-btn').addEventListener('click', () => { Sfx.init(); launchTsunami(); });
+$('#storm-btn').addEventListener('click', () => { Sfx.init(); setStorm(!storm.on); });
+$('#shower-btn').addEventListener('click', () => { Sfx.init(); startShower(12); });
+$('#btn-stop').addEventListener('click', () => { stopAll(); toast('Desastres detenidos'); });
+function stopAll() {
+  setQuake(false); setTornado(false); setStorm(false); shower.length = 0;
+  if (tsunami.phase === 'advance') { tsunami.phase = 'recede'; }
+}
+function refreshRunning() {
+  const run = { quake: quake.on, tornado: tornado.on, storm: storm.on, tsunami: tsunami.phase !== 'idle' };
+  for (const k in run) document.querySelector(`.tool[data-tool="${k}"]`).classList.toggle('running', run[k]);
+  const set = (id, on, a, b) => { const el = $(id); el.textContent = on ? b : a; el.classList.toggle('stop', on); };
+  set('#tornado-btn', tornado.on, 'Iniciar', 'Detener');
+  set('#storm-btn', storm.on, 'Iniciar', 'Detener');
+}
 
 let toastTimer;
 function toast(msg) {
@@ -1012,6 +1410,14 @@ function onTap(cx, cy) {
     const p = pick(cx, cy); if (!p) return;
     const pw = ui.blastPower;
     blast(p, pw * 1.15 + 1, 3.5 + pw * 1.25);
+  } else if (tool === 'tornado') {
+    const p = pick(cx, cy, true); if (!p) return;
+    if (!tornado.on) setTornado(true, p); else { tornado.target = p.clone(); toast('Tornado redirigido'); }
+  } else if (tool === 'tsunami') {
+    launchTsunami();
+  } else if (tool === 'storm') {
+    const p = pick(cx, cy); if (!p) return;
+    strike(p);
   } else if (tool === 'build') {
     const p = pick(cx, cy, true); if (!p) return;
     const ok = addBuilding(Math.round(p.x), Math.round(p.z), 6, 6, ui.floors, PALETTE[Math.floor(Math.random() * PALETTE.length)]);
@@ -1064,6 +1470,10 @@ function clearScene() {
   dust.clear(); fire.clear();
   groundGroup.position.set(0, 0, 0);
   flashLight.intensity = 0;
+  fires.length = 0; shower.length = 0;
+  tornado.on = false; tornado.fade = 0; funnel.visible = false;
+  tsunami.phase = 'idle'; tsunami.depth = 0; tsunami.crest = 0; tsunami.front = -200; water.visible = false;
+  storm.on = false;
 }
 function resetCity() {
   clearScene();
@@ -1071,7 +1481,7 @@ function resetCity() {
   if (world) world.free();
   createWorld();
   populateCity();
-  quake.t = 0; quake.amp = 0; setQuake(false); Sfx.rumble(0);
+  quake.t = 0; quake.amp = 0; setQuake(false); Sfx.rumble(0); refreshRunning();
   syncAll(true);
   toast('Ciudad reconstruida');
 }
@@ -1147,6 +1557,8 @@ function frame(now) {
   let n = 0;
   while (acc >= DT && n < Q.substeps) {
     quakeStep(DT);
+    tornadoForces(DT);
+    tsunamiForces(DT);
     const s0 = performance.now();
     world.step(eventQueue);
     stepMs = stepMs * 0.95 + (performance.now() - s0) * 0.05;
@@ -1155,7 +1567,12 @@ function frame(now) {
     acc -= DT; n++;
   }
   if (n >= Q.substeps) acc = 0;
+  updateShower(fdt);
   updateMeteors(fdt);
+  tornadoUpdate(fdt);
+  tsunamiUpdate(fdt);
+  stormUpdate(fdt);
+  updateFires(fdt);
   updateEffects(fdt);
   dust.update(fdt); fire.update(fdt);
   syncAll(false);
@@ -1221,6 +1638,15 @@ window.__lab = {
   build: (x, z, f = 6) => addBuilding(x, z, 6, 6, f, 0xd9c2a5),
   reset: () => resetCity(),
   tool: (t) => setTool(t),
+  tornado: (on, s) => { if (s) tornado.strength = s; setTornado(on); },
+  tornadoAt: (x, z) => setTornado(true, new THREE.Vector3(x, 0, z)),
+  tsunami: (h) => { if (h) tsunami.height = h; launchTsunami(); },
+  tsunamiState: () => ({ phase: tsunami.phase, front: tsunami.front }),
+  storm: (on, r) => { if (r) storm.rate = r; setStorm(on); },
+  strike: (x, z) => strike(pickDown(x, z)),
+  shower: () => startShower(12),
+  fires: () => fires.length,
+  stopAll: () => stopAll(),
   heights: () => blocks.items.reduce((m, it) => Math.max(m, it.body.translation().y), 0),
 };
 boot();

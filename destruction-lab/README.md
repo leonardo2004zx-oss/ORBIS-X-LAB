@@ -5,12 +5,18 @@ Ciudad 3D destructible con física real en el navegador (Three.js r160 + Rapier 
 - **Meteorito**: tocá un punto; el impacto fragmenta las piezas cercanas, empuja todo en el radio, deja cráter y la roca queda como cuerpo físico.
 - **Explosión**: potencia 1–10 (radio y fuerza).
 - **Terremoto**: el suelo es un cuerpo cinemático que se mueve de verdad; intensidad 1–10. Desde ~5 aparece fatiga estructural (se rompen piezas de los pisos bajos primero).
+- **Lluvia de meteoritos**: botón «Lluvia» en el panel del meteorito (12 impactos seguidos).
+- **Tornado**: embudo animado que recorre la ciudad, arrastra, levanta y rompe piezas; tocá el suelo para guiarlo. Fuerza 1–10.
+- **Tsunami**: una ola llega desde el fondo de la vista, empuja y hace flotar autos, árboles y escombros, rompe bloques en la cresta y luego se retira. Altura 1–10.
+- **Tormenta eléctrica**: cielo oscuro, lluvia y rayos que buscan lo más alto (o tocá para que caiga uno), con trueno e incendio.
+- **Incendios**: las explosiones fuertes, los meteoritos y los rayos dejan fuego y humo durante varios segundos.
+- **Detener**: apaga todos los desastres activos.
 - **Construir**: tocá el suelo para levantar un edificio de 2–14 pisos.
 - **Reiniciar**: recrea el mundo físico sin recargar la página.
 - **Ajustes**: calidad (baja/media/alta), límite de escombros y de partículas, sombras, sonido.
 
 Los edificios están hechos de bloques físicos independientes (InstancedMesh, una llamada de dibujo). Al romperse, un bloque se divide en 4–8 escombros físicos; cuando se supera el límite, los más viejos desaparecen.
 
-Controles: arrastrar = girar · pellizcar/rueda = zoom · dos dedos/clic derecho = desplazar · tocar = usar la herramienta. Teclado: 1–5 herramientas, R reinicia.
+Controles: arrastrar = girar · pellizcar/rueda = zoom · dos dedos/clic derecho = desplazar · tocar = usar la herramienta. Teclado: 1–8 herramientas, R reinicia.
 
 Uso local: `python3 -m http.server` en la raíz y abrir `/destruction-lab/`.
