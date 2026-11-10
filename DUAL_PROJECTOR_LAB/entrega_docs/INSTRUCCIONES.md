@@ -7,6 +7,14 @@
 4. Si aparece el aviso «Estás dentro de un visor integrado…», usar «Copiar enlace» y pegarlo en Chrome.
 5. Versión pública (GitHub Pages): pendiente de autorización; ver URL_PUBLICADA.md.
 
+## Proyección dual (v6)
+1. Tocá **💡 Dual**.
+2. Elegí **⧉ Superpuesta**, **▭▭ Panorámica** o **◫ Híbrida**, o ajustá el solapamiento con − / +.
+3. **🌡 Mapa de luz**: amarillo = 1× (un proyector), blanco = 2×. El perfil de abajo muestra A (naranja), B (celeste) y el total (blanco).
+4. **⇄ Blending**: compará antes (sin corrección, la zona compartida brilla de más) y después.
+5. **📊 Comparar modos**: los tres modos a escala, con sus números. «Probar» aplica uno.
+6. **⚙ Ajustes → Calculadora de pantalla dual**: poné tu distancia, tu relación de proyección (medila: distancia ÷ ancho de imagen) y las medidas de tu proyector.
+
 ## Encuadrar, enfocar y alinear (v5)
 1. Cargá una foto (🖼 Imagen).
 2. **🔍 Encuadre**: − / + (zoom de la foto), ⌖ Centrar, ⤢ Ajustar; arrastrá con un dedo para mover la foto y pellizcá para ampliarla. ◌ Desenfocar / ◉ Enfocar simulan el anillo de foco de los proyectores; «Nitidez digital» es un procesado aparte.

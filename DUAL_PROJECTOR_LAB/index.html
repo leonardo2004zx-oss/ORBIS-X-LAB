@@ -82,13 +82,39 @@
       <p>Actualizá Chrome o Edge y activá la “aceleración por hardware” en la configuración.</p>
     </div>
     <div id="compareBadge" class="cmpbadge" hidden>ANTES</div>
+    <div id="heatLegend" class="heatlegend" hidden>
+      <div class="hl-bar"></div>
+      <div class="hl-ticks"><span>0</span><span>0,5×</span><span>1×</span><span>1,5×</span><span>2×</span></div>
+      <small>Luz relativa (campo blanco) · 1× = un proyector · <b>simulado</b></small>
+    </div>
+    <div id="modesCard" class="modescard" role="dialog" aria-label="Comparar modos" hidden>
+      <div class="mc-head"><b>Comparar los tres modos</b><button data-act="compareModes" class="btn small">✕ Cerrar</button></div>
+      <div id="modesGrid" class="mc-grid"></div>
+      <p class="mc-note">📐 Tamaños calculados con tu distancia y relación de proyección · 🧪 brillo simulado · 🔬 lúmenes reales, uniformidad y color requieren medición física. Este laboratorio <b>no controla proyectores físicos</b>.</p>
+    </div>
    </div>
     <!-- Herramientas: quedan DEBAJO de la vista (no la tapan) -->
     <div id="tooldock" class="dock">
       <div class="dgroup dsel" role="tablist" aria-label="Herramienta">
+        <button data-tool="dual" title="Proyección dual: superpuesta, panorámica o híbrida">💡 Dual</button>
         <button data-tool="ver" title="Girar y mirar la sala">👁 Ver</button>
         <button data-tool="foto" title="Encuadre, zoom y enfoque de la foto">🔍 Encuadre</button>
         <button data-tool="cal" title="Calibrar y alinear A y B">🎯 Calibrar</button>
+      </div>
+      <div class="dpane" data-pane="dual">
+        <div class="dgroup lay" role="group" aria-label="Disposición">
+          <button data-layout="stack" title="Las dos imágenes en el mismo lugar: doble brillo">⧉ Superpuesta</button>
+          <button data-layout="pano" title="Una al lado de la otra: pantalla más ancha">▭▭ Panorámica</button>
+          <button data-layout="hybrid" title="Solapamiento grande: más ancha y con zona compartida">◫ Híbrida</button>
+        </div>
+        <div class="ovgroup"><span class="dlabel">Solapamiento</span>
+        <button data-act="ovMinus" title="Menos solapamiento">−</button><span id="ovVal" class="dinfo ovval">15 %</span><button data-act="ovPlus" title="Más solapamiento">+</button></div>
+        <button data-act="heat" id="heatBtn" title="Mapa de luminosidad en falso color">🌡 Mapa de luz</button>
+        <button data-act="blendToggle" id="blendBtn" title="Antes / después del edge blending">⇄ Blending</button>
+        <button data-act="grid" class="gridBtn" title="Prueba de calibración con cuadrícula">▦ Cuadrícula</button>
+        <button data-act="compareModes" title="Comparar los tres modos">📊 Comparar modos</button>
+        <canvas id="profile" width="480" height="112" title="Perfil de brillo a lo ancho (campo blanco)"></canvas>
+        <span id="dualInfo" class="dinfo"></span>
       </div>
       <div class="dpane" data-pane="foto">
         <span class="dlabel">Zoom de la foto<br><small>(contenido)</small></span>
@@ -117,6 +143,7 @@
     </div>
     <!-- Barra táctil (celular): modos, vistas, carga de archivos, pantalla completa y ajustes -->
     <div id="mbar" class="mbar">
+      <button class="mbtn tool accent2" data-tool="dual" title="Proyección dual">💡 Dual</button>
       <div class="mgroup"><button data-mode="A">A</button><button data-mode="B">B</button><button data-mode="C">C</button></div>
       <button id="mView" class="mbtn">2D</button>
       <button id="mTech" class="mbtn">Técnica</button>
@@ -166,6 +193,13 @@
       <label id="fitRow" class="inline" hidden>Ajuste a la pantalla
         <select id="fit"><option value="cover">Recortar (llenar)</option><option value="contain">Encajar completo</option><option value="stretch">Estirar</option></select>
       </label>
+    </section>
+
+    <section>
+      <h3>Calculadora de pantalla dual</h3>
+      <div id="calcCtl"></div>
+      <label class="check"><input type="checkbox" id="vigChk"> Simular caída de brillo hacia los bordes (viñeteo, aproximado)</label>
+      <div id="calcOut" class="info"></div>
     </section>
 
     <section>

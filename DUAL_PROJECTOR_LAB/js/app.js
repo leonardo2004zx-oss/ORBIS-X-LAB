@@ -45,6 +45,9 @@
     sel: 1,                            // proyector seleccionado al calibrar (0 = A, 1 = B)
     calib: false,                      // cuadrícula y puntos de referencia
     step: 0.01,                        // paso de los botones de alineación (m)
+    heat: false,                       // mapa de luminosidad en falso color
+    vig: false,                        // viñeteo aproximado
+    body: { w: 0.30, h: 0.12 },        // medidas del gabinete del proyector (m) — SUPUESTO editable
     tab: 0
   };
 
@@ -122,7 +125,7 @@
     uBlend: { value: 1 }, uGam: { value: 2.2 }, uCurve: { value: 1 }, uBlack: { value: 0.003 },
     uEdges: { value: 0 }, uRef: { value: new THREE.Vector3(1, 1, 1) }, uAmb: { value: 0.0015 },
     uFocus: { value: new THREE.Vector2(0, 0) }, uSharp: { value: 0 }, uPhoto: { value: new THREE.Vector3(1, 0, 0) },
-    uTexel: { value: new THREE.Vector2(1 / 1024, 1 / 512) }, uCalib: { value: 0 },
+    uTexel: { value: new THREE.Vector2(1 / 1024, 1 / 512) }, uCalib: { value: 0 }, uHeat: { value: 0 }, uVig: { value: 0 },
     uPts: { value: [new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2()] }
   };
   const screenMat = new THREE.ShaderMaterial({
@@ -135,6 +138,14 @@
       'uniform float uBlend; uniform float uGam; uniform float uCurve; uniform float uBlack;',
       'uniform float uEdges; uniform vec3 uRef; uniform float uAmb;',
       'uniform vec2 uFocus; uniform float uSharp; uniform vec3 uPhoto; uniform vec2 uTexel; uniform float uCalib; uniform vec2 uPts[5];',
+      'uniform float uHeat; uniform float uVig;',
+      // paleta del mapa de luz: 0 → azul oscuro, 1× (un proyector) → amarillo, 2× → blanco
+      'vec3 heat(float t){ t = clamp(t, 0.0, 1.0);',
+      '  vec3 c = mix(vec3(0.05,0.05,0.25), vec3(0.1,0.3,0.9), smoothstep(0.0,0.11,t));',
+      '  c = mix(c, vec3(0.1,0.85,0.85), smoothstep(0.11,0.23,t)); c = mix(c, vec3(0.3,0.9,0.3), smoothstep(0.23,0.34,t));',
+      '  c = mix(c, vec3(1.0,0.85,0.1), smoothstep(0.34,0.45,t)); c = mix(c, vec3(1.0,0.55,0.1), smoothstep(0.45,0.57,t));',
+      '  c = mix(c, vec3(1.0,0.2,0.1), smoothstep(0.57,0.70,t)); c = mix(c, vec3(1.0,1.0,1.0), smoothstep(0.70,0.91,t));',
+      '  return c; }',
       'varying vec2 vUv;',
       // muestra la fuente en coordenadas del panorama s (0..1), aplicando el encuadre del contenido (zoom y desplazamiento)
       'vec3 srcAt(vec2 s){ vec2 q = (s - 0.5) / uPhoto.x + 0.5 - uPhoto.yz; vec2 m = q * uScale + uOff;',
@@ -153,7 +164,8 @@
       '}',
       'float inUnit(vec2 p){ return step(0.0,p.x)*step(p.x,1.0)*step(0.0,p.y)*step(p.y,1.0); }',
       // luz (lineal) que aporta un proyector al punto P de la pantalla
-      'vec3 proj(vec2 P, vec4 g, float key, vec4 c, float isB, out vec2 uv, out float ins, out vec2 sz, out vec2 sOut){',
+      'vec3 proj(vec2 P, vec4 g, float key, vec4 c, float isB, out vec2 uv, out float ins, out vec2 sz, out vec2 sOut, out float wl){',
+      '  wl = 0.0;',
       '  vec2 d = P - g.xy; float cs = cos(g.w), sn = sin(g.w);',
       '  d = vec2(cs*d.x + sn*d.y, -sn*d.x + cs*d.y);',
       '  float h = g.z * 0.5625; float v = d.y / h + 0.5;',
@@ -180,20 +192,32 @@
       '  float w = mix(t, t*t*(3.0-2.0*t), uCurve);',
       '  w = uO > 0.0005 ? w : 1.0;',
       '  w = mix(1.0, w, uBlend);',
+      '  if (uO > 0.999) w = 1.0;',                                  // superposición total: no hay rampa, la luz se suma
       '  float re = pow(max(w, 1e-5), 1.0 / uGam);',                  // rampa aplicada a la señal
       '  vec3 sig = max(clamp(enc * c.rgb, 0.0, 1.0) * re, vec3(1e-5));',
       '  vec3 L = pow(sig, vec3(2.2)) + uBlack;',                      // el negro NO se puede atenuar
-      '  return L * c.a;',
+      '  vec2 dv = uv - 0.5; float vg = 1.0 - uVig * 0.7 * dot(dv, dv);',   // viñeteo aproximado (opcional)
+      // luz con campo blanco (para el mapa de luminosidad): misma rampa, mismo brillo y color
+      '  vec3 ws = max(clamp(c.rgb, 0.0, 1.0) * re, vec3(1e-5));',
+      '  wl = (dot(pow(ws, vec3(2.2)), vec3(0.2126, 0.7152, 0.0722)) + uBlack) * c.a * vg;',
+      '  return L * c.a * vg;',
       '}',
       'void main(){',
       '  vec2 P = (vUv - 0.5) * uPlane;',
-      '  vec2 uva = vec2(0.0), uvb = vec2(0.0), sza = vec2(1.0), szb = vec2(1.0), sa = vec2(0.0), sb = vec2(0.0); float ia = 0.0, ib = 0.0;',
+      '  vec2 uva = vec2(0.0), uvb = vec2(0.0), sza = vec2(1.0), szb = vec2(1.0), sa = vec2(0.0), sb = vec2(0.0); float ia = 0.0, ib = 0.0, wa = 0.0, wb = 0.0;',
       '  vec3 L = vec3(0.0);',
-      '  if (uOn.x > 0.5) L += proj(P, uGA, uKey.x, uCA, 0.0, uva, ia, sza, sa);',
-      '  if (uOn.y > 0.5) L += proj(P, uGB, uKey.y, uCB, 1.0, uvb, ib, szb, sb);',
+      '  if (uOn.x > 0.5) L += proj(P, uGA, uKey.x, uCA, 0.0, uva, ia, sza, sa, wa);',
+      '  if (uOn.y > 0.5) L += proj(P, uGB, uKey.y, uCB, 1.0, uvb, ib, szb, sb, wb);',
       '  vec3 col = L * 0.9 + uAmb;',
       '  col = 1.0 - exp(-col * 1.7);',                                // curva de exposición (aprox. visual)
       '  col = pow(col, vec3(1.0/2.2));',
+      '  if (uHeat > 0.5) {',                                        // MAPA DE LUMINOSIDAD (simulado)
+      '    float tot = wa + wb;',
+      '    float g = dot(col, vec3(0.333));',
+      '    col = heat(tot / 2.2) * 0.85 + g * 0.15;',
+      '    float k = tot * 4.0; float fw = max(fwidth(k), 1e-4);',     // curvas de nivel cada 0,25×
+      '    col *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 1.5 * fw, abs(fract(k + 0.5) - 0.5))) * step(0.02, tot);',
+      '  }',
       '  if (uCalib > 0.5) {',
       '    vec3 ov = vec3(0.0);',
       '    if (ia > 0.5) ov += calib(sa, vec3(1.0, 0.5, 0.1));',
@@ -447,13 +471,14 @@
       if (i) uniforms.uKey.value.y = G.key; else uniforms.uKey.value.x = G.key;
       // modelo del proyector
       const m = projMeshes[i];
-      m.position.set(G.lensX, G.lensY, G.lensZ + 0.14);
+      const lift = (i === 1 && Math.abs(projGeo(0).lensX - G.lensX) < S.body.w) ? S.body.h + 0.01 : 0;   // B arriba de A si no entran lado a lado
+      m.position.set(G.lensX, G.lensY + lift, G.lensZ + 0.14);
       const pole = m.getObjectByName('pole'), foot = m.getObjectByName('foot');
       const hh = Math.max(0.05, G.lensY - 0.06);
       pole.scale.y = hh; pole.position.y = -0.06 - hh / 2; foot.position.y = -G.lensY + 0.02;
       m.userData.glass.material.color.setHex(p.on ? 0xfff6e0 : 0x222222);
       // haz
-      const b = beams[i], c = imageCorners(G), apex = [G.lensX, G.lensY, G.lensZ - 0.03];
+      const b = beams[i], c = imageCorners(G), apex = [G.lensX, G.lensY + lift, G.lensZ - 0.03];
       const pa = b.mesh.geometry.attributes.position;
       pa.setXYZ(0, apex[0], apex[1], apex[2]);
       for (let k = 0; k < 4; k++) pa.setXYZ(k + 1, c[k][0], c[k][1], c[k][2]);
@@ -479,6 +504,8 @@
     uniforms.uSharp.value = S.sharp;
     uniforms.uPhoto.value.set(S.photo.zoom, S.photo.px, S.photo.py);
     uniforms.uCalib.value = S.calib ? 1 : 0;
+    uniforms.uHeat.value = S.heat ? 1 : 0; uniforms.uVig.value = S.vig ? 1 : 0;
+    $('heatLegend').hidden = !S.heat;
     calibPoints().forEach(function (p, k) { uniforms.uPts.value[k].set(p[0], p[1]); });
     updateDockInfo();
     screenLight.intensity = 0.25 + 0.45 * ((S.P[0].on ? S.P[0].bright : 0) + (S.P[1].on ? S.P[1].bright : 0));
@@ -730,14 +757,14 @@
     document.body.dataset.tool = t;
     document.body.classList.toggle('tool-on', t !== 'ver');
     document.querySelectorAll('[data-tool]').forEach(function (b) { b.classList.toggle('on', b.dataset.tool === t && !b.classList.contains('done')); });
-    controls.enabled = t === 'ver';
+    controls.enabled = t === 'ver' || t === 'dual';   // en Dual se puede seguir girando la sala
     if (t === 'cal' && !before) markBefore(true);
     if (t === 'cal' && !S.calibTouched) { S.calib = true; S.calibTouched = true; }
     if (t === 'foto' && !before) markBefore(true);
     const ht = $('hintTool');
     ht.hidden = t === 'ver';
     clearTimeout(setTool.ht); setTool.ht = setTimeout(function () { ht.hidden = true; }, 5000);   // la ayuda se oculta sola
-    ht.textContent = t === 'foto' ? 'Encuadre: arrastrá para mover la foto · pellizcá para ampliar o reducir'
+    ht.textContent = t === 'dual' ? 'Dual: elegí Superpuesta, Panorámica o Híbrida y mirá el mapa de luz' : t === 'foto' ? 'Encuadre: arrastrá para mover la foto · pellizcá para ampliar o reducir'
       : t === 'cal' ? 'Calibrar ' + (S.sel ? 'B' : 'A') + ': arrastrá para mover la proyección · pellizcá para cambiar su tamaño' : '';
     $('hint3d').hidden = t !== 'ver' || S.view === '2d';
     updateTouchAction();
@@ -775,6 +802,14 @@
       case 'focPlus': focusStep(p, +1); break;
       case 'focMinus': focusStep(p, -1); break;
       case 'grid': S.calib = !S.calib; break;
+      case 'ovPlus': setOverlap(S.overlap + 0.05); return;
+      case 'ovMinus': setOverlap(S.overlap - 0.05); return;
+      case 'heat': S.heat = !S.heat; break;
+      case 'blendToggle':
+        if (S.blend > 0) { S.blendSaved = S.blend; S.blend = 0; toast('ANTES: sin edge blending. En la zona compartida la luz se suma.'); }
+        else { S.blend = S.blendSaved || 1; if (S.gamma < 2) { S.gamma = 2.2; S.curve = 1; } toast('DESPUÉS: con edge blending y corrección de brillo.'); }
+        break;
+      case 'compareModes': { const mc = $('modesCard'); mc.hidden = !mc.hidden; if (!mc.hidden) renderModes(); return; }
       case 'misalign': Object.assign(S.P[1], { dx: S.P[1].dx + 0.04, dy: S.P[1].dy - 0.025, rot: S.P[1].rot + 0.6, zoom: S.P[1].zoom * 1.01, focus: 0.3 });
         touchManual(); toast('B desalineado: buscá la imagen doble en la cuadrícula.'); break;
       case 'autoAlign': autoAlign(); toast('Autoalineado: A y B vuelven a coincidir.'); return;
@@ -815,6 +850,141 @@
     document.querySelectorAll('.cmp').forEach(function (b) { b.classList.remove('on'); });
     refreshSource(); refreshUI(); applyState();
   }
+  // ======================= Proyección dual: disposición, luz y tamaño =======================
+  const LAYOUTS = {
+    stack: { o: 1, name: 'Superpuesta', icon: '⧉', why: 'Las dos imágenes en el mismo lugar. La pantalla tiene el tamaño de un proyector, pero recibe el doble de luz.' },
+    pano: { o: 0.15, name: 'Panorámica', icon: '▭▭', why: 'Una al lado de la otra con poca zona compartida. Casi el doble de ancho con el brillo de un proyector.' },
+    hybrid: { o: 0.5, name: 'Híbrida', icon: '◫', why: 'Mitad compartida: 1,5 veces más ancha. Sin blending, el centro recibe el doble de luz; con blending queda pareja.' }
+  };
+  function layoutOf(o) { return o > 0.999 ? 'stack' : o <= 0.3 ? 'pano' : 'hybrid'; }
+  function setOverlap(o) {
+    endCompare();
+    S.overlap = Math.round(clamp(o, 0, 1) * 100) / 100;
+    S.P.forEach(function (p) { p.dx = 0; p.dy = 0; p.rot = 0; p.key = 0; p.zoom = 1; });   // la geometría ideal se recalcula
+    refreshSource(); refreshUI(); applyState(); camPreset(S.cam, true);
+    if (!$('modesCard').hidden) renderModes();
+  }
+  function setLayout(k) {
+    if (k !== 'stack' && S.blend === 0 && S.mode !== 'A') S.blend = 1;
+    setOverlap(LAYOUTS[k].o);
+    toast(LAYOUTS[k].icon + ' ' + LAYOUTS[k].name + ': ' + LAYOUTS[k].why);
+  }
+  // Cálculo de tamaño (exacto, con los valores elegidos) para un solapamiento o
+  function layoutStats(o) {
+    const W1 = (S.P[0].dist / S.throwRatio) * S.P[0].zoom, H = W1 * 9 / 16;
+    const Wc = W1 * (2 - o), diag = Math.hypot(Wc, H) / 0.0254, sep = W1 * (1 - o);
+    const stack = o > 0.999;
+    return {
+      W1: W1, H: H, Wc: Wc, diag: diag, area: Wc * H, sep: sep,
+      fits: sep >= S.body.w + 0.02, stacked: stack,
+      // brillo uniforme simulado relativo a UN proyector llenando su imagen (1×)
+      bright: stack ? 2 : 1, peak: stack ? 2 : (S.blend > 0.99 ? 1 : 2),
+      useful: stack ? 1 : (S.blend > 0.99 ? (2 - o) / 2 : 1)
+    };
+  }
+  // Luz de campo blanco (misma fórmula que el shader, sin giro ni trapecio): [A, B]
+  function rampSignal(u, isB) {
+    const o = S.overlap;
+    let w = 1;
+    if (o > 0.0005 && o <= 0.999) { let t = isB ? u / o : (1 - u) / o; t = clamp(t, 0, 1); w = t + (t * t * (3 - 2 * t) - t) * S.curve; }
+    w = 1 + (w - 1) * S.blend;
+    if (o > 0.999) w = 1;
+    return Math.pow(Math.max(w, 1e-5), 1 / S.gamma);
+  }
+  function whiteAt(x, y) {
+    const out = [0, 0];
+    [0, 1].forEach(function (i) {
+      const p = S.P[i]; if (!p.on) return;
+      const G = projGeo(i), u = (x - G.cx) / G.w + 0.5, v = (y - G.cy) / G.h + 0.5;
+      if (u < 0 || u > 1 || v < 0 || v > 1) return;
+      const re = rampSignal(u, i);
+      const lin = [p.r, p.g, p.b].map(function (c) { return Math.pow(Math.max(Math.min(c, 1) * re, 1e-5), 2.2); });
+      let l = (0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2] + S.black) * p.bright;
+      if (S.vig) l *= 1 - 0.7 * ((u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5));
+      out[i] = l;
+    });
+    return out;
+  }
+  function profileData(n) {
+    const a = projGeo(0), b = projGeo(1), cy = centerY();
+    const x0 = Math.min(a.cx - a.w / 2, b.cx - b.w / 2), x1 = Math.max(a.cx + a.w / 2, b.cx + b.w / 2);
+    const pts = [];
+    for (let k = 0; k < n; k++) { const x = x0 + (x1 - x0) * (k + 0.5) / n, w = whiteAt(x, cy); pts.push({ x: x, a: w[0], b: w[1], t: w[0] + w[1] }); }
+    const lit = pts.filter(function (p) { return p.t > 0.02; }).map(function (p) { return p.t; });
+    return { pts: pts, min: Math.min.apply(null, lit), max: Math.max.apply(null, lit), x0: x0, x1: x1 };
+  }
+  function drawProfile() {
+    const cv = $('profile'); if (!cv) return;
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height, d = profileData(120), ymax = 2.2;
+    ctx.clearRect(0, 0, W, H);
+    const Y = function (v) { return H - 6 - (H - 14) * v / ymax; };
+    ctx.font = '18px Consolas, monospace'; ctx.lineWidth = 1;
+    [1, 2].forEach(function (v) { ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(0, Y(v)); ctx.lineTo(W, Y(v)); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillText(v + '×', 4, Y(v) - 3); });
+    const line = function (key, col, wdt) { ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath(); d.pts.forEach(function (p, k) { const x = (k + 0.5) / d.pts.length * W; if (k) ctx.lineTo(x, Y(p[key])); else ctx.moveTo(x, Y(p[key])); }); ctx.stroke(); };
+    line('a', '#ffa050', 3); line('b', '#4fb8ff', 3); line('t', '#ffffff', 4);
+  }
+  function updateDual() {
+    if (!$('ovVal')) return;
+    const st = layoutStats(S.overlap), lay = layoutOf(S.overlap), pr = profileData(80);
+    $('ovVal').textContent = Math.round(S.overlap * 100) + ' %';
+    document.querySelectorAll('[data-layout]').forEach(function (b) { b.classList.toggle('on', b.dataset.layout === lay); });
+    $('heatBtn').classList.toggle('on', S.heat);
+    $('blendBtn').textContent = S.overlap > 0.999 ? '⇄ Blending (no aplica)' : (S.blend > 0 ? '⇄ Blending: SÍ' : '⇄ Blending: NO');
+    $('blendBtn').classList.toggle('on', S.blend > 0 && S.overlap <= 0.999);
+    const uni = pr.max > 0 ? pr.min / pr.max : 0;
+    $('dualInfo').innerHTML = LAYOUTS[lay].name + ': ' + st.Wc.toFixed(2).replace('.', ',') + ' × ' + st.H.toFixed(2).replace('.', ',') + ' m (≈ ' + Math.round(st.diag) + '″)' +
+      '<br>luz ' + pr.min.toFixed(2).replace('.', ',') + '–' + pr.max.toFixed(2).replace('.', ',') + '× · uniformidad <span class="' + (uni > 0.9 ? 'good' : 'bad') + '">' + Math.round(uni * 100) + ' %</span>';
+    drawProfile();
+    renderCalc();
+  }
+  // Tarjetas de comparación de los tres modos (dibujadas a escala)
+  function renderModes() {
+    const cur = layoutOf(S.overlap), f2 = function (v) { return v.toFixed(2).replace('.', ','); };
+    const all = ['stack', 'pano', 'hybrid'].map(function (k) { return [k, layoutStats(LAYOUTS[k].o)]; });
+    const maxW = Math.max.apply(null, all.map(function (e) { return e[1].Wc; }));
+    $('modesGrid').innerHTML = all.map(function (e) {
+      const k = e[0], st = e[1], L = LAYOUTS[k];
+      return '<div class="mc-card' + (k === cur ? ' on' : '') + '"><h4>' + L.icon + ' ' + L.name + ' <small>(' + Math.round(L.o * 100) + ' % compartido)</small></h4>' +
+        '<canvas width="420" height="170" data-mc="' + k + '"></canvas>' +
+        '<dl><dt>Imagen <span class="tag calc">calculado</span></dt><dd>' + f2(st.Wc) + ' × ' + f2(st.H) + ' m</dd>' +
+        '<dt>Diagonal</dt><dd>≈ ' + Math.round(st.diag) + '″</dd>' +
+        '<dt>Superficie</dt><dd>' + f2(st.area) + ' m² (' + f2(st.Wc / st.W1) + '×)</dd>' +
+        '<dt>Brillo parejo <span class="tag sim">simulado</span></dt><dd>' + st.bright + '× un proyector</dd>' +
+        '<dt>Luz aprovechada</dt><dd>' + Math.round((k === 'stack' ? 1 : (2 - L.o) / 2) * 100) + ' %</dd>' +
+        '<dt>Separación de lentes</dt><dd>' + (st.stacked ? 'apilados' : f2(st.sep) + ' m') + '</dd></dl>' +
+        '<p class="why">' + L.why + (st.stacked || !st.fits ? ' <span class="tag med">requiere medición</span> uno arriba del otro: la diferencia de altura (' + Math.round(S.body.h * 100) + ' cm) se corrige con keystone o desplazamiento de lente.' : '') + '</p>' +
+        '<button class="btn small" data-try="' + k + '">Probar ' + L.name + '</button></div>';
+    }).join('');
+    document.querySelectorAll('[data-mc]').forEach(function (cv) {
+      const k = cv.dataset.mc, st = layoutStats(LAYOUTS[k].o), ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+      const sc = (W - 30) / maxW, w1 = st.W1 * sc, h = st.H * sc, wc = st.Wc * sc, x0 = (W - wc) / 2, y0 = 18;
+      ctx.fillStyle = 'rgba(255,160,80,.55)'; ctx.fillRect(x0, y0, w1, h);
+      ctx.fillStyle = 'rgba(79,184,255,.55)'; ctx.fillRect(x0 + wc - w1, y0, w1, h);
+      ctx.strokeStyle = '#ffd36b'; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, wc, h);
+      ctx.fillStyle = '#e8eaf2'; ctx.font = '15px Segoe UI, Arial'; ctx.fillText('A', x0 + 6, y0 + 17); ctx.fillText('B', x0 + wc - 16, y0 + 17);
+      ctx.fillText(st.Wc.toFixed(2).replace('.', ',') + ' m', x0 + wc / 2 - 22, y0 + h + 18);
+      const ph = 1.75 * sc;   // persona de 1,75 m a escala
+      ctx.fillStyle = '#9aa0b8'; ctx.fillRect(x0 - 12, y0 + h + 4 - ph, 5, ph);
+    });
+    document.querySelectorAll('[data-try]').forEach(function (b) { b.addEventListener('click', function () { setLayout(b.dataset.try); $('modesCard').hidden = true; }); });
+  }
+  function renderCalc() {
+    const out = $('calcOut'); if (!out) return;
+    const f2 = function (v) { return v.toFixed(2).replace('.', ','); };
+    const rows = ['stack', 'pano', 'hybrid'].map(function (k) {
+      const st = layoutStats(LAYOUTS[k].o);
+      return '<tr' + (layoutOf(S.overlap) === k ? ' class="on"' : '') + '><td>' + LAYOUTS[k].icon + ' ' + LAYOUTS[k].name + '</td><td>' + f2(st.Wc) + '×' + f2(st.H) + ' m</td><td>' + Math.round(st.diag) + '″</td><td>' + st.bright + '×</td></tr>';
+    }).join('');
+    const cur = layoutStats(S.overlap);
+    out.innerHTML = '<table><tr><th>Modo</th><th>Imagen</th><th>Diag.</th><th>Brillo</th></tr>' + rows + '</table>' +
+      '<p>Un proyector a ' + f2(S.P[0].dist) + ' m con relación ' + f2(S.throwRatio) + ':1 → <b>' + f2(cur.W1) + ' × ' + f2(cur.H) + ' m</b>. ' +
+      (cur.stacked ? 'Superpuestos: hay que apilarlos.' : 'Lentes separadas ' + f2(cur.sep) + ' m: ' + (cur.fits ? 'entran lado a lado.' : '<span class="warn">no entran lado a lado (gabinete de ' + Math.round(S.body.w * 100) + ' cm): hay que apilarlos.</span>')) + '</p>' +
+      '<p><span class="tag calc">📐 calculado</span> tamaño, diagonal, superficie y separación (geometría exacta con tus valores).<br>' +
+      '<span class="tag sim">🧪 simulado</span> brillo relativo, mapa de luz, uniformidad y viñeteo (aproximaciones).<br>' +
+      '<span class="tag med">🔬 requiere medición física</span> relación de proyección real del Gadnic C45N, lúmenes reales (luxómetro), uniformidad, color de cada lámpara, keystone o desplazamiento de lente al apilar, nivel de negro.</p>' +
+      '<p class="warn">Este laboratorio simula: no controla proyectores físicos ni envía imagen a ellos.</p>';
+  }
+
   // ---- lecturas en la barra ----
   function updateDockInfo() {
     const fi = $('fotoInfo'), ci = $('calInfo');
@@ -825,7 +995,8 @@
     ci.innerHTML = (S.sel ? 'B' : 'A') + ': X ' + cm(p.dx) + ' · Y ' + cm(p.dy) + ' · ' + p.rot.toFixed(2) + '° · ' + (p.zoom * 100).toFixed(1) + ' % · foco ' + (p.focus || 0).toFixed(1) +
       '<br>' + (e === null ? 'sin zona compartida' : 'imagen doble: <span class="' + (e < 0.003 ? 'good' : 'bad') + '">' + (e * 1000).toFixed(0) + ' mm</span>' + (e < 0.003 ? ' ✔ alineado' : ''));
     $('stepBtn').textContent = 'Paso ' + (S.step >= 0.01 ? (S.step * 100) + ' cm' : (S.step * 1000) + ' mm');
-    $('gridBtn').classList.toggle('on', S.calib);
+    document.querySelectorAll('#gridBtn, .gridBtn').forEach(function (b) { b.classList.toggle('on', S.calib); });
+    updateDual();
     document.querySelectorAll('[data-sel]').forEach(function (b) { b.classList.toggle('on', +b.dataset.sel === S.sel); });
   }
   // ---- gestos sobre la vista en modo Encuadre / Calibrar ----
@@ -996,7 +1167,7 @@
 
     // fusión
     const bl = $('blendCtl');
-    slider(bl, { id: 'sOverlap', label: 'Superposición', min: 0, max: 0.4, step: 0.005, reset: 0.15, calib: true, get: function () { return S.overlap; }, set: function (v) { S.overlap = v; }, fmt: function (v) { return pct(v) + ' · ' + Math.round(v * NATIVE_W) + ' px'; }, after: function () { refreshSource(); } });
+    slider(bl, { id: 'sOverlap', label: 'Superposición', min: 0, max: 1, step: 0.005, reset: 0.15, calib: true, get: function () { return S.overlap; }, set: function (v) { S.overlap = v; }, fmt: function (v) { return pct(v) + ' · ' + Math.round(v * NATIVE_W) + ' px'; }, after: function () { refreshSource(); } });
     slider(bl, { id: 'sBlend', label: 'Intensidad del Edge Blending', min: 0, max: 1, step: 0.01, reset: 1, calib: true, get: function () { return S.blend; }, set: function (v) { S.blend = v; }, fmt: pct });
     slider(bl, { id: 'sGamma', label: 'Gamma de compensación', min: 1, max: 3, step: 0.05, reset: 2.2, calib: true, get: function () { return S.gamma; }, set: function (v) { S.gamma = v; }, fmt: function (v) { return v.toFixed(2); }, title: 'La rampa se aplica a la señal; el proyector la eleva a ~2,2. Con 2,2 la luz suma exactamente 1.' });
     slider(bl, { id: 'sCurve', label: 'Forma de la transición (lineal → suave)', min: 0, max: 1, step: 0.01, reset: 1, calib: true, get: function () { return S.curve; }, set: function (v) { S.curve = v; }, fmt: pct });
@@ -1045,6 +1216,16 @@
       b.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nudge(d[0], d[1]); } });
     });
     // panel: encuadre y enfoque
+    document.querySelectorAll('[data-layout]').forEach(function (b) { b.addEventListener('click', function () { setLayout(b.dataset.layout); }); });
+    const cc = $('calcCtl');
+    slider(cc, { id: 'cDist', label: 'Distancia de tiro (A y B)', min: 0.8, max: 15, step: 0.05, get: function () { return S.P[0].dist; },
+      set: function (v) { S.P.forEach(function (p) { p.dist = v; }); S.sizeIn = (v / S.throwRatio) * Math.sqrt(337) / 16 / 0.0254; },
+      fmt: function (v) { return v.toFixed(2) + ' m'; }, after: function () { refreshUI(); camPreset(S.cam, true); } });
+    slider(cc, { id: 'cThrow', label: 'Relación de proyección (medila)', min: 0.5, max: 2.5, step: 0.01, reset: 1.4, get: function () { return S.throwRatio; },
+      set: function (v) { S.sizeIn = (S.P[0].dist / v) * Math.sqrt(337) / 16 / 0.0254; S.throwRatio = v; }, fmt: function (v) { return v.toFixed(2) + ' : 1'; }, after: function () { refreshUI(); camPreset(S.cam, true); } });
+    slider(cc, { id: 'cBodyW', label: 'Ancho del gabinete del proyector', min: 0.1, max: 0.6, step: 0.01, reset: 0.30, get: function () { return S.body.w; }, set: function (v) { S.body.w = v; }, fmt: function (v) { return Math.round(v * 100) + ' cm'; } });
+    slider(cc, { id: 'cBodyH', label: 'Alto del gabinete del proyector', min: 0.05, max: 0.3, step: 0.01, reset: 0.12, get: function () { return S.body.h; }, set: function (v) { S.body.h = v; }, fmt: function (v) { return Math.round(v * 100) + ' cm'; } });
+    $('vigChk').addEventListener('change', function () { S.vig = $('vigChk').checked; applyState(); });
     const ph = $('photoCtl');
     slider(ph, { id: 'phZoom', label: 'Zoom de la foto (contenido)', min: 0.25, max: 8, step: 0.01, reset: 1, get: function () { return S.photo.zoom; }, set: function (v) { S.photo.zoom = v; }, fmt: function (v) { return Math.round(v * 100) + ' %'; } });
     slider(ph, { id: 'phX', label: 'Desplazar foto horizontal', min: -1, max: 1, step: 0.005, reset: 0, get: function () { return S.photo.px; }, set: function (v) { S.photo.px = v; }, fmt: pct });
@@ -1317,6 +1498,7 @@
       const px = new Uint8Array(w * h * 4); gl.readPixels(x, y, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
       return { w: w, h: h, data: Array.from(px), cw: c.width, ch: c.height };
     },
+    setLayout: setLayout, setOverlap: setOverlap, layoutStats: layoutStats, profileData: profileData, whiteAt: whiteAt,
     setTool: setTool, act: act, nudge: nudge, alignError: alignError, worldOf: worldOf, calibPoints: calibPoints,
     camState: function () { return { pos: camera.position.toArray(), target: controls.target.toArray(), dist: camera.position.distanceTo(controls.target) }; },
     srcSize: function () { const im = uniforms.uSrc.value.image; return im ? [im.videoWidth || im.width, im.videoHeight || im.height] : null; },

@@ -1,5 +1,10 @@
 # ERRORES — DUAL PROJECTOR LAB
 
+## v6 — observaciones
+- Sin errores de la app en las pruebas. Ajustes de diseño hechos al revisar las capturas: en vertical, los botones − / + del solapamiento quedaban en líneas separadas (ahora van juntos), y la leyenda del mapa de luz era demasiado grande en el celular (ahora es compacta).
+- Falso negativo de la prueba (no de la app): comparar las porciones de A y B sobre el patrón de cuadrícula, que es casi todo negro, daba poca diferencia. Ahora se compara sobre el panorama.
+- Limitación del modelo: el brillo «2×» de la superpuesta se ve en pantalla solo un poco más claro (250 contra 228 de 255) por la curva de exposición de la imagen. El mapa de luz y el perfil muestran el valor físico simulado (2×).
+
 ## v5 — errores encontrados al probar
 - **⇄ Antes/Después no volvía a «después»** (CORREGIDO): `act()` cerraba la comparación antes de procesar cualquier botón; al tocar ⇄ otra vez, se cerraba y se volvía a abrir. Ahora ⇄ maneja la comparación por sí mismo.
 - **La vista se corría de costado en escritorio** al tocar un botón de la barra (CORREGIDO): el grupo de botones no hacía salto de línea y desplazaba el contenedor. Ahora los grupos se acomodan en varias filas y `#stage` usa `overflow: clip`.

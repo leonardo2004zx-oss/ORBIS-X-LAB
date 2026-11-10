@@ -2,7 +2,21 @@
 
 Rama: `ccr-c47ef91f-l1boq4` · PR #2 en `leonardo2004zx-oss/ORBIS-X-LAB`
 
-## v5 — encuadre, enfoque y calibración (versión actual)
+## v6 — laboratorio de proyección dual híbrida (versión actual)
+Sobre la v5, sin reconstruir la app.
+- Nueva herramienta **💡 Dual** (barra de herramientas y barra táctil):
+  - Tres disposiciones: **⧉ Superpuesta** (100 % compartido: mismo tamaño, doble luz), **▭▭ Panorámica** (15 %: 1,85× de ancho) e **◫ Híbrida** (50 %: 1,5× de ancho).
+  - Solapamiento ajustable con − / + (0–100 %); el control del panel ahora llega a 100 %.
+  - **🌡 Mapa de luz**: luminosidad simulada en falso color (campo blanco), con curvas de nivel cada 0,25× y leyenda (1× = un proyector).
+  - **Perfil de brillo** a lo ancho (curva de A, de B y total) y lectura de uniformidad.
+  - **⇄ Blending SÍ/NO**: demostración antes/después de la corrección de brillo en la zona compartida.
+  - **▦ Cuadrícula** (prueba de calibración) y **📊 Comparar modos**: tres tarjetas dibujadas a escala, con persona de 1,75 m, tamaño, diagonal, superficie, brillo, luz aprovechada y separación de lentes. «Probar» aplica el modo.
+- **Calculadora de pantalla dual** en el panel: distancia de tiro (A y B), relación de proyección, ancho y alto del gabinete. Calcula el tamaño de cada modo, avisa si los proyectores no entran lado a lado y separa lo calculado, lo simulado y lo que requiere medición física. Aclara que no controla proyectores físicos.
+- Superpuesta: la rampa de blending se desactiva (las dos imágenes son iguales y la luz se suma). En 3D, si las lentes quedan más cerca que el ancho del gabinete, B se dibuja encima de A.
+- Viñeteo opcional (caída de brillo hacia los bordes, aproximado).
+- Nueva prueba `tests/dual.js` (16).
+
+## v5 — encuadre, enfoque y calibración
 Sin reconstruir la app: se agregó sobre la v4.
 - **Barra de herramientas debajo de la vista** (ya no tapa la imagen): *👁 Ver*, *🔍 Encuadre*, *🎯 Calibrar*. La vista (`#viewport`) ocupa el espacio libre y las barras van abajo; en celular, al usar una herramienta se oculta la barra general y aparece «✓ Listo».
 - **Encuadre del contenido** (no mueve los proyectores): zoom −/+, ⌖ Centrar, ⤢ Ajustar; arrastrar con un dedo mueve la foto y pellizcar la amplía. Shader: `srcAt()` aplica `uPhoto` (zoom, desplazamiento X/Y).

@@ -48,6 +48,18 @@ La vista 2D y la 3D usan **el mismo material**, por eso muestran exactamente el 
 - Sin sombras, sin postprocesado, materiales Lambert, butacas instanciadas.
 - Sin bloqueo del puntero.
 
+## Proyección dual híbrida (v6)
+| Modo | Solapamiento o | Ancho | Brillo parejo (simulado) | Luz aprovechada |
+|---|---|---|---|---|
+| Superpuesta | 100 % | 1× | 2× | 100 % |
+| Panorámica | 15 % | (2 − o) = 1,85× | 1× | (2 − o)/2 = 92,5 % |
+| Híbrida | 50 % | 1,5× | 1× (2× en el centro sin blending) | 75 % |
+- **Tamaño (calculado)**: ancho de un proyector = distancia ÷ relación de proyección; alto = ancho × 9/16; ancho total = ancho × (2 − o); separación de lentes = ancho × (1 − o). Si la separación es menor que el ancho del gabinete, hay que apilarlos.
+- **Luz (simulada)**: el shader calcula para cada punto la luz de campo blanco de A y de B (`wa`, `wb`) con la misma rampa, brillo, color y nivel de negro que la imagen. El mapa usa `heat((wa + wb) / 2,2)`. `whiteAt()` / `profileData()` repiten la fórmula en JavaScript para el perfil y la uniformidad (sin giro ni trapecio).
+- Con o = 100 % la rampa se anula (`w = 1`): las dos imágenes son iguales y se suman.
+- Viñeteo opcional: 1 − 0,7·r² (r desde el centro de cada imagen), es una aproximación.
+- No hay control de hardware: la app no envía imagen ni comandos a proyectores.
+
 ## Encuadre, enfoque y calibración (v5)
 Tres conceptos separados, en controles separados:
 | Concepto | Qué cambia | Dónde | Uniforme |
