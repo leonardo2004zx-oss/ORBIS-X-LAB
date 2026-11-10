@@ -1,0 +1,87 @@
+[
+  {
+    "name": "Abre un video local",
+    "ok": true,
+    "detail": "1280×720, 20.0 s"
+  },
+  {
+    "name": "Se abren dos ventanas independientes (A y B) con el bloqueador de ventanas activo",
+    "ok": true,
+    "detail": "Proyector A — Dual Projector Player | Proyector B — Dual Projector Player · botón: «Ahora tocá para abrir B ▸» → «A y B abiertas ✓»"
+  },
+  {
+    "name": "Cada ventana pinta exactamente el fotograma actual del único decodificador",
+    "ok": true,
+    "detail": "100.0 % de los dibujos coinciden (±1) con el fotograma de la fuente"
+  },
+  {
+    "name": "Sincronía en pantalla entre A y B",
+    "ok": true,
+    "detail": "186 instantes comparados: mismo fotograma en 98.9 %, diferencia media 0.01, máxima 1 fotograma(s) (1 fotograma = 33 ms); un mismo fotograma aparece en A y en B con 4.7 ms de diferencia (mediana), 11.3 ms (p95)"
+  },
+  {
+    "name": "Los fotogramas avanzan al reproducir",
+    "ok": true,
+    "detail": "A: 0 → 180, B: 0 → 180"
+  },
+  {
+    "name": "Rendimiento (FPS, CPU, memoria)",
+    "ok": true,
+    "detail": "FPS dibujados A 30 / B 30 (video de 30 fps) · ventanas 955×500 y 955×500 · CPU del navegador 53 % de un núcleo · memoria del navegador (PSS) 985 MB con las dos ventanas reproduciendo, 454 MB solo con el panel (RSS sumado 1599 MB) · JS 3.8 MB"
+  },
+  {
+    "name": "Cada ventana muestra una parte diferente del mismo video",
+    "ok": true,
+    "detail": "A: letra «A» naranja 0.4 %, «B» celeste 0.00 % · B: «A» 0.00 %, «B» 0.4 %"
+  },
+  {
+    "name": "Pausa: ambas ventanas quedan quietas en el mismo fotograma",
+    "ok": true,
+    "detail": "A 189→189 · B 189→189"
+  },
+  {
+    "name": "Saltar a 10 s cambia el fotograma en ambas ventanas",
+    "ok": true,
+    "detail": "fotograma A 300, B 300 (esperado 300)"
+  },
+  {
+    "name": "Edge blending atenúa realmente el borde compartido de A",
+    "ok": true,
+    "detail": "brillo del borde derecho de A: con blending 23, sin blending 86 (centro 166)"
+  },
+  {
+    "name": "Solapamiento: en Superpuesta A y B muestran la misma imagen completa",
+    "ok": true,
+    "detail": "diferencia A/B: panorámica 102.5 → superpuesta 0.0"
+  },
+  {
+    "name": "Híbrida (50 %): A y B comparten la mitad",
+    "ok": true,
+    "detail": "diferencia A/B 66.5"
+  },
+  {
+    "name": "«Encajar» mantiene la proporción original (16:9); «Estirar» la deforma",
+    "ok": true,
+    "detail": "proporción con Encajar 1.778 (16:9 = 1,778), con Estirar 3.53; borde izquierdo de A: negro 0 (barra lateral) vs. imagen 164"
+  },
+  {
+    "name": "Alineación fina: ▶ mueve la imagen de B 2 píxeles",
+    "ok": true,
+    "detail": "desplazamiento medido 2 px"
+  },
+  {
+    "name": "Cuadrícula de calibración se dibuja en las ventanas",
+    "ok": true,
+    "detail": "brillo medio 49.0 → 52.1"
+  },
+  {
+    "name": "Pantalla completa en la ventana A (pedido aceptado por el navegador)",
+    "ok": true,
+    "detail": "requestFullscreen → true; tamaño del lienzo 955×500 (esta pantalla virtual no tiene gestor de ventanas, por eso no cambió el tamaño: NO verificado visualmente)"
+  },
+  {
+    "name": "Sin errores de JavaScript",
+    "ok": true,
+    "detail": "[]"
+  }
+]
