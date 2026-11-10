@@ -46,7 +46,8 @@ Juego de preguntas en `akari/index.html`, con Akari, una presentadora anime que 
 
 - 43 preguntas en 6 categorías (cultura general, anime, videojuegos, terror, lógica y tramposas) y tres niveles de dificultad. Cada partida tiene 15 preguntas, 3 vidas, 20 segundos por pregunta, rachas que multiplican los puntos y un comodín 50:50.
 - Se puede responder con botones, con el teclado (`1`–`4` o `A`–`D`, `Enter` para seguir) o con el micrófono (si el navegador lo permite).
-- Akari habla con la síntesis de voz del navegador. Si no hay voz disponible, solo muestra el texto.
+- Akari habla con la voz en español del dispositivo (`speechSynthesis`). Si el dispositivo no tiene voz, no tiene voces en español o la voz no arranca, el juego cambia solo a una **voz integrada** (`akari/mespeak-es.js`: meSpeak/eSpeak con voz en español, licencia GNU GPL v3) que suena por WebAudio. En el menú se puede elegir *Auto*, *Del celular* o *Integrada*, y probar la voz.
+- `python3 scripts/build_akari_artifact.py salida.html` genera una versión de un solo archivo con la voz integrada adentro.
 - Récord, historial y partida en curso se guardan en el navegador (`localStorage`).
 
 ```bash

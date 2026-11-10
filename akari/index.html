@@ -136,6 +136,11 @@ button{cursor:pointer}
 .chip-toggle[aria-pressed="true"]{border-color:var(--violet);background:color-mix(in srgb,var(--violet) 22%,var(--ink))}
 .chip-toggle svg{width:16px;height:16px}
 .note{font-size:.78rem;color:var(--muted);line-height:1.45;margin:0}
+.note b{color:var(--cyan);font-weight:700}
+.voice-box{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--ink)}
+.seg button{border:0;background:none;padding:7px 11px;font-size:.82rem;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:color-mix(in srgb,var(--violet) 40%,var(--ink));color:#fff}
 .hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:.85rem}
 .hist li{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-variant-numeric:tabular-nums}
 .hist li b{color:var(--text);font-family:var(--f-hud)}
@@ -393,6 +398,13 @@ kbd{font-family:var(--f-hud);background:var(--ink);border:1px solid var(--line);
             <button class="chip-toggle" id="tVoice" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 8a5 5 0 0 1 0 8M19 5a9 9 0 0 1 0 14"/></svg>Voz de Akari</button>
             <button class="chip-toggle" id="tSfx" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>Efectos</button>
           </div>
+          <div class="voice-box">
+            <div class="seg" role="group" aria-label="Tipo de voz">
+              <button type="button" data-vm="auto">Auto</button><button type="button" data-vm="device">Del celular</button><button type="button" data-vm="builtin">Integrada</button>
+            </div>
+            <button type="button" class="chip-toggle" id="testVoice"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Probar voz</button>
+          </div>
+          <p class="note"><b id="voiceStatus">Voz: cargando…</b> ¿No escuchás nada? Subí el volumen, sacá el modo silencio y elegí «Integrada».</p>
           <p class="note" id="capNote"></p>
         </div>
         <div class="panel menu">
@@ -467,6 +479,7 @@ kbd{font-family:var(--f-hud);background:var(--ink);border:1px solid var(--line);
   </section>
 </div>
 
+<!--MESPEAK--><script id="msScript" src="mespeak-es.js" async></script><!--/MESPEAK-->
 <script>
 (() => {
 'use strict';
@@ -553,7 +566,7 @@ const RANKS = [[5000, 'Leyenda del Show', 'Sos una leyenda. Ok, oficialmente me 
 
 /* ===================== MEMORIA LOCAL ===================== */
 const KEY = 'akari-gameshow-v1';
-const DEF = {best: 0, games: 0, correct: 0, answered: 0, bestStreak: 0, history: [], seen: [], name: '', voice: true, sfx: true, run: null};
+const DEF = {best: 0, games: 0, correct: 0, answered: 0, bestStreak: 0, history: [], seen: [], name: '', voice: true, voiceMode: 'auto', sfx: true, run: null};
 let S = Object.assign({}, DEF);
 try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
@@ -625,15 +638,43 @@ addEventListener('pointermove', e => {
 }, {passive: true});
 function moveAkari(slot) { $(slot).appendChild(akStage); }
 
-/* ===================== VOZ (síntesis) ===================== */
-const synth = 'speechSynthesis' in window ? window.speechSynthesis : null;
-let voice = null;
+/* ===================== VOZ ===================== */
+// Dos motores: la voz del dispositivo (speechSynthesis) y una voz integrada (meSpeak/eSpeak, en español)
+// que suena por WebAudio. En modo «auto» se usa la del dispositivo si tiene voz en español y responde;
+// si no existe, no tiene voces en español o no arranca en 1,6 s, se pasa a la integrada.
+const synth = ('speechSynthesis' in window && window.SpeechSynthesisUtterance) ? window.speechSynthesis : null;
+let voice = null, esVoices = 0, nativeOk = null, lastEngine = 'none', keepUtt = null, curSrc = null;
 function pickVoice() {
-  if (!synth) return; const vs = synth.getVoices(); const es = vs.filter(v => /^es/i.test(v.lang));
+  if (!synth) return; let vs = []; try { vs = synth.getVoices() || []; } catch (e) {}
+  const es = vs.filter(v => /^es/i.test(v.lang)); esVoices = es.length;
   const fem = /(paulina|m[oó]nica|helena|laura|sabina|elvira|dalia|marisol|esperanza|lupe|penélope|paloma|francisca|female|mujer)/i;
   voice = es.find(v => /es-(AR|419|MX|US)/i.test(v.lang) && fem.test(v.name)) || es.find(v => fem.test(v.name)) || es.find(v => /google/i.test(v.name)) || es.find(v => /es-(AR|419|MX|US)/i.test(v.lang)) || es[0] || null;
+  voiceStatus();
 }
-if (synth) { pickVoice(); synth.addEventListener?.('voiceschanged', pickVoice); }
+if (synth) { pickVoice(); try { synth.addEventListener('voiceschanged', pickVoice); } catch (e) { synth.onvoiceschanged = pickVoice; } }
+function hasBuiltin() { return !!(window.meSpeak && window.meSpeak.isConfigLoaded && window.meSpeak.isConfigLoaded()); }
+function engineFor() {
+  const mode = S.voiceMode || 'auto';
+  if (mode === 'builtin') return hasBuiltin() ? 'builtin' : (synth ? 'device' : 'none');
+  if (mode === 'device') return synth ? 'device' : (hasBuiltin() ? 'builtin' : 'none');
+  if (synth && nativeOk !== false && (esVoices > 0 || nativeOk === true || (synth.getVoices() || []).length === 0)) return 'device';
+  return hasBuiltin() ? 'builtin' : (synth ? 'device' : 'none');
+}
+function voiceStatus() {
+  const el = $('#voiceStatus'); if (!el) return;
+  const e = engineFor();
+  el.textContent = !S.voice ? 'Voz apagada.' : e === 'device' ? `Voz del dispositivo${voice ? ' (' + voice.name.replace(/\s*\(.*\)/, '') + ')' : ''}.` : e === 'builtin' ? 'Voz integrada de Akari (no depende del celular).' : 'No hay voz disponible: Akari habla con texto.';
+}
+// Desbloqueo de audio en el primer toque (iOS/Android lo exigen)
+let unlocked = false;
+function unlockAudio() {
+  if (unlocked) return; unlocked = true;
+  const a = ac(); if (a) { try { const b = a.createBuffer(1, 1, 22050), src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(0); } catch (e) {} }
+  if (synth) { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } catch (e) {} }
+}
+addEventListener('pointerdown', unlockAudio, {capture: true});
+addEventListener('keydown', unlockAudio, {capture: true});
+
 let typeIv = null, sayId = 0, sayFallback = null;
 const bubbleText = $('#bubbleText');
 function bubble(text) {
@@ -642,30 +683,67 @@ function bubble(text) {
   let i = 0; bubbleText.textContent = '';
   typeIv = setInterval(() => { i += 2; bubbleText.textContent = text.slice(0, i); if (i >= text.length) clearInterval(typeIv); }, 26);
 }
+function stopAudio() {
+  if (synth && (synth.speaking || synth.pending)) { try { synth.cancel(); } catch (e) {} }
+  if (curSrc) { try { curSrc.onended = null; curSrc.stop(); } catch (e) {} curSrc = null; }
+}
+function speakBuiltin(spoken, id, done) {
+  const a = ac(); if (!a || !hasBuiltin()) return false;
+  let data;
+  try { data = window.meSpeak.speak(spoken, {rawdata: 'array', variant: 'f5', pitch: 72, speed: 168, amplitude: 140, wordgap: 1}); } catch (e) { return false; }
+  if (!data || !data.length) return false;
+  const buf = new Uint8Array(data).buffer;
+  const play = audio => {
+    if (id !== sayId) return;
+    const src = a.createBufferSource(), g = a.createGain(); g.gain.value = 1.15;
+    src.buffer = audio; src.connect(g); g.connect(a.destination);
+    src.onended = () => { if (curSrc === src) curSrc = null; done(); };
+    curSrc = src; src.start(0); lastEngine = 'builtin'; talkStart();
+    clearTimeout(sayFallback); sayFallback = setTimeout(done, audio.duration * 1000 + 1500);
+  };
+  try { const pr = a.decodeAudioData(buf, play, () => done()); if (pr && pr.catch) pr.catch(() => {}); } catch (e) { return false; }
+  return true;
+}
+function speakDevice(spoken, id, done, fallback) {
+  if (!synth) return false;
+  let started = false;
+  const go = () => {
+    if (id !== sayId) return;
+    const u = new SpeechSynthesisUtterance(spoken); keepUtt = u;
+    if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'es-AR';
+    u.pitch = 1.4; u.rate = 1.05; u.volume = 1;
+    u.onstart = () => { started = true; nativeOk = true; lastEngine = 'device'; voiceStatus(); };
+    u.onend = done;
+    u.onerror = ev => { if (id !== sayId) return; const er = ev && ev.error;
+      if (er === 'interrupted' || er === 'canceled') return done();
+      if (!started) { nativeOk = false; voiceStatus(); fallback(); } else done(); };
+    try { synth.speak(u); if (synth.paused) synth.resume(); } catch (e) { nativeOk = false; fallback(); return; }
+    // Si la voz del sistema no arranca, pasar a la integrada
+    if (nativeOk !== true) setTimeout(() => { if (id === sayId && !started) { nativeOk = false; try { synth.cancel(); } catch (e) {} voiceStatus(); fallback(); } }, 1600);
+  };
+  const wasBusy = synth.speaking || synth.pending;
+  stopAudio();
+  if (wasBusy) setTimeout(go, 70); else go(); // Chrome descarta un speak() pegado a un cancel()
+  talkStart(); lastEngine = 'device';
+  clearTimeout(sayFallback); sayFallback = setTimeout(done, spoken.length * 95 + 4000);
+  return true;
+}
 function say(text, opt = {}) {
   const id = ++sayId;
   if (opt.mood) setMood(opt.mood);
   bubble(text);
   clearTimeout(sayFallback);
-  const spoken = text.replace(/[«»]/g, '').replace(/…/g, '.');
+  const spoken = text.replace(/[«»]/g, '').replace(/…/g, '.').replace(/¿|¡/g, '');
   const done = () => { if (id !== sayId) return; clearTimeout(sayFallback); talkStop(); };
-  if (synth) synth.cancel();
-  if (opt.voice !== false && S.voice && synth && !micOn) {
-    try {
-      const u = new SpeechSynthesisUtterance(spoken);
-      if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'es-ES';
-      u.pitch = 1.4; u.rate = 1.06;
-      u.onend = done;
-      u.onerror = ev => { if (id !== sayId) return; if (ev && (ev.error === 'interrupted' || ev.error === 'canceled')) return done();
-        clearTimeout(sayFallback); talkStart(); sayFallback = setTimeout(done, Math.min(5000, spoken.length * 42 + 300)); };
-      synth.speak(u); talkStart();
-      sayFallback = setTimeout(done, spoken.length * 90 + 2500);
-      return;
-    } catch (e) {}
-  }
-  talkStart(); sayFallback = setTimeout(done, Math.min(5000, spoken.length * 42 + 300));
+  const silent = () => { talkStart(); clearTimeout(sayFallback); sayFallback = setTimeout(done, Math.min(5000, spoken.length * 42 + 300)); lastEngine = 'none'; };
+  if (opt.voice === false || !S.voice || micOn) { stopAudio(); return silent(); }
+  const builtin = () => { if (id !== sayId) return; stopAudio(); if (!speakBuiltin(spoken, id, done)) silent(); };
+  const e = engineFor();
+  if (e === 'device') { if (!speakDevice(spoken, id, done, builtin)) builtin(); }
+  else if (e === 'builtin') builtin();
+  else { stopAudio(); silent(); }
 }
-function hush() { sayId++; if (synth) synth.cancel(); clearTimeout(sayFallback); talkStop(); }
+function hush() { sayId++; stopAudio(); clearTimeout(sayFallback); talkStop(); }
 
 /* ===================== MICRÓFONO ===================== */
 // En claude.ai se usa el dictado de la plataforma; fuera de ahí, la Web Speech API del navegador si existe.
@@ -990,7 +1068,7 @@ function renderTitle() {
   const h = $('#hist'); h.innerHTML = '';
   S.history.slice(0, 5).forEach(x => { const li = document.createElement('li'); const d = new Date(x.t);
     li.innerHTML = '<span></span><b></b>'; li.firstChild.textContent = `${d.toLocaleDateString('es', {day: '2-digit', month: 'short'})} · ${x.c}/${x.n} correctas`; li.lastChild.textContent = x.s + ' pts'; h.appendChild(li); });
-  syncToggles(); capNote();
+  syncToggles(); syncVoiceMode(); capNote();
 }
 
 /* restart con doble toque (no hay confirm() en todas las vistas) */
@@ -1004,8 +1082,16 @@ restartBtn.addEventListener('click', () => {
 });
 
 /* toggles */
+function syncVoiceMode() { $$('.seg [data-vm]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vm === (S.voiceMode || 'auto'))); voiceStatus(); }
+function voiceOn() { if (!S.voice) { S.voice = true; save(); syncToggles(); } }
+$$('.seg [data-vm]').forEach(b => b.addEventListener('click', () => {
+  S.voiceMode = b.dataset.vm; if (b.dataset.vm === 'device') nativeOk = null; save(); voiceOn(); syncVoiceMode();
+  say('¡Hola! Soy Akari. ¿Me escuchás bien?', {mood: 'happy'}); react('jump');
+}));
+$('#testVoice').addEventListener('click', () => { voiceOn(); say(rnd(['¡Hola! Soy Akari. ¿Me escuchás bien?', 'Probando, probando… ¡uno, dos, tres! ¿Llega mi voz?']), {mood: 'happy'}); react('jump'); });
+const msScript = $('#msScript'); if (msScript && !hasBuiltin()) msScript.addEventListener('load', voiceStatus);
 function syncToggles() { ['tVoice', 'hVoice'].forEach(id => $('#' + id).setAttribute('aria-pressed', S.voice)); ['tSfx', 'hSfx'].forEach(id => $('#' + id).setAttribute('aria-pressed', S.sfx)); }
-function toggleVoice() { S.voice = !S.voice; if (!S.voice) hush(); save(); syncToggles(); }
+function toggleVoice() { S.voice = !S.voice; if (!S.voice) hush(); save(); syncToggles(); voiceStatus(); if (S.voice) say('¡Volví a hablar!', {mood: 'happy'}); }
 function toggleSfx() { S.sfx = !S.sfx; save(); syncToggles(); if (S.sfx) SFX.click(); }
 $('#tVoice').addEventListener('click', toggleVoice); $('#hVoice').addEventListener('click', toggleVoice);
 $('#tSfx').addEventListener('click', toggleSfx); $('#hSfx').addEventListener('click', toggleSfx);
@@ -1040,7 +1126,7 @@ addEventListener('keydown', e => {
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (synth) synth.cancel(); if (micOn) micStop(); } });
 
 // Exponer un pequeño gancho para pruebas automatizadas
-window.__akari = {get state() { return state; }, get run() { return run; }, get cur() { return cur; }, matchAnswer, Q};
+window.__akari = {get engine() { return lastEngine; }, get nativeOk() { return nativeOk; }, engineFor, get state() { return state; }, get run() { return run; }, get cur() { return cur; }, matchAnswer, Q};
 
 toTitle();
 })();
