@@ -418,7 +418,7 @@ kbd{font-family:var(--f-hud);background:var(--ink);border:1px solid var(--line);
             <div class="stat"><b id="stStreak">0</b><span>Mejor racha</span></div>
           </div>
           <ul class="hist" id="hist"></ul>
-          <div class="keys"><span><kbd>1</kbd>–<kbd>4</kbd> o <kbd>A</kbd>–<kbd>D</kbd> responder</span><span><kbd>Enter</kbd> seguir</span><span><kbd>M</kbd> micrófono</span></div>
+          <div class="keys"><span><kbd>1</kbd>–<kbd>4</kbd> o <kbd>A</kbd>–<kbd>D</kbd> responder</span><span><kbd>Enter</kbd> seguir / saltear lectura</span><span><kbd>M</kbd> micrófono</span></div>
         </div>
       </div>
     </div>
@@ -449,6 +449,7 @@ kbd{font-family:var(--f-hud);background:var(--ink);border:1px solid var(--line);
         <p class="explain" id="explain" hidden></p>
         <div class="actions">
           <button class="btn" id="micBtn" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Responder con la voz</span></button>
+          <button class="btn" id="skipBtn" hidden title="También con Enter o S">Saltear lectura ⏭</button>
           <button class="btn" id="fiftyBtn">50 : 50</button>
           <button class="btn" id="nextBtn" hidden>Siguiente ➜</button>
         </div>
@@ -817,7 +818,8 @@ function playNatural(segs, id, done, fail) {
       t += b.duration / vs.rate + (segs[i].p || 0) * vs.pause / 1000; curSrcs.push(src);
     });
     lastEngine = 'natural'; lipStart();
-    clearTimeout(sayFallback); sayFallback = setTimeout(done, (t - a.currentTime) * 1000 + 150);
+    const last = curSrcs[curSrcs.length - 1]; if (last) last.onended = () => { if (curSrcs.includes(last)) done(); };
+    clearTimeout(sayFallback); sayFallback = setTimeout(done, (t - a.currentTime) * 1000 + 2500); // respaldo si «ended» no llega
   }, fail);
 }
 function speakDevice(spoken, id, done, fail) {
@@ -1076,7 +1078,7 @@ function presentQuestion(lv) {
   setMood(q.c === 'tr' ? 'smug' : 'think'); react('lean');
   // El reloj arranca cuando Akari termina de leer la pregunta y las opciones (como mucho a los 16 s)
   const thisQ = cur, go = once(() => { if (state === 'asking' && cur === thisQ && !timerOn) startTimer(TIME); });
-  resetTimer(TIME);
+  resetTimer(TIME); $('#skipBtn').hidden = false;
   say(`${q.c === 'tr' ? 'Atención… esta tiene trampa. ' : ''}${qLine(run.i + 1)} ${q.q}`, {mood: q.c === 'tr' ? 'smug' : 'neutral', segs: SAY.question(run.i + 1, q, cur.order), onDone: go});
   SFX.whoosh(); setTimeout(go, 16000);
 }
@@ -1084,12 +1086,13 @@ let tRAF = 0, tStart = 0, tDur = 0, lastSec = 0, hurried = false, timerOn = fals
 const once = fn => { let did = false; return (...a) => { if (!did) { did = true; fn(...a); } }; };
 // Si el jugador interrumpe la lectura (50:50, micrófono), el reloj arranca ya
 function kickTimer() { if (state === 'asking' && !timerOn) startTimer(TIME); }
+function skipReading() { if (state === 'asking' && !timerOn) { hush(); kickTimer(); } }
 function resetTimer(sec) {
   cancelAnimationFrame(tRAF); timerOn = false; tDur = sec * 1000;
   $('#timerFill').style.transform = 'scaleX(1)'; $('#timerNum').textContent = sec; $('#timer').classList.remove('danger');
 }
 function startTimer(sec) {
-  cancelAnimationFrame(tRAF); tDur = sec * 1000; tStart = performance.now(); lastSec = sec; hurried = false; timerOn = true;
+  cancelAnimationFrame(tRAF); tDur = sec * 1000; tStart = performance.now(); lastSec = sec; hurried = false; timerOn = true; $('#skipBtn').hidden = true;
   const fill = $('#timerFill'), num = $('#timerNum'), tm = $('#timer');
   const loop = () => {
     const left = Math.max(0, tDur - (performance.now() - tStart)); const s = Math.ceil(left / 1000);
@@ -1100,7 +1103,7 @@ function startTimer(sec) {
   };
   tRAF = requestAnimationFrame(loop);
 }
-function stopTimer() { cancelAnimationFrame(tRAF); if (!timerOn) return tDur / 1000; timerOn = false; return Math.max(0, tDur - (performance.now() - tStart)) / 1000; }
+function stopTimer() { cancelAnimationFrame(tRAF); $('#skipBtn').hidden = true; if (!timerOn) return tDur / 1000; timerOn = false; return Math.max(0, tDur - (performance.now() - tStart)) / 1000; }
 function timeUp() { if (state === 'asking') answer(-1); }
 
 function answer(pos) {
@@ -1234,6 +1237,7 @@ $('#playBtn').addEventListener('click', () => { SFX.click(); S.run = null; start
 $('#contBtn').addEventListener('click', () => { SFX.click(); startGame(true); });
 $('#nextBtn').addEventListener('click', next);
 $('#fiftyBtn').addEventListener('click', fifty);
+$('#skipBtn').addEventListener('click', skipReading);
 $('#homeBtn').addEventListener('click', () => { SFX.click(); toTitle(); });
 $('#againBtn').addEventListener('click', () => { SFX.click(); startGame(false); });
 $('#menuBtn').addEventListener('click', () => { SFX.click(); toTitle(); });
@@ -1253,13 +1257,14 @@ addEventListener('keydown', e => {
     if (idx !== undefined) { e.preventDefault(); answer(idx); return; }
     if (k === 'm' && !micBtn.hidden) { e.preventDefault(); micStart(); return; }
     if (k === 'h') { e.preventDefault(); fifty(); return; }
+    if ((k === 'enter' || k === 's') && !timerOn) { e.preventDefault(); skipReading(); return; }
   } else if (state === 'revealed' && (k === 'enter' || k === ' ')) { e.preventDefault(); next(); }
   else if (state === 'title' && k === 'enter' && document.activeElement === document.body) { $('#playBtn').click(); }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (synth) synth.cancel(); if (micOn) micStop(); } });
 
 // Exponer un pequeño gancho para pruebas automatizadas
-window.__akari = {get engine() { return lastEngine; }, get timerOn() { return timerOn; }, engineFor, allSpoken, PACK, SAY, get state() { return state; }, get run() { return run; }, get cur() { return cur; }, matchAnswer, Q};
+window.__akari = {skipReading, get engine() { return lastEngine; }, get timerOn() { return timerOn; }, engineFor, allSpoken, PACK, SAY, get state() { return state; }, get run() { return run; }, get cur() { return cur; }, matchAnswer, Q};
 
 toTitle();
 })();

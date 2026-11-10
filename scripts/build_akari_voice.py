@@ -8,8 +8,9 @@ Uso: python3 scripts/build_akari_voice.py RUTA/es_AR-daniela-high.onnx
 Los segmentos, su estilo y la palabra clave de cada pregunta salen de spokenStyles() en akari/index.html (bloque /*SPEECH-START*/ ... /*SPEECH-END*/),
 así que después de cambiar preguntas o diálogos hay que volver a correr este script.
 
-Para que Akari suene alegre y no plana, cada frase pasa por Praat (PSOLA): se sube el tono y se
-estira la melodía alrededor de su mediana, sin tocar el timbre. Cada estilo tiene su intensidad.
+Para que Akari suene alegre y no plana, cada frase pasa por Praat (PSOLA): se sube el tono (techo +3 st) y se
+estira la melodía alrededor de su mediana, sin tocar el timbre ni la duración. La velocidad va solo en Piper
+(length_scale). Cada segmento lleva fundidos de 5 ms para que no haya clics al encadenarlos.
 """
 import base64
 import json
@@ -29,13 +30,14 @@ from piper import PiperVoice, SynthesisConfig
 STYLES = {
     "hype": (0.84, 0.85, 1.0, 3.0, 1.85),  # festejos, burlas, sorpresas
     "play": (0.88, 0.80, 0.95, 2.5, 1.5),  # explicaciones y frases normales, con energía
-    "ask": (0.90, 0.80, 0.95, 2.5, 1.5),   # la pregunta, con énfasis en su palabra clave
+    "ask": (0.90, 0.80, 0.95, 2.0, 1.5),   # la pregunta; su palabra clave sube +1 st (techo total: +3 st)
     "list": (0.95, 0.60, 0.80, 1.5, 1.15),  # opciones: tono más llano para no competir con la pregunta
     "calm": (1.00, 0.70, 0.85, 1.0, 1.25),  # suspenso: «La respuesta era…», «Atención…»
-    "key": (0.96, 0.85, 1.0, 3.5, 1.7),    # lo que se revela: más agudo, más lento y más fuerte
+    "key": (0.96, 0.85, 1.0, 3.0, 1.7),    # lo que se revela: en el techo de tono y más fuerte
     "sad": (0.95, 0.70, 0.80, 1.5, 1.2),   # pierde una vida, game over
 }
-GAIN_DB = {"key": 2.0, "list": -1.0}
+GAIN_DB = {"hype": 2.0, "key": 2.0, "list": -1.0}  # la energía sale de intensidad y rango, no de más tono
+MAX_SEMI = 3.0  # techo de subida de tono
 
 
 def phon_count(text):
@@ -70,22 +72,17 @@ def liven(inp, out, semi, expand, span=None):
     fs = np.array([call(pt, "Get value at index", i) for i in range(1, n + 1)])
     med = np.median(fs)
     boost = np.zeros(len(ts))
-    if span:  # énfasis: la palabra clave sube 2,5 semitonos con rampas suaves de 40 ms
+    if span:  # énfasis: la palabra clave sube 1 semitono con rampas suaves de 40 ms
         t0, t1 = span
-        boost = 2.5 * np.clip(np.minimum((np.array(ts) - t0) / 0.04, (t1 - np.array(ts)) / 0.04), 0, 1)
-    new = med * 2 ** ((12 * np.log2(fs / med) * expand + semi + boost) / 12)
+        boost = 1.0 * np.clip(np.minimum((np.array(ts) - t0) / 0.04, (t1 - np.array(ts)) / 0.04), 0, 1)
+    new = med * 2 ** ((12 * np.log2(fs / med) * expand + np.minimum(semi + boost, MAX_SEMI)) / 12)
     npt = call("Create PitchTier", "p", snd.xmin, snd.xmax)
     for t, f in zip(ts, new):
         call(npt, "Add point", t, float(min(f, 700)))
     call([npt, man], "Replace pitch tier")
-    if span:  # y se dice un 15 % más lenta
-        dt = call("Create DurationTier", "d", snd.xmin, snd.xmax)
-        for t, v in ((t0 - 0.03, 1.0), (t0, 1.15), (t1, 1.15), (t1 + 0.03, 1.0)):
-            call(dt, "Add point", max(snd.xmin, t), v)
-        call([dt, man], "Replace duration tier")
     res = call(man, "Get resynthesis (overlap-add)")
-    if span:  # y un poco más fuerte (+3 dB)
-        e0, e1 = t0, t0 + (t1 - t0) * 1.15
+    if span:  # y un poco más fuerte (+3 dB); Praat nunca cambia la duración
+        e0, e1 = t0, t1
         call(res, "Formula", f"self * (1 + 0.41 * min(1, max(0, min((x - {e0}) / 0.04, ({e1} - x) / 0.04))))")
     call(res, "Scale peak", 0.9)  # evita recortes al guardar
     res.save(out, "WAV")
@@ -108,8 +105,8 @@ with tempfile.TemporaryDirectory() as tmp:
         liven(raw, lively, semi, expand, keyword_span(raw, clean, keyword) if keyword else None)
         # recorta silencios, da brillo y nivela volumen; MP3 mono lo decodifican todos los navegadores
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", lively, "-af",
-                        "silenceremove=start_periods=1:start_threshold=-50dB,areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,"
-                        f"treble=g=2.5:f=3200,loudnorm=I=-16:TP=-1.5,volume={GAIN_DB.get(style, 0)}dB",
+                        "silenceremove=start_periods=1:start_threshold=-50dB,afade=t=in:d=0.005,areverse,silenceremove=start_periods=1:start_threshold=-50dB,afade=t=in:d=0.005,areverse,"
+                        f"treble=g=2.5:f=3200,loudnorm=I=-16:TP=-1.5,volume={GAIN_DB.get(style, 0)}dB,afade=t=in:d=0.005,areverse,afade=t=in:d=0.005,areverse",
                         "-ar", "22050", "-ac", "1", "-b:a", "40k", mp3], check=True)
         pack[style + "|" + text] = base64.b64encode(pathlib.Path(mp3).read_bytes()).decode()
 
