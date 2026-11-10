@@ -39,3 +39,17 @@ python3 scripts/make_demo_gifs.py
 | `js/caption.js` | Animaciones de texto compartidas |
 | `js/export.js` | Exportación a vídeo con `MediaRecorder` |
 | `js/store.js` | Guardado en IndexedDB |
+
+## Akari Game Show
+
+Juego de preguntas en `akari/index.html`, con Akari, una presentadora anime que habla, cambia de expresión y reacciona a tus respuestas. Es un único archivo sin dependencias.
+
+- 43 preguntas en 6 categorías (cultura general, anime, videojuegos, terror, lógica y tramposas) y tres niveles de dificultad. Cada partida tiene 15 preguntas, 3 vidas, 20 segundos por pregunta, rachas que multiplican los puntos y un comodín 50:50.
+- Se puede responder con botones, con el teclado (`1`–`4` o `A`–`D`, `Enter` para seguir) o con el micrófono (si el navegador lo permite).
+- Akari habla con la síntesis de voz del navegador. Si no hay voz disponible, solo muestra el texto.
+- Récord, historial y partida en curso se guardan en el navegador (`localStorage`).
+
+```bash
+python3 -m http.server 8000
+# abre http://localhost:8000/akari/
+```
