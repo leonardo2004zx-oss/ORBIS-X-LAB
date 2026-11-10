@@ -3,7 +3,9 @@
 Requisitos: node, ffmpeg, `pip install piper-tts praat-parselmouth` y el modelo de Piper
 es_AR-daniela-high (https://huggingface.co/rhasspy/piper-voices, carpeta es/es_AR/daniela/high).
 
-Uso: python3 scripts/build_akari_voice.py RUTA/MODELO.onnx [--pilot SALIDA.wav]
+Uso: python3 scripts/build_akari_voice.py RUTA/MODELO.onnx [--pilot SALIDA.wav] [--only ESTILO]
+
+Con --only ESTILO (por ejemplo key) regraba solo los segmentos de ese estilo y conserva el resto de voice-pack.js.
 
 Con --pilot solo graba la secuencia de prueba de la pregunta 3 (pregunta, opciones, acierto y error)
 en un único wav e imprime sus mediciones, sin tocar akari/voice-pack.js.
@@ -51,7 +53,7 @@ PROFILES["es_MX-claude-high"] = {
     "ask": (0.70, 0.80, 0.95, 2.0, 1.2),
     "list": (0.72, 0.60, 0.80, 1.5, 1.0),
     "calm": (0.70, 0.70, 0.85, 1.0, 1.1),
-    "key": (0.70, 0.85, 1.0, 3.0, 1.25),
+    "key": (0.70, 0.85, 1.0, 3.0, 1.8),  # revelación: más melodía (~9-10 st de rango)
     "sad": (0.74, 0.70, 0.80, 1.5, 1.0),
 }
 F0_FLOOR, F0_CEIL = 150, 450  # rango de análisis de tono para una voz femenina aguda
@@ -167,7 +169,12 @@ html = (root / "index.html").read_text(encoding="utf-8")
 block = re.search(r"/\*SPEECH-START\*/(.*?)/\*SPEECH-END\*/", html, re.S).group(1)
 lines = json.loads(subprocess.run(["node", "-e", block + "\nprocess.stdout.write(JSON.stringify(spokenStyles()))"],
                                   capture_output=True, text=True, check=True).stdout)
+only = sys.argv[sys.argv.index("--only") + 1] if "--only" in sys.argv else None
 pack = {}
+if only:  # conserva lo ya grabado y solo reemplaza el estilo pedido
+    prev = (root / "voice-pack.js").read_text(encoding="utf-8")
+    pack = json.loads(prev[prev.index("=") + 1:].rstrip().rstrip(";"))
+    lines = [x for x in lines if x[1] == only]
 with tempfile.TemporaryDirectory() as tmp:
     for i, (text, style, keyword) in enumerate(lines):
         f = render(text, style, keyword, tmp, i)
