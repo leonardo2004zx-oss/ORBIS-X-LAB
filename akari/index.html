@@ -1,0 +1,1274 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!--WRAP-END-->
+<title>Akari Game Show</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#0a0614">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=M+PLUS+Rounded+1c:wght@400;700;800&family=Mochiy+Pop+One&display=swap">
+<style>
+/* Layout: plató de neón a pantalla completa. Akari a la izquierda (arriba en el celular), tablero de preguntas a la derecha. Un solo look oscuro a propósito. */
+:root{
+  --ink:#0a0614; --panel:#150d27; --panel-2:#1f1439; --line:#3b2868;
+  --violet:#a35cff; --pink:#ff4fd2; --cyan:#4fe3ff; --gold:#ffd166;
+  --good:#4dffa6; --bad:#ff4d6d; --text:#f4eeff; --muted:#a99cca;
+  --f-display:"Mochiy Pop One","M PLUS Rounded 1c",system-ui,sans-serif;
+  --f-body:"M PLUS Rounded 1c",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-hud:"Chakra Petch",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--text);font-family:var(--f-body);font-size:15px;overflow:hidden;-webkit-tap-highlight-color:transparent}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
+[hidden]{display:none!important}
+
+/* ---------- Escenario de fondo ---------- */
+#bg{position:fixed;inset:0;overflow:hidden;z-index:0;pointer-events:none;
+  background:radial-gradient(120% 70% at 50% 0%,#2a0f56 0%,transparent 60%),radial-gradient(80% 50% at 85% 100%,#3a0b45 0%,transparent 70%),var(--ink)}
+.beam{position:absolute;top:-10%;width:34vmax;height:120vmax;transform-origin:50% 0;
+  background:linear-gradient(to bottom,color-mix(in srgb,var(--violet) 38%,transparent),transparent 70%);
+  filter:blur(6px);opacity:.45;mix-blend-mode:screen;animation:sweep 9s ease-in-out infinite alternate}
+.beam.b1{left:2%;animation-delay:-2s}
+.beam.b2{right:2%;animation-duration:11s;background:linear-gradient(to bottom,color-mix(in srgb,var(--pink) 32%,transparent),transparent 70%)}
+.beam.b3{left:40%;animation-duration:13s;opacity:.25;background:linear-gradient(to bottom,color-mix(in srgb,var(--cyan) 30%,transparent),transparent 65%)}
+@keyframes sweep{from{transform:rotate(-24deg)}to{transform:rotate(24deg)}}
+.floor{position:absolute;left:-50%;right:-50%;bottom:-6%;height:52%;transform:perspective(420px) rotateX(62deg);transform-origin:50% 100%;
+  background-image:linear-gradient(color-mix(in srgb,var(--violet) 55%,transparent) 1.5px,transparent 1.5px),linear-gradient(90deg,color-mix(in srgb,var(--violet) 55%,transparent) 1.5px,transparent 1.5px);
+  background-size:56px 56px;animation:floor 3s linear infinite;
+  -webkit-mask-image:linear-gradient(to top,#000 10%,transparent 85%);mask-image:linear-gradient(to top,#000 10%,transparent 85%)}
+@keyframes floor{to{background-position:0 56px,0 0}}
+#fx{position:fixed;inset:0;width:100%;height:100%;z-index:5;pointer-events:none}
+
+/* ---------- App ---------- */
+#app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px;box-sizing:border-box}
+.screen{flex:1;min-height:0;display:flex;flex-direction:column}
+.screen[hidden]{display:none!important}
+
+/* ---------- Akari ---------- */
+#akStage{position:relative;display:flex;align-items:center;justify-content:center;min-height:0}
+#akWrap{position:relative;height:100%;aspect-ratio:300/380;max-width:100%;cursor:pointer;filter:drop-shadow(0 0 22px color-mix(in srgb,var(--violet) 55%,transparent))}
+#akari{width:100%;height:100%;display:block;overflow:visible}
+#akari *{transform-box:fill-box}
+#akBody{animation:breathe 3.6s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes breathe{50%{transform:translateY(2.5px) scaleY(.995)}}
+#akHead{transform-origin:50% 90%;transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
+#ahoge{transform-origin:20% 100%;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:rotate(14deg)}}
+.lock{transform-origin:50% 0;animation:sway 4.2s ease-in-out infinite}
+#lockR{animation-delay:-2.1s}
+@keyframes sway{50%{transform:skewX(3deg)}}
+.eye-open{transform-origin:center;transition:transform .07s}
+.iris{transition:transform .25s ease-out}
+.eye-happy,.eye-closed,.fx-a{display:none}
+#akari.blink .eye-open{transform:scaleY(.08)}
+.brow{transform-origin:center;transition:transform .25s}
+.blush{opacity:.45;transition:opacity .3s}
+.mouth{display:none}.mouth.on{display:inline}
+.mood-happy .eye-open,.mood-laugh .eye-open{display:none}
+.mood-happy .eye-happy,.mood-laugh .eye-happy{display:inline}
+.mood-happy .blush,.mood-laugh .blush,.mood-sad .blush{opacity:.85}
+.mood-smug #eyeR .eye-open{display:none}.mood-smug #eyeR .eye-happy{display:inline}
+.mood-smug #browL{transform:rotate(7deg) translateY(1px)}
+.mood-surprised .brow{transform:translateY(-7px)}
+.mood-surprised .iris{transform:scale(.78)!important}
+.mood-sad #browL{transform:rotate(-13deg) translateY(-1px)}.mood-sad #browR{transform:rotate(13deg) translateY(-1px)}
+.mood-fired #browL{transform:rotate(14deg) translateY(2px)}.mood-fired #browR{transform:rotate(-14deg) translateY(2px)}
+.mood-think #browR{transform:translateY(-5px) rotate(-4deg)}
+.mood-happy #fxSpark,.mood-fired #fxSpark{display:inline}
+.mood-surprised #fxSweat,.mood-sad #fxSweat{display:inline}
+.mood-laugh #fxHa{display:inline}
+.mood-fired #fxFire{display:inline}
+.fx-a{animation:fxpop 1.2s ease-in-out infinite;transform-origin:center}
+@keyframes fxpop{50%{transform:translateY(-4px) scale(1.08)}}
+#akWrap.r-jump{animation:jump .7s cubic-bezier(.3,1.7,.5,1)}
+@keyframes jump{30%{transform:translateY(-9%) scale(1.03)}60%{transform:translateY(0) scale(.98,1.02)}}
+#akWrap.r-shake{animation:shake .7s ease-in-out}
+@keyframes shake{20%{transform:rotate(-4deg)}40%{transform:rotate(4deg)}60%{transform:rotate(-3deg)}80%{transform:rotate(2deg)}}
+#akWrap.r-gasp{animation:gasp .5s ease-out}
+@keyframes gasp{30%{transform:scale(1.07) translateY(-3%)}}
+#akWrap.r-lean{animation:lean .9s ease-in-out}
+@keyframes lean{40%{transform:rotate(-5deg) translateX(-3%)}}
+
+.bubble{position:relative;background:linear-gradient(160deg,#fff 0%,#f1e6ff 100%);color:#22123f;border-radius:20px;padding:12px 16px;
+  font-weight:700;line-height:1.4;box-shadow:0 0 0 3px var(--violet),0 0 26px color-mix(in srgb,var(--violet) 70%,transparent);min-height:2.8em}
+.bubble .who{display:block;font-family:var(--f-display);font-size:.72rem;letter-spacing:.08em;color:var(--violet);margin-bottom:2px}
+.bubble p{margin:0;font-size:1rem}
+.bubble::after{content:"";position:absolute;width:18px;height:18px;background:#f6efff;box-shadow:3px 3px 0 0 var(--violet);transform:rotate(45deg)}
+
+/* ---------- Pantalla de inicio ---------- */
+#title{overflow-y:auto;align-items:center;gap:14px;padding-block:6px}
+.title-grid{display:grid;grid-template-columns:minmax(240px,1fr) minmax(280px,420px);gap:28px;align-items:center;width:min(980px,100%);margin:auto}
+#titleSlot #akStage{height:min(62vh,520px);flex-direction:column;gap:12px}
+#titleSlot #akWrap{flex:1}
+#titleSlot .bubble{order:-1;max-width:330px}
+#titleSlot .bubble::after{bottom:-8px;left:50%;margin-left:-9px}
+.logo{margin:0;font-family:var(--f-display);font-weight:400;line-height:.95;text-wrap:balance;font-size:clamp(2.2rem,6vw,3.6rem);
+  background:linear-gradient(180deg,#fff 10%,#e2c6ff 45%,var(--violet) 75%,var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 14px color-mix(in srgb,var(--violet) 80%,transparent));animation:flicker 5s infinite}
+.logo small{display:block;font-size:.42em;letter-spacing:.32em;color:var(--cyan);-webkit-text-fill-color:var(--cyan);margin-top:6px;font-family:var(--f-hud);font-weight:700}
+@keyframes flicker{0%,92%,100%{opacity:1}93%{opacity:.55}95%{opacity:1}96%{opacity:.7}}
+.panel{background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:18px;padding:16px;backdrop-filter:blur(6px)}
+.menu{display:flex;flex-direction:column;gap:14px}
+.field label{display:block;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field input{width:100%;box-sizing:border-box;background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:1rem}
+.field input:focus{border-color:var(--violet);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--violet) 35%,transparent)}
+.btn{border:0;border-radius:14px;padding:13px 18px;font-weight:800;font-size:1rem;background:var(--panel-2);border:1px solid var(--line);transition:transform .12s,box-shadow .2s,background .2s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px color-mix(in srgb,var(--violet) 35%,transparent)}
+.btn:active{transform:translateY(1px) scale(.98)}
+.btn.primary{font-family:var(--f-display);font-weight:400;font-size:1.25rem;letter-spacing:.03em;color:#fff;border:0;padding:15px 18px;
+  background:linear-gradient(100deg,var(--violet),var(--pink));box-shadow:0 0 0 2px #ffffff22 inset,0 8px 30px color-mix(in srgb,var(--pink) 45%,transparent);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 2px #ffffff33 inset,0 8px 42px color-mix(in srgb,var(--pink) 70%,transparent)}}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:var(--ink);border:1px solid var(--line);border-radius:12px;padding:8px 6px;text-align:center}
+.stat b{display:block;font-family:var(--f-hud);font-size:1.25rem;font-variant-numeric:tabular-nums;color:var(--gold)}
+.stat span{font-size:.68rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.toggles{display:flex;gap:8px;flex-wrap:wrap}
+.chip-toggle{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--ink);font-size:.85rem;font-weight:700}
+.chip-toggle[aria-pressed="true"]{border-color:var(--violet);background:color-mix(in srgb,var(--violet) 22%,var(--ink))}
+.chip-toggle svg{width:16px;height:16px}
+.note{font-size:.78rem;color:var(--muted);line-height:1.45;margin:0}
+.note b{color:var(--cyan);font-weight:700}
+.voice-box{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--ink)}
+.seg button{border:0;background:none;padding:7px 11px;font-size:.82rem;font-weight:700;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:color-mix(in srgb,var(--violet) 40%,var(--ink));color:#fff}
+.hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:.85rem}
+.hist li{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hist li b{color:var(--text);font-family:var(--f-hud)}
+.keys{display:flex;gap:6px;flex-wrap:wrap;font-size:.75rem;color:var(--muted)}
+kbd{font-family:var(--f-hud);background:var(--ink);border:1px solid var(--line);border-bottom-width:3px;border-radius:6px;padding:1px 6px;color:var(--text)}
+
+/* ---------- HUD ---------- */
+.hud{display:flex;align-items:center;gap:10px;padding-bottom:8px;flex-wrap:wrap}
+.hud .brand{font-family:var(--f-display);font-size:1rem;color:#fff;text-shadow:0 0 12px var(--violet);white-space:nowrap}
+.hud .brand em{font-style:normal;color:var(--pink)}
+.hud-stats{display:flex;gap:8px;align-items:center;margin-left:auto}
+.pill{display:flex;align-items:baseline;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-family:var(--f-hud);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill small{font-size:.65rem;color:var(--muted);letter-spacing:.1em}
+#hudScore{color:var(--gold);min-width:3.5ch;text-align:right;display:inline-block}
+#hudScore.bump{animation:bump .4s}
+@keyframes bump{40%{transform:scale(1.35);color:#fff}}
+.hearts{letter-spacing:2px;font-size:1rem}
+.hearts i{font-style:normal;color:var(--pink);text-shadow:0 0 8px var(--pink);display:inline-block}
+.hearts i.lost{color:#4a3a63;text-shadow:none}
+.hearts i.pop{animation:heartpop .6s}
+@keyframes heartpop{30%{transform:scale(1.8) rotate(-15deg)}}
+#hudStreak{color:#ffb347}
+.icon-btn{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;padding:0}
+.icon-btn svg{width:19px;height:19px}
+.icon-btn[aria-pressed="false"]{opacity:.5}
+.icon-btn.armed{border-color:var(--bad);color:var(--bad);width:auto;padding:0 10px;font-size:.78rem;font-weight:800}
+
+/* ---------- Partida ---------- */
+.game{flex:1;min-height:0;display:grid;grid-template-columns:minmax(260px,40%) minmax(0,1fr);gap:18px}
+.game>*{min-width:0}
+#gameSlot{min-height:0;display:flex}
+#gameSlot #akStage{flex:1;min-width:0;flex-direction:column;justify-content:flex-end;gap:10px}
+#gameSlot #akWrap{flex:1;min-height:0}
+#gameSlot .bubble{width:100%;box-sizing:border-box;order:-1}
+#gameSlot .bubble::after{bottom:-8px;left:50%;margin-left:-9px}
+.board{min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:2px 2px 6px}
+.qmeta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tag{font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:5px 10px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line)}
+.tag.lv{color:var(--cyan);border-color:color-mix(in srgb,var(--cyan) 45%,var(--line))}
+.tag.cat{color:#fff;background:linear-gradient(90deg,color-mix(in srgb,var(--violet) 55%,var(--panel)),var(--panel-2))}
+.tag.count{margin-left:auto;font-family:var(--f-hud);font-variant-numeric:tabular-nums}
+.qcard{position:relative;padding:18px 18px 16px;border-radius:18px;background:linear-gradient(160deg,var(--panel-2),var(--panel));border:1px solid var(--line);
+  box-shadow:0 0 0 1px #ffffff0d inset,0 10px 40px #0008}
+.qcard::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;background:linear-gradient(120deg,var(--violet),transparent 40%,transparent 60%,var(--pink));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+#qText{margin:0;font-family:var(--f-display);font-weight:400;font-size:clamp(1.1rem,2.4vw,1.55rem);line-height:1.3;text-wrap:balance}
+.qcard.enter{animation:qin .5s cubic-bezier(.2,1.4,.4,1)}
+@keyframes qin{from{transform:translateY(14px) scale(.96);opacity:0}}
+.timer{display:flex;align-items:center;gap:10px}
+.timer-bar{flex:1;height:10px;border-radius:99px;background:var(--ink);border:1px solid var(--line);overflow:hidden}
+#timerFill{height:100%;width:100%;transform-origin:0 50%;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));box-shadow:0 0 12px var(--violet)}
+.timer.danger #timerFill{background:linear-gradient(90deg,var(--bad),#ff9a4d);animation:blinkbar .5s steps(2) infinite}
+@keyframes blinkbar{50%{opacity:.55}}
+#timerNum{font-family:var(--f-hud);font-weight:700;width:2.2ch;text-align:right;font-variant-numeric:tabular-nums;font-size:1.1rem}
+.timer.danger #timerNum{color:var(--bad)}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ans{position:relative;display:flex;align-items:center;gap:12px;text-align:left;min-height:58px;padding:10px 14px 10px 10px;border-radius:14px;
+  background:linear-gradient(180deg,#24184a,#1a1036);border:1.5px solid var(--line);font-weight:800;font-size:1rem;line-height:1.25;
+  transition:transform .15s,border-color .2s,box-shadow .2s,opacity .3s;animation:ain .45s cubic-bezier(.2,1.4,.4,1) backwards}
+.ans:nth-child(2){animation-delay:.06s}.ans:nth-child(3){animation-delay:.12s}.ans:nth-child(4){animation-delay:.18s}
+@keyframes ain{from{transform:translateX(-14px);opacity:0}}
+.ans .k{flex:none;width:34px;height:34px;display:grid;place-items:center;font-family:var(--f-hud);font-weight:700;border-radius:10px;
+  background:var(--ink);border:1.5px solid var(--violet);color:var(--violet);transition:.2s}
+.ans:not(:disabled):hover{transform:translateY(-2px);border-color:var(--violet);box-shadow:0 0 22px color-mix(in srgb,var(--violet) 45%,transparent)}
+.ans:not(:disabled):hover .k{background:var(--violet);color:#fff}
+.ans:disabled{cursor:default}
+.ans.correct{border-color:var(--good);background:linear-gradient(180deg,#0f4a35,#0b2d22);box-shadow:0 0 26px color-mix(in srgb,var(--good) 55%,transparent);animation:okpulse .8s}
+.ans.correct .k{background:var(--good);border-color:var(--good);color:#04261a}
+.ans.wrong{border-color:var(--bad);background:linear-gradient(180deg,#4d1426,#2b0b17);animation:wshake .45s}
+.ans.wrong .k{background:var(--bad);border-color:var(--bad);color:#fff}
+.ans.dim{opacity:.38}
+.ans.removed{opacity:.12;filter:grayscale(1)}
+.ans.heard{outline:2px dashed var(--cyan);outline-offset:3px}
+@keyframes okpulse{40%{transform:scale(1.04)}}
+@keyframes wshake{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.actions .btn{display:inline-flex;align-items:center;gap:8px}
+.actions svg{width:18px;height:18px}
+#micBtn.listening{border-color:var(--pink);color:#fff;background:color-mix(in srgb,var(--pink) 30%,var(--panel-2));animation:pulse 1.2s infinite}
+#nextBtn{margin-left:auto;font-family:var(--f-display);font-weight:400;color:#fff;border:0;background:linear-gradient(100deg,var(--violet),var(--pink))}
+#heard{font-size:.85rem;color:var(--cyan);min-height:1.2em;margin:0}
+.explain{margin:0;padding:12px 14px;border-radius:14px;background:var(--ink);border:1px solid var(--line);line-height:1.45;font-size:.95rem}
+.explain b{color:var(--good)}
+.explain.bad b{color:var(--bad)}
+.scorepop{position:fixed;z-index:6;font-family:var(--f-hud);font-weight:700;font-size:1.6rem;color:var(--gold);text-shadow:0 0 12px var(--gold);pointer-events:none;animation:rise 1.1s ease-out forwards}
+@keyframes rise{to{transform:translateY(-60px);opacity:0}}
+
+/* Cartel de nivel */
+#banner{position:fixed;left:0;right:0;top:38%;z-index:7;text-align:center;pointer-events:none;padding:14px 16px;
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--violet) 80%,transparent) 20%,color-mix(in srgb,var(--pink) 80%,transparent) 80%,transparent);
+  font-family:var(--f-display);font-size:clamp(1.4rem,5vw,2.6rem);color:#fff;text-shadow:0 0 18px #fff8;animation:banner 2.2s ease-in-out forwards}
+#banner small{display:block;font-family:var(--f-hud);font-size:.4em;letter-spacing:.3em}
+@keyframes banner{0%{transform:translateX(-100%) skewX(-12deg)}18%,82%{transform:none}100%{transform:translateX(100%) skewX(-12deg)}}
+
+/* ---------- Final ---------- */
+#end{overflow-y:auto;align-items:center}
+.end-grid{display:grid;grid-template-columns:minmax(220px,1fr) minmax(280px,440px);gap:24px;align-items:center;width:min(940px,100%);margin:auto}
+#endSlot #akStage{height:min(60vh,480px);flex-direction:column;gap:12px}
+#endSlot #akWrap{flex:1}
+#endSlot .bubble{order:-1;max-width:340px}
+#endSlot .bubble::after{bottom:-8px;left:50%;margin-left:-9px}
+.end-score{font-family:var(--f-hud);font-weight:700;font-size:clamp(3rem,10vw,4.6rem);line-height:1;color:var(--gold);text-shadow:0 0 24px color-mix(in srgb,var(--gold) 60%,transparent);font-variant-numeric:tabular-nums}
+.rank{font-family:var(--f-display);font-size:1.3rem;color:#fff;margin:4px 0 0}
+.record{display:inline-block;margin-top:8px;padding:4px 10px;border-radius:8px;background:var(--gold);color:#2b1a00;font-weight:800;font-size:.8rem;letter-spacing:.08em;animation:pulse 1.4s infinite}
+.end-head{text-align:center}
+
+/* ---------- Celular ---------- */
+@media (max-width:820px){
+  body{font-size:14px}
+  .title-grid,.end-grid{grid-template-columns:1fr;gap:14px}
+  #titleSlot #akStage,#endSlot #akStage{height:auto;flex-direction:row;align-items:flex-end;gap:10px}
+  #titleSlot #akWrap,#endSlot #akWrap{flex:none;height:clamp(170px,30vh,260px)}
+  #titleSlot .bubble,#endSlot .bubble{order:2;flex:1;align-self:center;max-width:none}
+  #titleSlot .bubble::after,#endSlot .bubble::after{bottom:auto;top:50%;left:-8px;margin:-9px 0 0;box-shadow:-3px 3px 0 0 var(--violet)}
+  .logo{text-align:center}
+  .game{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:10px}
+  #gameSlot #akStage{flex-direction:row;align-items:flex-end;gap:10px}
+  #gameSlot #akWrap{flex:none;height:clamp(130px,22vh,200px)}
+  #gameSlot .bubble{order:2;flex:1;align-self:center;padding:10px 12px}
+  #gameSlot .bubble p{font-size:.92rem}
+  #gameSlot .bubble::after{bottom:auto;top:50%;left:-8px;margin:-9px 0 0;box-shadow:-3px 3px 0 0 var(--violet)}
+  .answers{gap:8px}
+  .ans{min-height:52px;padding:8px 10px 8px 8px;gap:8px;font-size:.9rem}
+  .ans .k{width:28px;height:28px;border-radius:8px}
+  .pill small{display:none}
+  #explain{display:none}
+  .board{gap:10px}
+  .actions .btn{padding:10px 14px}
+  .hud .brand{display:none}
+  .hud-stats{margin-left:0}
+  .hud{gap:6px}
+  .pill{padding:4px 9px}
+  .icon-btn{width:34px;height:34px;border-radius:10px}
+  .hud .hud-stats{flex:1}
+  .qcard{padding:14px}
+  .keys{display:none}
+}
+@media (max-width:420px){ .stats{grid-template-columns:repeat(2,1fr)} .hud{gap:5px} .hud-stats{gap:5px} .icon-btn{width:32px;height:32px} .pill{padding:4px 8px} }
+@media (max-width:340px){ .answers{grid-template-columns:1fr} #hSfx{display:none} }
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+
+<div id="bg" aria-hidden="true"><div class="beam b1"></div><div class="beam b2"></div><div class="beam b3"></div><div class="floor"></div></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<div id="app">
+  <!-- Akari: un único SVG que se mueve entre pantallas -->
+  <div id="akStage">
+    <div class="bubble" aria-live="polite"><span class="who">AKARI</span><p id="bubbleText">¡Hola! Soy Akari. ¿Jugamos?</p></div>
+    <div id="akWrap" title="Tocá a Akari">
+      <svg id="akari" class="mood-neutral" viewBox="0 0 300 380" role="img" aria-label="Akari, la presentadora del show">
+        <defs>
+          <linearGradient id="hairG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b1748"/><stop offset=".5" stop-color="#1a0e2e"/><stop offset="1" stop-color="#4a2288"/></linearGradient>
+          <linearGradient id="hairFront" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1f63"/><stop offset=".6" stop-color="#1c1031"/><stop offset="1" stop-color="#2a1550"/></linearGradient>
+          <linearGradient id="hairHi" x1="0" x2="1"><stop offset="0" stop-color="#c08cff" stop-opacity="0"/><stop offset=".5" stop-color="#d4adff"/><stop offset="1" stop-color="#c08cff" stop-opacity="0"/></linearGradient>
+          <radialGradient id="irisG" cx=".5" cy=".3" r=".75"><stop offset="0" stop-color="#f0dcff"/><stop offset=".4" stop-color="#b06bff"/><stop offset=".8" stop-color="#5a1fb0"/><stop offset="1" stop-color="#2c0b63"/></radialGradient>
+          <linearGradient id="skinG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0e8"/><stop offset="1" stop-color="#ffd9ca"/></linearGradient>
+          <linearGradient id="jacketG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a1a4a"/><stop offset="1" stop-color="#120a24"/></linearGradient>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <g id="akBody">
+          <!-- pelo de atrás -->
+          <path d="M150 28C68 28 38 98 44 178C49 250 30 320 16 380H284C270 320 251 250 256 178C262 98 232 28 150 28Z" fill="url(#hairG)"/>
+          <path d="M62 200C58 260 46 320 36 372" stroke="#7d45d6" stroke-width="2.5" fill="none" opacity=".55"/>
+          <path d="M238 200C242 260 254 320 264 372" stroke="#7d45d6" stroke-width="2.5" fill="none" opacity=".55"/>
+          <!-- cuerpo -->
+          <path d="M136 198V248Q150 260 164 248V198Z" fill="#f2c2b0"/>
+          <path d="M56 380C60 306 98 266 150 260C202 266 240 306 244 380Z" fill="url(#jacketG)"/>
+          <path d="M126 262L150 304L174 262Z" fill="#f4ecff"/>
+          <path d="M150 304V380" stroke="#a35cff" stroke-width="2" opacity=".7"/>
+          <path d="M126 262L150 304L174 262" fill="none" stroke="#a35cff" stroke-width="3" filter="url(#glow)"/>
+          <path d="M80 318C96 300 108 290 122 284M220 318C204 300 192 290 178 284" stroke="#ff4fd2" stroke-width="2.5" fill="none" filter="url(#glow)"/>
+          <g transform="translate(196 330)"><path d="M0-11L3-3L11-3L5 2L7 10L0 5L-7 10L-5 2L-11-3L-3-3Z" fill="#ffd166" filter="url(#glow)"/></g>
+          <g id="akHead">
+            <!-- cara -->
+            <path d="M96 128C96 80 120 62 150 62C180 62 204 80 204 128C204 174 182 210 150 219C118 210 96 174 96 128Z" fill="url(#skinG)"/>
+            <ellipse class="blush" cx="113" cy="171" rx="12" ry="6" fill="#ff8fb3"/>
+            <ellipse class="blush" cx="187" cy="171" rx="12" ry="6" fill="#ff8fb3"/>
+            <!-- ojos -->
+            <g id="eyeL">
+              <g class="eye-open">
+                <ellipse cx="124" cy="146" rx="16" ry="19" fill="#fff"/>
+                <g class="iris"><ellipse cx="124" cy="148" rx="12.5" ry="16" fill="url(#irisG)"/><ellipse cx="124" cy="150" rx="5.5" ry="8" fill="#1d0640"/>
+                  <circle cx="119" cy="141" r="4.6" fill="#fff"/><circle cx="129" cy="155" r="2" fill="#fff" opacity=".85"/></g>
+                <path d="M105 138Q109 126 124 125Q138 125 143 135" fill="none" stroke="#1a0e2e" stroke-width="4.5" stroke-linecap="round"/>
+                <path d="M106 137L99 131" stroke="#1a0e2e" stroke-width="3" stroke-linecap="round"/>
+                <path d="M112 165Q124 168 136 164" fill="none" stroke="#b07a8a" stroke-width="1.5" stroke-linecap="round"/>
+              </g>
+              <path class="eye-happy" d="M108 150Q124 132 140 150" fill="none" stroke="#1a0e2e" stroke-width="4.5" stroke-linecap="round"/>
+            </g>
+            <g id="eyeR">
+              <g class="eye-open">
+                <ellipse cx="176" cy="146" rx="16" ry="19" fill="#fff"/>
+                <g class="iris"><ellipse cx="176" cy="148" rx="12.5" ry="16" fill="url(#irisG)"/><ellipse cx="176" cy="150" rx="5.5" ry="8" fill="#1d0640"/>
+                  <circle cx="171" cy="141" r="4.6" fill="#fff"/><circle cx="181" cy="155" r="2" fill="#fff" opacity=".85"/></g>
+                <path d="M157 135Q162 125 176 125Q191 126 195 138" fill="none" stroke="#1a0e2e" stroke-width="4.5" stroke-linecap="round"/>
+                <path d="M194 137L201 131" stroke="#1a0e2e" stroke-width="3" stroke-linecap="round"/>
+                <path d="M164 164Q176 168 188 165" fill="none" stroke="#b07a8a" stroke-width="1.5" stroke-linecap="round"/>
+              </g>
+              <path class="eye-happy" d="M160 150Q176 132 192 150" fill="none" stroke="#1a0e2e" stroke-width="4.5" stroke-linecap="round"/>
+            </g>
+            <path id="browL" class="brow" d="M108 114Q122 106 138 112" fill="none" stroke="#2a1748" stroke-width="3.5" stroke-linecap="round"/>
+            <path id="browR" class="brow" d="M162 112Q178 106 192 114" fill="none" stroke="#2a1748" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M150 170L148 176L151 176" fill="none" stroke="#d9a090" stroke-width="1.6" stroke-linecap="round"/>
+            <!-- bocas -->
+            <path class="mouth on" data-m="smile" d="M139 189Q150 197 161 189" fill="none" stroke="#5b1a33" stroke-width="3" stroke-linecap="round"/>
+            <path class="mouth" data-m="flat" d="M142 192Q150 193 158 191" fill="none" stroke="#5b1a33" stroke-width="3" stroke-linecap="round"/>
+            <path class="mouth" data-m="smirk" d="M140 192Q152 195 162 186" fill="none" stroke="#5b1a33" stroke-width="3" stroke-linecap="round"/>
+            <path class="mouth" data-m="sad" d="M141 195Q150 188 159 195" fill="none" stroke="#5b1a33" stroke-width="3" stroke-linecap="round"/>
+            <g class="mouth" data-m="talkS"><path d="M143 187Q150 186 157 187Q155 196 150 196Q145 196 143 187Z" fill="#6b1f3a"/></g>
+            <g class="mouth" data-m="talkB"><path d="M140 185Q150 184 160 185Q158 202 150 202Q142 202 140 185Z" fill="#6b1f3a"/><ellipse cx="150" cy="198" rx="6" ry="3" fill="#ff7c9c"/></g>
+            <g class="mouth" data-m="o"><ellipse cx="150" cy="193" rx="6" ry="8" fill="#6b1f3a"/><ellipse cx="150" cy="197" rx="3.5" ry="2.5" fill="#ff7c9c"/></g>
+            <g class="mouth" data-m="grin"><path d="M135 184Q150 187 165 184Q162 204 150 205Q138 204 135 184Z" fill="#6b1f3a"/><path d="M137 185Q150 188 163 185L162 189Q150 191 138 189Z" fill="#fff"/><ellipse cx="150" cy="200" rx="7" ry="3.5" fill="#ff7c9c"/></g>
+            <g class="mouth" data-m="laugh"><path d="M131 182Q150 186 169 182Q165 212 150 213Q135 212 131 182Z" fill="#6b1f3a"/><path d="M133 183Q150 187 167 183L166 188Q150 191 134 188Z" fill="#fff"/><ellipse cx="150" cy="206" rx="9" ry="5" fill="#ff7c9c"/></g>
+            <!-- mechones laterales y flequillo -->
+            <path id="lockL" class="lock" d="M101 104C82 160 92 236 66 334C94 300 112 236 114 160Z" fill="url(#hairFront)"/>
+            <path id="lockR" class="lock" d="M199 104C218 160 208 236 234 334C206 300 188 236 186 160Z" fill="url(#hairFront)"/>
+            <path d="M92 142C84 76 118 42 152 42C190 42 220 76 208 142C202 118 196 104 187 95C186 112 179 123 170 130C172 113 168 100 161 91C155 110 145 122 131 129C139 114 140 102 137 93C127 108 116 117 104 122C99 128 95 135 92 142Z" fill="url(#hairFront)"/>
+            <path d="M112 66Q148 46 190 64" fill="none" stroke="url(#hairHi)" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+            <path d="M104 92Q118 76 132 72M170 72Q186 78 196 94" fill="none" stroke="#b884ff" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+            <path d="M100 140C96 180 98 220 90 262" fill="none" stroke="#a35cff" stroke-width="1.8" opacity=".55"/>
+            <path d="M200 140C204 180 202 220 210 262" fill="none" stroke="#a35cff" stroke-width="1.8" opacity=".55"/>
+            <path id="ahoge" d="M150 46C144 22 162 12 176 18C162 22 157 31 158 46Z" fill="#2a1650"/>
+            <!-- auriculares -->
+            <path d="M86 118Q90 30 150 28Q210 30 214 118" fill="none" stroke="#241838" stroke-width="7" stroke-linecap="round"/>
+            <path d="M92 104Q100 40 150 36Q200 40 208 104" fill="none" stroke="#a35cff" stroke-width="1.6" opacity=".85" filter="url(#glow)"/>
+            <rect x="76" y="112" width="20" height="40" rx="9" fill="#241838"/>
+            <rect x="204" y="112" width="20" height="40" rx="9" fill="#241838"/>
+            <rect x="80" y="120" width="6" height="24" rx="3" fill="#4fe3ff" filter="url(#glow)"/>
+            <rect x="214" y="120" width="6" height="24" rx="3" fill="#4fe3ff" filter="url(#glow)"/>
+            <path d="M88 150Q92 192 126 198" fill="none" stroke="#241838" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="128" cy="198" r="4.5" fill="#ff4fd2" filter="url(#glow)"/>
+            <!-- efectos por expresión -->
+            <g id="fxSpark" class="fx-a"><path d="M228 60l4 10 10 4-10 4-4 10-4-10-10-4 10-4z" fill="#ffd166"/><path d="M70 66l3 6 6 3-6 3-3 6-3-6-6-3 6-3z" fill="#4fe3ff"/></g>
+            <g id="fxSweat" class="fx-a"><path d="M206 92C200 104 200 110 206 112C212 110 212 104 206 92Z" fill="#8fdcff" stroke="#fff" stroke-width="1.5"/></g>
+            <g id="fxHa" class="fx-a" font-family="Mochiy Pop One, sans-serif" font-size="22" fill="#ff4fd2"><text x="214" y="70">JA</text><text x="232" y="98" font-size="16">JA</text><text x="50" y="80" font-size="18">JA</text></g>
+            <g id="fxFire" class="fx-a"><path d="M232 70C224 58 232 46 238 40C238 50 248 54 246 66C244 74 236 76 232 70Z" fill="#ff7a2f"/><path d="M236 70C232 64 236 58 239 55C240 60 244 63 242 68Z" fill="#ffd166"/></g>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- INICIO -->
+  <section id="title" class="screen" aria-label="Inicio">
+    <div class="title-grid">
+      <div id="titleSlot"></div>
+      <div class="menu">
+        <h1 class="logo">AKARI<br>GAME SHOW<small>PREGUNTAS · RISAS · NEÓN</small></h1>
+        <div class="panel menu">
+          <div class="field"><label for="nameIn">¿Cómo te llamo?</label><input id="nameIn" maxlength="16" autocomplete="nickname" placeholder="Tu nombre o apodo"></div>
+          <button id="playBtn" class="btn primary">¡Jugar!</button>
+          <button id="contBtn" class="btn" hidden>Continuar partida</button>
+          <div class="toggles">
+            <button class="chip-toggle" id="tVoice" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 8a5 5 0 0 1 0 8M19 5a9 9 0 0 1 0 14"/></svg>Voz de Akari</button>
+            <button class="chip-toggle" id="tSfx" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>Efectos</button>
+          </div>
+          <div class="voice-box">
+            <div class="seg" role="group" aria-label="Tipo de voz">
+              <button type="button" data-vm="natural">Natural</button><button type="button" data-vm="device">Del celular</button>
+            </div>
+            <div class="seg" role="group" aria-label="Estilo de locución">
+              <button type="button" data-vs="neutral">Neutral</button><button type="button" data-vs="hype">Entusiasta</button><button type="button" data-vs="mystery">Misteriosa</button>
+            </div>
+            <button type="button" class="chip-toggle" id="testVoice"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Probar voz</button>
+          </div>
+          <p class="note"><b id="voiceStatus">Voz: cargando…</b> ¿No escuchás nada? Subí el volumen y sacá el modo silencio.</p>
+          <p class="note" id="capNote"></p>
+        </div>
+        <div class="panel menu">
+          <div class="stats">
+            <div class="stat"><b id="stBest">0</b><span>Récord</span></div>
+            <div class="stat"><b id="stGames">0</b><span>Partidas</span></div>
+            <div class="stat"><b id="stAcc">–</b><span>Aciertos</span></div>
+            <div class="stat"><b id="stStreak">0</b><span>Mejor racha</span></div>
+          </div>
+          <ul class="hist" id="hist"></ul>
+          <div class="keys"><span><kbd>1</kbd>–<kbd>4</kbd> o <kbd>A</kbd>–<kbd>D</kbd> responder</span><span><kbd>Enter</kbd> seguir / saltear lectura</span><span><kbd>M</kbd> micrófono</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PARTIDA -->
+  <section id="game" class="screen" aria-label="Partida" hidden>
+    <div class="hud">
+      <div class="brand">AKARI <em>GAME SHOW</em></div>
+      <div class="hud-stats">
+        <div class="pill"><small>PTS</small><span id="hudScore">0</span></div>
+        <div class="pill hearts" id="hudLives" aria-label="Vidas"></div>
+        <div class="pill" title="Racha"><small>RACHA</small><span aria-hidden="true">🔥</span><span id="hudStreak">0</span></div>
+      </div>
+      <button class="icon-btn" id="hVoice" aria-pressed="true" title="Voz de Akari"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 8a5 5 0 0 1 0 8"/></svg></button>
+      <button class="icon-btn" id="hSfx" aria-pressed="true" title="Efectos de sonido"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></button>
+      <button class="icon-btn" id="restartBtn" title="Reiniciar partida"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+      <button class="icon-btn" id="homeBtn" title="Volver al menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></button>
+    </div>
+    <div class="game">
+      <div id="gameSlot"></div>
+      <div class="board">
+        <div class="qmeta"><span class="tag lv" id="qLevel">Nivel 1</span><span class="tag cat" id="qCat">Cultura general</span><span class="tag count" id="qCount">01/15</span></div>
+        <div class="qcard" id="qCard"><p id="qText">…</p></div>
+        <div class="timer" id="timer"><div class="timer-bar"><div id="timerFill"></div></div><span id="timerNum">20</span></div>
+        <div class="answers" id="answers"></div>
+        <p id="heard" aria-live="polite"></p>
+        <p class="explain" id="explain" hidden></p>
+        <div class="actions">
+          <button class="btn" id="micBtn" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Responder con la voz</span></button>
+          <button class="btn" id="skipBtn" hidden title="También con Enter o S">Saltear lectura ⏭</button>
+          <button class="btn" id="fiftyBtn">50 : 50</button>
+          <button class="btn" id="nextBtn" hidden>Siguiente ➜</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section id="end" class="screen" aria-label="Resultado" hidden>
+    <div class="end-grid">
+      <div id="endSlot"></div>
+      <div class="menu">
+        <div class="panel end-head">
+          <div class="note">PUNTUACIÓN FINAL</div>
+          <div class="end-score" id="endScore">0</div>
+          <p class="rank" id="endRank">—</p>
+          <span class="record" id="endRecord" hidden>¡NUEVO RÉCORD!</span>
+        </div>
+        <div class="panel menu">
+          <div class="stats">
+            <div class="stat"><b id="enCorrect">0</b><span>Correctas</span></div>
+            <div class="stat"><b id="enAcc">0%</b><span>Precisión</span></div>
+            <div class="stat"><b id="enStreak">0</b><span>Racha</span></div>
+            <div class="stat"><b id="enBest">0</b><span>Récord</span></div>
+          </div>
+          <div class="row"><button class="btn primary" id="againBtn">Jugar otra vez</button></div>
+          <div class="row"><button class="btn" id="menuBtn">Menú</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!--VOICEPACK--><script src="voice-pack.js"></script><!--/VOICEPACK-->
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/*SPEECH-START*/
+/* ===================== PREGUNTAS ===================== */
+const CATS = {
+  cg: 'Cultura general', an: 'Anime', vg: 'Videojuegos', te: 'Terror', lo: 'Lógica', tr: 'Tramposa'
+};
+// d: dificultad 1-3 · a: índice de la respuesta correcta · x: explicación
+const Q = [
+  {id:1,k:'producen',c:'cg',d:1,q:'¿Qué órganos producen la orina?',o:['La vejiga urinaria','Los riñones','Los uréteres','El hígado'],a:1,x:'Los riñones la producen. La vejiga solo la guarda.'},
+  {id:2,c:'cg',d:1,k:'más grande',q:'¿Cuál es el planeta más grande del sistema solar?',o:['Saturno','Júpiter','Neptuno','La Tierra'],a:1,x:'Júpiter: le entran más de mil Tierras adentro.'},
+  {id:3,c:'cg',d:1,k:'pirámides',q:'¿En qué país están las pirámides de Guiza?',o:['México','Perú','Egipto','Sudán'],a:2,x:'Están en Egipto, al lado de El Cairo.'},
+  {id:4,c:'cg',d:2,k:'oro',q:'¿Cuál es el símbolo químico del oro?',o:['Ag','Au','Or','Go'],a:1,x:'Au, del latín aurum. Ag es la plata.'},
+  {id:5,c:'cg',d:2,k:'más largo',q:'¿Cuál es el hueso más largo del cuerpo humano?',o:['La tibia','El húmero','El fémur','El peroné'],a:2,x:'El fémur, en el muslo.'},
+  {id:6,c:'cg',d:3,k:'corazones',q:'¿Cuántos corazones tiene un pulpo?',o:['Uno','Dos','Tres','Ocho'],a:2,x:'Tres: uno principal y dos para las branquias.'},
+  {id:7,c:'cg',d:3,k:'husos horarios',q:'Contando sus territorios, ¿qué país tiene más husos horarios?',o:['Rusia','Estados Unidos','Francia','China'],a:2,x:'Francia, gracias a sus territorios de ultramar.'},
+  {id:8,c:'an',d:1,k:'sueña',q:'¿Qué sueña llegar a ser Naruto Uzumaki?',o:['Hokage','Rey de los Piratas','Cazador','Maestro Pokémon'],a:0,x:'Hokage, el líder de la Aldea de la Hoja.'},
+  {id:9,c:'an',d:1,k:'Luffy',q:'En One Piece, ¿qué quiere ser Luffy?',o:['Hokage','Almirante','Rey de los Piratas','Shinigami'],a:2,x:'¡El Rey de los Piratas!'},
+  {id:10,c:'an',d:1,k:'esferas',q:'En Dragon Ball, ¿cuántas esferas del dragón hay que reunir?',o:['Cinco','Siete','Nueve','Doce'],a:1,x:'Siete esferas para invocar a Shenlong.'},
+  {id:11,c:'an',d:2,k:'Death Note',q:'¿Qué shinigami deja caer la Death Note en el mundo humano?',o:['Ryuk','Rem','Light','L'],a:0,x:'Ryuk, el de las manzanas.'},
+  {id:12,c:'an',d:2,k:'estudio',q:'¿Qué estudio hizo «El viaje de Chihiro»?',o:['Toei Animation','Studio Ghibli','MAPPA','Kyoto Animation'],a:1,x:'Studio Ghibli, con Hayao Miyazaki.'},
+  {id:13,c:'an',d:2,k:'murallas',q:'Al empezar Attack on Titan, ¿cuántas murallas protegen a la humanidad?',o:['Dos','Tres','Cuatro','Cinco'],a:1,x:'Tres: María, Rose y Sina.'},
+  {id:14,c:'an',d:3,k:'ley básica',q:'¿Cuál es la ley básica de la alquimia en Fullmetal Alchemist?',o:['Intercambio equivalente','Conservación del alma','La ley del más fuerte','El poder de la amistad'],a:0,x:'Intercambio equivalente: para obtener algo, hay que dar algo del mismo valor.'},
+  {id:15,c:'an',d:3,k:'respiración',q:'¿Qué respiración usa Tanjiro al empezar Demon Slayer?',o:['Del Agua','Del Fuego','Del Trueno','De la Bestia'],a:0,x:'La Respiración del Agua, que le enseñó Urokodaki.'},
+  {id:16,c:'vg',d:1,k:'PlayStation',q:'¿Qué empresa creó la consola PlayStation?',o:['Nintendo','Sega','Sony','Microsoft'],a:2,x:'Sony, en 1994.'},
+  {id:17,c:'vg',d:1,k:'fantasmas',q:'¿Qué come Pac-Man para poder comerse a los fantasmas?',o:['Cerezas','Píldoras de poder','Hongos','Monedas'],a:1,x:'Las píldoras de poder, las grandes de las esquinas.'},
+  {id:18,c:'vg',d:1,k:'Creepers',q:'¿En qué juego aparecen los Creepers?',o:['Terraria','Minecraft','Roblox','Fortnite'],a:1,x:'Minecraft. Sssss… ¡bum!'},
+  {id:19,c:'vg',d:2,k:'región',q:'¿En qué región empieza Pokémon Rojo y Azul?',o:['Johto','Kanto','Hoenn','Sinnoh'],a:1,x:'Kanto, saliendo de Pueblo Paleta.'},
+  {id:20,c:'vg',d:2,k:'protagonista',q:'¿Cómo se llama el protagonista de Half-Life?',o:['Gordon Freeman','Master Chief','Solid Snake','Isaac Clarke'],a:0,x:'Gordon Freeman, el físico de la palanca.'},
+  {id:21,c:'vg',d:2,k:'villano',q:'En la saga Zelda, ¿quién suele ser el gran villano?',o:['Bowser','Ganondorf','Dr. Wily','Ridley'],a:1,x:'Ganondorf, o su forma Ganon.'},
+  {id:22,c:'vg',d:3,k:'año',q:'¿En qué año se creó el primer Tetris?',o:['1979','1984','1989','1995'],a:1,x:'En 1984, por Alekséi Pázhitnov.'},
+  {id:23,c:'te',d:1,k:'ajo',q:'Según la leyenda, ¿qué criatura le teme al ajo?',o:['El hombre lobo','El vampiro','El zombi','La momia'],a:1,x:'El vampiro. El hombre lobo le teme a la plata.'},
+  {id:24,c:'te',d:1,k:'payaso',q:'¿Cómo se llama el payaso de «It», de Stephen King?',o:['Pennywise','Chucky','Jason','Freddy'],a:0,x:'Pennywise, el payaso bailarín.'},
+  {id:25,c:'te',d:2,k:'Frankenstein',q:'¿Quién escribió «Frankenstein»?',o:['Bram Stoker','Mary Shelley','Edgar Allan Poe','H. P. Lovecraft'],a:1,x:'Mary Shelley, en 1818.'},
+  {id:26,c:'te',d:2,k:'ciudad ficticia',q:'¿En qué ciudad ficticia transcurre Resident Evil 2?',o:['Silent Hill','Raccoon City','Derry','Haddonfield'],a:1,x:'Raccoon City. Derry es la de «It».'},
+  {id:27,c:'te',d:2,k:'Cthulhu',q:'¿Qué escritor creó a Cthulhu?',o:['H. P. Lovecraft','Edgar Allan Poe','Stephen King','Bram Stoker'],a:0,x:'H. P. Lovecraft, en 1928.'},
+  {id:28,c:'te',d:3,k:'pueblo',q:'¿En qué pueblo ocurre «Halloween» (1978), con Michael Myers?',o:['Haddonfield','Derry','Springwood','Crystal Lake'],a:0,x:'Haddonfield, Illinois.'},
+  {id:29,c:'te',d:3,k:'cinta maldita',q:'¿En qué película una cinta maldita mata a los siete días de verla?',o:['El exorcista','The Ring (El aro)','Saw','Hereditary'],a:1,x:'The Ring. La original japonesa es Ringu.'},
+  {id:30,c:'lo',d:1,k:'sigue',q:'¿Qué número sigue? 2, 4, 8, 16…',o:['24','32','30','20'],a:1,x:'Cada número es el doble del anterior: 32.'},
+  {id:31,c:'lo',d:2,k:'sigue',q:'¿Qué número sigue? 1, 1, 2, 3, 5, 8…',o:['11','12','13','15'],a:2,x:'Fibonacci: se suman los dos anteriores. 5 + 8 = 13.'},
+  {id:32,c:'lo',d:2,k:'letra',q:'¿Qué letra sigue? L, M, X, J, V, S…',o:['D','L','M','T'],a:0,x:'Son los días de la semana. Sigue D, de domingo.'},
+  {id:33,c:'lo',d:3,k:'pelota',q:'Un bate y una pelota cuestan 1,10 en total. El bate cuesta 1 más que la pelota. ¿Cuánto cuesta la pelota?',o:['0,10','0,05','0,15','0,01'],a:1,x:'0,05: el bate cuesta 1,05 y juntos suman 1,10.'},
+  {id:34,c:'lo',d:3,k:'cuánto tardan',q:'Si 5 máquinas hacen 5 piezas en 5 minutos, ¿cuánto tardan 100 máquinas en hacer 100 piezas?',o:['100 minutos','5 minutos','20 minutos','1 minuto'],a:1,x:'5 minutos: cada máquina hace una pieza cada 5 minutos.'},
+  {id:35,c:'tr',d:1,k:'28 días',q:'¿Cuántos meses del año tienen 28 días?',o:['Uno','Doce','Dos','Ninguno'],a:1,x:'¡Todos! Los doce tienen al menos 28 días.'},
+  {id:36,c:'tr',d:1,k:'pesa más',q:'¿Qué pesa más: un kilo de plumas o un kilo de hierro?',o:['El hierro','Las plumas','Pesan lo mismo','Depende del día'],a:2,x:'Un kilo es un kilo.'},
+  {id:37,c:'tr',d:1,k:'vos',q:'Tenés 3 manzanas y te llevás 2. ¿Cuántas manzanas tenés vos?',o:['1','2','3','0'],a:1,x:'Las 2 que te llevaste.'},
+  {id:38,c:'tr',d:2,k:'segundo',q:'En una carrera, adelantás al que va segundo. ¿En qué puesto quedás?',o:['Primero','Segundo','Tercero','Último'],a:1,x:'Segundo: ocupás su lugar.'},
+  {id:39,c:'tr',d:2,k:'quinta',q:'El papá de María tiene cinco hijas: Nana, Nene, Nini y Nono. ¿Cómo se llama la quinta?',o:['Nunu','María','Nina','Nadia'],a:1,x:'¡María! Estaba en la pregunta.'},
+  {id:40,c:'tr',d:2,k:'nombrarlo',q:'¿Qué se rompe con solo nombrarlo?',o:['Un espejo','El silencio','Una promesa','El hielo'],a:1,x:'El silencio.'},
+  {id:41,c:'tr',d:3,k:'sobrevivientes',q:'Un avión cae justo en la frontera entre dos países. ¿Dónde entierran a los sobrevivientes?',o:['En el país de origen','En el país de destino','En la frontera','A los sobrevivientes no se los entierra'],a:3,x:'¡Están vivos! No se entierra a nadie.'},
+  {id:42,c:'tr',d:3,k:'Moisés',q:'¿Cuántos animales de cada especie subió Moisés al arca?',o:['Dos','Siete','Uno','Ninguno'],a:3,x:'Ninguno: el del arca fue Noé, no Moisés.'},
+  {id:43,c:'lo',d:3,k:'día',q:'Un caracol sube por un pozo de 10 metros. De día sube 3 y de noche resbala 2. ¿En qué día sale?',o:['Día 10','Día 8','Día 7','Día 9'],a:1,x:'Día 8: al final del día 7 está a 7 metros y el día 8 sube los 3 que faltan.'},
+];
+
+/* ===================== FRASES DE AKARI ===================== */
+const L = {
+  hello: ['¡Hola! Soy Akari. ¿Jugamos?', '¡Ey! Escribí tu nombre y tocá Jugar. Prometo no burlarme… mucho.'],
+  introSay: '¡Hola! Soy Akari y este es mi show. Quince preguntas, tres vidas y yo juzgándote con cariño. ¡Arrancamos!',
+  resume: '¡Volviste! Seguimos donde quedamos.',
+  correct: ['¡Siii! ¡Esa es!', '¡Correctísimo! Me caés bien.', '¡Bien ahí! Ni yo lo decía mejor.', '¡Wooo! Seguí así y me robás el puesto.', '¡Exacto! Chocá esos cinco.'],
+  streakTail: ['Estás que ardés.', '¿Estás haciendo trampa? Es broma… creo.', 'Ok, ahora te tengo un poquito de miedo.'],
+  laugh: ['¡Jajaja, no! Perdón, perdón… bueno, no tanto.', '¡Jaja! Esa la guardo para el resumen del programa.', 'Ay, no… me reí. No lo voy a negar.'],
+  surprised: ['¡¿Quéee?! ¿De dónde sacaste eso?', 'Esa no me la esperaba… para mal.', '¿En serio? Me dejaste sin palabras. Casi.'],
+  sad: ['Uy, casi… bueno, no, ni casi. ¡Ánimo!', 'Nooo, ¡y venías tan bien!'],
+  trickWrong: ['¡Caíste en la trampa! Jejeje, era tramposa a propósito.', '¡Te la creíste! Las tramposas son mis favoritas.'],
+  trickRight: ['¡No caíste! Tenés más calle que yo.', 'Uh, ¿no caíste? Qué aburrido… ¡bien jugado!'],
+  timeout: ['¡Tiempo! Me quedé esperando como en una cita.', 'Se acabó el tiempo… ¿te dormiste?'],
+  hurry: ['¡Dale que se acaba el tiempo!', 'Tic, tac… te estoy mirando.', 'Si no sabés, elegí con estilo.'],
+  fifty: '¿Comodín cincuenta y cincuenta? Dale, saco dos… pero te estoy mirando.',
+  lastLife: '¡Te queda una sola vida!',
+  lv2: '¡Nivel 2! Se terminó el calentamiento. Ahora voy en serio.',
+  lv3: 'Nivel 3: el jefe final. O sea, yo. ¡A ver cómo te va!',
+  poke: ['¡Ey! Cuidado con el pelo, me llevó dos horas.', '¿Una pista? No hay pistas. Jeje.', 'Si me tocás otra vez, la próxima es más difícil.', '¡Estoy en vivo! Portate bien.'],
+  noHear: 'No te entendí… decí A, B, C o D.',
+  lose: '¡Game over! Te quedaste sin vidas, pero la revancha está a un toque.',
+  record: '¡Y es nuevo récord! Lo voy a anunciar en todos lados.',
+  finish: '¡Llegaste al final!',
+  test: ['¡Hola! Soy Akari. ¿Me escuchás bien?', 'Probando, probando… ¡uno, dos, tres! ¿Llega mi voz?'],
+  back: '¡Volví a hablar!',
+};
+const RANKS = [[5000, 'Leyenda del Show', 'Sos una leyenda. Ok, oficialmente me ganaste. Por hoy.'], [3000, 'Estrella Gamer', '¡Qué partidón! Casi me hacés llorar de orgullo.'], [1500, 'Promesa del Plató', 'Nada mal. Con un poco de práctica me vas a dar pelea.'], [0, 'Aprendiz del Plató', 'Bueno… lo importante es participar. ¡Jeje!']];
+const streakLine = k => `¡Racha de ${k}!`;
+const qLine = n => `Pregunta ${n}.`;
+// Guion hablado: cada frase es una lista de segmentos {t: texto, s: estilo de grabación, p: pausa después (ms), f: banderas}.
+// Estilos: hype (festejo/burla), play (normal con energía), ask (pregunta con énfasis en q.k), list (opciones, tono llano),
+// calm (suspenso), key (palabra que se revela con énfasis), sad.
+// Banderas: x = interjección (no va en estilo neutral), m = solo en estilo misterioso.
+const SEG = (t, s = 'play', p = 220, f = '') => ({t, s, p, f});
+const LETTERS = ['A.', 'Be.', 'Ce.', 'De.'];
+const optSay = o => /[.!?]$/.test(o) ? o : o + '.';
+const ansSay = q => optSay(q.o[q.a]);
+const SAY = {
+  intro: () => [SEG('¡Hola!', 'hype', 200), SEG('Soy Akari.', 'play', 250), SEG('Y esto es…', 'calm', 250), SEG('¡El Akari Game Show!', 'hype', 450),
+    SEG('Quince preguntas.', 'play', 150), SEG('Tres vidas.', 'play', 300), SEG('¿Todo listo?', 'play', 200), SEG('¡Vamos!', 'hype', 0, 'x')],
+  resume: () => [SEG('¡Volviste!', 'hype', 250), SEG('Seguimos donde quedamos.', 'play', 0)],
+  trick: () => [SEG('Atención…', 'calm', 350), SEG('Esta tiene trampa.', 'key', 300)],
+  question: (n, q, order) => [
+    ...(q.c === 'tr' ? SAY.trick() : [SEG('Atención…', 'calm', 350, 'm')]),
+    SEG(qLine(n), 'play', 300), SEG(q.q, 'ask', 450),
+    ...order.flatMap((oi, pos) => [SEG(LETTERS[pos], 'list', 90), SEG(optSay(q.o[oi]), 'list', pos < 3 ? 260 : 0)])],
+  correct: (q, streak) => [SEG('A ver…', 'calm', 400, 'x'),
+    ...(q.c === 'tr' ? [SEG(rnd(L.trickRight), 'hype', 300)]
+      : streak >= 3 ? [SEG(streakLine(Math.min(streak, 15)), 'hype', 250), SEG(rnd(L.streakTail), 'play', 300)]
+      : [SEG(rnd(L.correct), 'hype', 300)]),
+    SEG(q.x, 'play', 0)],
+  lastLife: () => [SEG('Cuidado.', 'calm', 300), SEG('Te queda…', 'calm', 300), SEG('una sola vida.', 'key', 400)],
+  wrong: (q, line, style, lastLife) => [SEG(line, style, 400), ...(lastLife ? SAY.lastLife() : []),
+    SEG('La respuesta era…', 'calm', 500), SEG(ansSay(q), 'key', 300), SEG(q.x, 'play', 0)],
+  lv2: () => [SEG('Nivel dos.', 'calm', 400), SEG('Se terminó el calentamiento.', 'play', 300), SEG('Ahora…', 'calm', 300), SEG('voy en serio.', 'key', 0)],
+  lv3: () => [SEG('Nivel tres.', 'calm', 400), SEG('El jefe final.', 'play', 300), SEG('O sea…', 'calm', 250), SEG('yo.', 'key', 300), SEG('¡A ver cómo te va!', 'hype', 0)],
+  fifty: () => [SEG('¿Comodín cincuenta y cincuenta?', 'play', 250), SEG('Dale.', 'hype', 200), SEG('Saco dos…', 'play', 300), SEG('pero te estoy mirando.', 'hype', 0)],
+  record: () => [SEG('Y es…', 'calm', 400), SEG('¡nuevo récord!', 'key', 250), SEG('Lo voy a anunciar en todos lados.', 'hype', 0)],
+  finish: rank => [SEG('¡Llegaste al final!', 'hype', 400), SEG(rank[2], rank[0] === 0 ? 'play' : 'hype', 300)],
+  lose: () => [SEG('¡Game over!', 'hype', 300), SEG('Te quedaste sin vidas…', 'sad', 300), SEG('pero la revancha está a un toque.', 'play', 0)],
+  demo: () => [SEG('Atención…', 'calm', 350, 'm'), SEG(rnd(L.test), 'hype', 0)],
+  one: (t, st = 'hype') => [SEG(t, st, 0)],
+};
+// Todos los segmentos que pueden sonar, con su estilo (scripts/build_akari_voice.py los graba)
+function spokenStyles() {
+  const out = new Map();
+  const add = (segs, q) => segs.forEach(g => { const key = g.s + '|' + g.t; if (!out.has(key)) out.set(key, [g.t, g.s, g.s === 'ask' ? q.k : '']); });
+  const all = (arr, st) => arr.forEach(t => add([SEG(t, st)]));
+  add(SAY.intro()); add(SAY.resume()); add(SAY.trick()); add(SAY.lastLife()); add(SAY.lv2()); add(SAY.lv3()); add(SAY.fifty());
+  add(SAY.record()); add(SAY.lose()); add([SEG('Atención…', 'calm'), SEG('A ver…', 'calm'), SEG('La respuesta era…', 'calm'), SEG('¡Llegaste al final!', 'hype')]);
+  RANKS.forEach(r => add(SAY.finish(r).slice(1)));
+  for (let k = 3; k <= 15; k++) add([SEG(streakLine(k), 'hype')]);
+  for (let n = 1; n <= 15; n++) add([SEG(qLine(n), 'play')]);
+  LETTERS.forEach(l => add([SEG(l, 'list')]));
+  all(L.correct, 'hype'); all(L.trickRight, 'hype'); all(L.streakTail, 'play');
+  all(L.laugh, 'hype'); all(L.surprised, 'hype'); all(L.trickWrong, 'hype'); all(L.timeout, 'hype'); all(L.sad, 'sad');
+  all(L.hurry, 'hype'); all(L.poke, 'hype'); all(L.test, 'hype'); all([L.back], 'hype'); all([L.noHear], 'play');
+  Q.forEach(q => { add([SEG(q.q, 'ask')], q); q.o.forEach(o => add([SEG(optSay(o), 'list')])); add([SEG(ansSay(q), 'key'), SEG(q.x, 'play')]); });
+  return [...out.values()];
+}
+function allSpoken() { return spokenStyles().map(x => x[1] + '|' + x[0]); }
+/*SPEECH-END*/
+
+/* ===================== MEMORIA LOCAL ===================== */
+const KEY = 'akari-gameshow-v1';
+const DEF = {best: 0, games: 0, correct: 0, answered: 0, bestStreak: 0, history: [], seen: [], name: '', voice: true, voiceMode: 'natural', voiceStyle: 'hype', sfx: true, run: null};
+let S = Object.assign({}, DEF);
+try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+/* ===================== SONIDO ===================== */
+let AC = null;
+function ac() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function tone(f, t0, dur, type = 'sine', vol = .12, f2) {
+  if (!S.sfx) return; const a = ac(); if (!a) return;
+  const t = a.currentTime + t0, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .015); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + .05);
+}
+const SFX = {
+  click() { tone(700, 0, .07, 'square', .04); },
+  correct() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .07, .2, 'triangle', .13)); },
+  wrong() { tone(240, 0, .28, 'sawtooth', .08, 110); tone(190, .12, .32, 'sawtooth', .06, 90); },
+  tick() { tone(1250, 0, .04, 'square', .035); },
+  fanfare() { [392, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .24, 'triangle', .12)); },
+  level() { [300, 450, 600, 900, 1200].forEach((f, i) => tone(f, i * .06, .25, 'sawtooth', .045)); },
+  whoosh() { tone(180, 0, .35, 'sine', .06, 900); },
+  lose() { [392, 349, 311, 262].forEach((f, i) => tone(f, i * .2, .32, 'triangle', .11)); },
+};
+
+/* ===================== AKARI ===================== */
+const ak = $('#akari'), akWrap = $('#akWrap'), akStage = $('#akStage');
+const MOODS = ['neutral', 'happy', 'laugh', 'surprised', 'smug', 'sad', 'think', 'fired'];
+const REST = {neutral: 'smile', happy: 'grin', laugh: 'laugh', surprised: 'o', smug: 'smirk', sad: 'sad', think: 'flat', fired: 'smirk'};
+const TALK = {happy: ['grin', 'talkB', 'talkS'], laugh: ['laugh', 'grin', 'talkB']};
+let mood = 'neutral', talking = false, talkIv = null;
+const mouths = $$('#akari .mouth');
+function setMouth(m) { mouths.forEach(el => el.classList.toggle('on', el.dataset.m === m)); }
+function setMood(m) {
+  MOODS.forEach(x => ak.classList.remove('mood-' + x));
+  ak.classList.add('mood-' + m); mood = m;
+  if (!talking) setMouth(REST[m]);
+}
+function react(kind) {
+  if (reduceMotion) return;
+  akWrap.classList.remove('r-jump', 'r-shake', 'r-gasp', 'r-lean');
+  void akWrap.offsetWidth; akWrap.classList.add('r-' + kind);
+}
+function talkStart() {
+  talking = true; clearInterval(talkIv);
+  const set = TALK[mood] || ['talkS', 'talkB', REST[mood], 'talkS'];
+  talkIv = setInterval(() => setMouth(rnd(set)), 105);
+}
+function talkStop() { talking = false; clearInterval(talkIv); cancelAnimationFrame(lipRAF); setMouth(REST[mood]); }
+// parpadeo
+(function blinkLoop() {
+  setTimeout(() => { ak.classList.add('blink'); setTimeout(() => ak.classList.remove('blink'), 120);
+    if (Math.random() < .2) setTimeout(() => { ak.classList.add('blink'); setTimeout(() => ak.classList.remove('blink'), 110); }, 260);
+    blinkLoop(); }, 1800 + Math.random() * 3200);
+})();
+// mirada que sigue al puntero
+const irises = $$('#akari .iris');
+function look(dx, dy) { irises.forEach(i => i.style.transform = `translate(${dx}px,${dy}px)`); }
+addEventListener('pointermove', e => {
+  if (mood === 'think') return;
+  const r = ak.getBoundingClientRect(); if (!r.width) return;
+  const cx = r.left + r.width / 2, cy = r.top + r.height * .38;
+  const dx = Math.max(-1, Math.min(1, (e.clientX - cx) / 300)), dy = Math.max(-1, Math.min(1, (e.clientY - cy) / 300));
+  look(dx * 3.5, dy * 3);
+}, {passive: true});
+function moveAkari(slot) { $(slot).appendChild(akStage); }
+
+/* ===================== VOZ ===================== */
+// Voz natural: cada frase está grabada con una voz neuronal en español rioplatense (Piper, «daniela»)
+// y viaja dentro del juego (voice-pack.js), así suena igual en cualquier celular.
+// Lo que no esté grabado lo lee la voz del celular, si hay; si no, Akari solo lo escribe.
+const PACK = window.AKARI_VOICE || {};
+const hasPack = Object.keys(PACK).length > 0;
+const synth = ('speechSynthesis' in window && window.SpeechSynthesisUtterance) ? window.speechSynthesis : null;
+// Estilos de locución elegibles en el menú
+const VSTYLE = {
+  neutral: {drop: 'xm', pause: .85, rate: 1, fx: false, label: 'Neutral: clara y directa.'},
+  hype: {drop: 'm', pause: 1, rate: 1, fx: false, label: 'Entusiasta: presentadora de tele.'},
+  mystery: {drop: '', pause: 1.5, rate: .92, fx: true, label: 'Misteriosa: más grave, lenta y con eco.'},
+};
+const vstyle = () => VSTYLE[S.voiceStyle] || VSTYLE.hype;
+const activeSegs = segs => segs.filter(g => ![...g.f].some(f => vstyle().drop.includes(f)));
+let voice = null, lastEngine = 'none', keepUtt = null, curSrcs = [], analyser = null, lipRAF = 0;
+const bufCache = new Map();
+function pickVoice() {
+  if (!synth) return; let vs = []; try { vs = synth.getVoices() || []; } catch (e) {}
+  const es = vs.filter(v => /^es/i.test(v.lang));
+  const nat = /(natural|neural|premium|enhanced|mejorad|online)/i;
+  const fem = /(paulina|m[oó]nica|helena|laura|sabina|elvira|dalia|marisol|esperanza|lupe|penélope|paloma|francisca|elena|female|mujer)/i;
+  const latam = v => /es-(AR|419|MX|US|CO|CL|UY)/i.test(v.lang);
+  voice = es.find(v => nat.test(v.name) && fem.test(v.name)) || es.find(v => nat.test(v.name)) || es.find(v => latam(v) && fem.test(v.name)) || es.find(v => fem.test(v.name)) || es.find(v => /google/i.test(v.name)) || es.find(latam) || es[0] || null;
+  voiceStatus();
+}
+if (synth) { pickVoice(); try { synth.addEventListener('voiceschanged', pickVoice); } catch (e) { synth.onvoiceschanged = pickVoice; } }
+const segKey = g => g.s + '|' + g.t;
+const inPack = segs => hasPack && segs.every(g => PACK[segKey(g)]);
+function engineFor(parts) {
+  if ((S.voiceMode === 'device' || !inPack(parts)) && synth) return 'device';
+  return inPack(parts) ? 'natural' : 'none';
+}
+function voiceStatus() {
+  const el = $('#voiceStatus'); if (!el) return;
+  if (!S.voice) { el.textContent = 'Voz apagada.'; return; }
+  if (S.voiceMode === 'device' && synth) el.textContent = `Voz del celular${voice ? ' (' + voice.name.replace(/\s*\(.*\)/, '') + ')' : ''}.`;
+  else el.textContent = hasPack ? 'Voz natural de Akari · ' + vstyle().label : (synth ? 'Voz del celular.' : 'No hay voz disponible: Akari habla con texto.');
+}
+// Desbloqueo de audio en el primer toque (iOS/Android lo exigen)
+let unlocked = false;
+function unlockAudio() {
+  if (unlocked) return; unlocked = true;
+  const a = ac(); if (a) { try { const b = a.createBuffer(1, 1, 22050), src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(0); } catch (e) {} }
+  if (synth && S.voiceMode === 'device') { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } catch (e) {} }
+}
+addEventListener('pointerdown', unlockAudio, {capture: true});
+addEventListener('keydown', unlockAudio, {capture: true});
+
+let typeIv = null, sayId = 0, sayFallback = null;
+const bubbleText = $('#bubbleText');
+function bubble(text) {
+  clearInterval(typeIv);
+  if (reduceMotion) { bubbleText.textContent = text; return; }
+  let i = 0; bubbleText.textContent = '';
+  typeIv = setInterval(() => { i += 2; bubbleText.textContent = text.slice(0, i); if (i >= text.length) clearInterval(typeIv); }, 26);
+}
+function stopAudio() {
+  if (synth && (synth.speaking || synth.pending)) { try { synth.cancel(); } catch (e) {} }
+  curSrcs.forEach(src => { try { src.stop(); } catch (e) {} }); curSrcs = [];
+}
+function getBuf(key) {
+  if (bufCache.has(key)) return bufCache.get(key);
+  const a = ac();
+  const pr = new Promise((res, rej) => {
+    if (!a) return rej(new Error('sin audio'));
+    const bin = atob(PACK[key]); const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    try { const r = a.decodeAudioData(u8.buffer, res, rej); if (r && r.catch) r.catch(rej); } catch (e) { rej(e); }
+  });
+  pr.catch(() => bufCache.delete(key));
+  bufCache.set(key, pr); return pr;
+}
+// Boca sincronizada con el volumen real de la voz
+function lipStart() {
+  talking = true; clearInterval(talkIv); cancelAnimationFrame(lipRAF);
+  if (!analyser) { talkStart(); return; }
+  const data = new Float32Array(analyser.fftSize); let last = 0, cur = '';
+  const loop = now => {
+    if (!talking) return;
+    if (now - last > 55) {
+      last = now; analyser.getFloatTimeDomainData(data);
+      let sum = 0; for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+      const rms = Math.sqrt(sum / data.length);
+      const big = (mood === 'happy' || mood === 'laugh') ? 'grin' : 'talkB';
+      const m = rms < .012 ? REST[mood] : rms < .05 ? 'talkS' : big;
+      if (m !== cur) { cur = m; setMouth(m); }
+    }
+    lipRAF = requestAnimationFrame(loop);
+  };
+  lipRAF = requestAnimationFrame(loop);
+}
+let fxIn = null;
+function fxChain(a, out) {
+  // eco suave y filtro para el estilo misterioso
+  if (fxIn) return fxIn;
+  try {
+    const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5200;
+    const dl = a.createDelay(1); dl.delayTime.value = .16; const fb = a.createGain(); fb.gain.value = .28; const wet = a.createGain(); wet.gain.value = .26;
+    lp.connect(out); lp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(out);
+    fxIn = lp;
+  } catch (e) { fxIn = out; }
+  return fxIn;
+}
+function playNatural(segs, id, done, fail) {
+  const a = ac(); if (!a) return fail();
+  Promise.all(segs.map(g => getBuf(segKey(g)))).then(bufs => {
+    if (id !== sayId) return;
+    if (!analyser) { try { analyser = a.createAnalyser(); analyser.fftSize = 512; analyser.connect(a.destination); } catch (e) { analyser = null; } }
+    const vs = vstyle(), base = analyser || a.destination, out = vs.fx ? fxChain(a, base) : base;
+    let t = a.currentTime + .04; curSrcs = [];
+    bufs.forEach((b, i) => {
+      const src = a.createBufferSource(); src.buffer = b; src.playbackRate.value = vs.rate; src.connect(out); src.start(t);
+      t += b.duration / vs.rate + (segs[i].p || 0) * vs.pause / 1000; curSrcs.push(src);
+    });
+    lastEngine = 'natural'; lipStart();
+    const last = curSrcs[curSrcs.length - 1]; if (last) last.onended = () => { if (curSrcs.includes(last)) done(); };
+    clearTimeout(sayFallback); sayFallback = setTimeout(done, (t - a.currentTime) * 1000 + 2500); // respaldo si «ended» no llega
+  }, fail);
+}
+function speakDevice(spoken, id, done, fail) {
+  let started = false;
+  const go = () => {
+    if (id !== sayId) return;
+    const u = new SpeechSynthesisUtterance(spoken); keepUtt = u;
+    if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'es-AR';
+    u.pitch = 1.08; u.rate = 1; u.volume = 1;
+    u.onstart = () => { started = true; };
+    u.onend = done;
+    u.onerror = ev => { if (id !== sayId) return; const er = ev && ev.error; if (er === 'interrupted' || er === 'canceled' || started) return done(); fail(); };
+    try { synth.speak(u); if (synth.paused) synth.resume(); } catch (e) { fail(); return; }
+    setTimeout(() => { if (id === sayId && !started) { try { synth.cancel(); } catch (e) {} fail(); } }, 1800);
+  };
+  const busy = synth.speaking || synth.pending; stopAudio();
+  if (busy) setTimeout(go, 70); else go(); // Chrome descarta un speak() pegado a un cancel()
+  lastEngine = 'device'; talkStart();
+  clearTimeout(sayFallback); sayFallback = setTimeout(done, spoken.length * 95 + 4000);
+}
+// say(texto en el globo, {segs: segmentos a decir en voz alta, mood, onDone})
+function say(text, opt = {}) {
+  const id = ++sayId;
+  if (opt.mood) setMood(opt.mood);
+  bubble(text);
+  clearTimeout(sayFallback);
+  const segs = activeSegs(opt.segs || SAY.one(text));
+  const parts = segs;
+  const spoken = segs.map(g => g.t).join(' ').replace(/[«»]/g, '');
+  const done = () => { if (id !== sayId) return; clearTimeout(sayFallback); talkStop(); if (opt.onDone) opt.onDone(); };
+  const silent = () => { if (id !== sayId) return; lastEngine = 'none'; talkStart(); clearTimeout(sayFallback); sayFallback = setTimeout(done, Math.min(5000, spoken.length * 42 + 300)); };
+  stopAudio();
+  if (!S.voice || micOn) return silent();
+  const e = engineFor(parts);
+  if (e === 'natural') playNatural(parts, id, done, () => (synth ? speakDevice(spoken, id, done, silent) : silent()));
+  else if (e === 'device') speakDevice(spoken, id, done, () => (inPack(parts) ? playNatural(parts, id, done, silent) : silent()));
+  else silent();
+}
+function hush() { sayId++; stopAudio(); clearTimeout(sayFallback); talkStop(); }
+
+/* ===================== MICRÓFONO ===================== */
+// En claude.ai se usa el dictado de la plataforma; fuera de ahí, la Web Speech API del navegador si existe.
+const micBtn = $('#micBtn'), heardEl = $('#heard');
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const inViewer = !!(window.claude && typeof window.claude.use === 'function');
+let dict = null, rec = null, micOn = false, micMode = inViewer ? 'pending' : (SR ? 'sr' : 'none'), dictLangOk = true;
+function micUI() {
+  micBtn.hidden = !(micMode === 'dict' || micMode === 'sr') || state !== 'asking';
+  micBtn.classList.toggle('listening', micOn);
+  micBtn.querySelector('span').textContent = micOn ? 'Escuchando… (tocá para parar)' : 'Responder con la voz';
+  capNote();
+}
+function capNote() {
+  const parts = [];
+  if (!synth) parts.push('Este navegador no tiene síntesis de voz: Akari habla solo con texto.');
+  if (micMode === 'none') parts.push('Micrófono no disponible en este navegador o vista: respondé con botones o teclado.');
+  else if (micMode === 'dict' || micMode === 'sr') parts.push('Micrófono: tocá «Responder con la voz» y decí la letra o la respuesta. El navegador te va a pedir permiso.');
+  $('#capNote').textContent = parts.join(' ');
+}
+if (inViewer) {
+  try {
+    window.claude.use('dictation').then(d => {
+      dict = d;
+      if (!d) { micMode = 'none'; micUI(); return; }
+      micMode = 'dict';
+      d.onPartial(e => { if (e.text) heardEl.textContent = 'Te escucho: ' + e.text; });
+      d.onFinal(e => onHeard(e.text));
+      d.onState(e => {
+        micOn = e.state !== 'idle'; micUI();
+        if (e.state === 'idle' && (e.reason === 'unavailable')) { if (!dictLangOk) { micMode = 'none'; } dictLangOk = false; micUI(); }
+      });
+      micUI();
+    }).catch(() => { micMode = 'none'; micUI(); });
+  } catch (e) { micMode = 'none'; }
+}
+function micStart() {
+  if (micOn) { micStop(); return; }
+  hush(); kickTimer();
+  heardEl.textContent = '';
+  if (micMode === 'dict' && dict) {
+    dict.start(dictLangOk ? {language: 'es'} : undefined).catch(err => {
+      micOn = false; micUI();
+      const c = err && err.code;
+      if (c === 'not_granted') { micMode = 'none'; heardEl.textContent = 'Sin permiso de micrófono: respondé con botones o teclado.'; }
+      else if (c === 'unavailable') { if (!dictLangOk) micMode = 'none'; dictLangOk = false; heardEl.textContent = 'El dictado no está disponible ahora.'; }
+      else if (c !== 'stopped') heardEl.textContent = 'No pude abrir el micrófono. Probá de nuevo.';
+      micUI();
+    });
+    micOn = true; micUI(); return;
+  }
+  if (micMode === 'sr' && SR) {
+    try {
+      rec = new SR(); rec.lang = 'es-AR'; rec.interimResults = true; rec.maxAlternatives = 3; rec.continuous = false;
+      rec.onresult = ev => {
+        const r = ev.results[ev.results.length - 1];
+        if (r.isFinal) { const alts = [...r].map(x => x.transcript); onHeard(alts.find(t => matchAnswer(t) >= 0) || alts[0]); }
+        else heardEl.textContent = 'Te escucho: ' + r[0].transcript;
+      };
+      rec.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { micMode = 'none'; heardEl.textContent = 'El navegador bloqueó el micrófono: respondé con botones o teclado.'; } else if (ev.error === 'no-speech') heardEl.textContent = 'No escuché nada. Probá otra vez.'; };
+      rec.onend = () => { micOn = false; micUI(); };
+      rec.start(); micOn = true; micUI();
+    } catch (e) { micOn = false; micUI(); }
+  }
+}
+function micStop() {
+  if (micMode === 'dict' && dict) dict.stop().catch(() => {});
+  if (rec) { try { rec.stop(); } catch (e) {} }
+  micOn = false; micUI();
+}
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ ]/g, ' ').replace(/\s+/g, ' ').trim();
+const LETTER = {a: 0, b: 1, be: 1, ve: 1, c: 2, ce: 2, se: 2, d: 3, de: 3, uno: 0, '1': 0, dos: 1, '2': 1, tres: 2, '3': 2, cuatro: 3, '4': 3, primera: 0, segunda: 1, tercera: 2, cuarta: 3};
+function matchAnswer(raw) {
+  if (!cur) return -1;
+  const t = norm(raw); if (!t) return -1;
+  const w = t.split(' ');
+  // «la a», «opción b», «letra c», «respuesta d», o solo la letra
+  const m = t.match(/^(?:(?:es |la |opcion |letra |respuesta |elijo |digo )+)?([a-z0-9]+)$/);
+  if (m && m[1] in LETTER) return LETTER[m[1]];
+  if (w.length <= 3) { for (const x of w) if (x in LETTER && x.length > 1 && x !== 'de' && x !== 'se') return LETTER[x]; }
+  // por texto de la opción
+  let best = -1, bestScore = 0;
+  cur.order.forEach((oi, pos) => {
+    const opt = norm(cur.q.o[oi]); if (!opt) return;
+    if (t.includes(opt)) { const s = 2 + opt.length / 100; if (s > bestScore) { bestScore = s; best = pos; } return; }
+    const ow = opt.split(' ').filter(x => x.length > 2 && !['los', 'las', 'del', 'que', 'una', 'uno'].includes(x));
+    if (!ow.length) return;
+    const hit = ow.filter(x => w.includes(x)).length / ow.length;
+    if (hit > bestScore && hit >= .5) { bestScore = hit; best = pos; }
+  });
+  return best;
+}
+function onHeard(text) {
+  if (state !== 'asking' || !text) return;
+  heardEl.textContent = 'Te escuché: «' + text.trim() + '»';
+  const pos = matchAnswer(text);
+  if (pos >= 0 && !removed.has(pos)) { micStop(); const b = $$('.ans')[pos]; b.classList.add('heard'); answer(pos); }
+  else bubble(L.noHear);
+}
+micBtn.addEventListener('click', micStart);
+
+/* ===================== EFECTOS (canvas) ===================== */
+const cv = $('#fx'), cx = cv.getContext('2d');
+let parts = [], W = 0, H = 0, DPR = 1;
+function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; cx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+resize(); addEventListener('resize', resize);
+const COLORS = ['#a35cff', '#ff4fd2', '#4fe3ff', '#ffd166', '#ffffff'];
+function confetti(n = 120, x = W / 2, y = H * .35) {
+  if (reduceMotion) return;
+  for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = 4 + Math.random() * 9;
+    parts.push({x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 6, g: .28, life: 90 + Math.random() * 60, r: 3 + Math.random() * 5, c: rnd(COLORS), rot: Math.random() * 6, vr: (Math.random() - .5) * .4, sq: Math.random() < .6}); }
+}
+function sparks(n = 26, x, y, c = '#ff4d6d') {
+  if (reduceMotion) return;
+  for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 5; parts.push({x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: .05, life: 40 + Math.random() * 20, r: 2 + Math.random() * 2, c, rot: 0, vr: 0, sq: false}); }
+}
+const motes = Array.from({length: reduceMotion ? 0 : 34}, () => ({x: Math.random(), y: Math.random(), s: .2 + Math.random() * .8, r: .6 + Math.random() * 1.8, c: rnd(COLORS)}));
+(function loop() {
+  cx.clearRect(0, 0, W, H);
+  for (const m of motes) { m.y -= .0006 * m.s; if (m.y < -.02) { m.y = 1.02; m.x = Math.random(); }
+    cx.globalAlpha = .35 * m.s; cx.fillStyle = m.c; cx.beginPath(); cx.arc(m.x * W, m.y * H, m.r, 0, 7); cx.fill(); }
+  parts = parts.filter(p => p.life > 0);
+  for (const p of parts) { p.vy += p.g; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life--;
+    cx.globalAlpha = Math.min(1, p.life / 30); cx.fillStyle = p.c;
+    if (p.sq) { cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); cx.restore(); }
+    else { cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill(); } }
+  cx.globalAlpha = 1; requestAnimationFrame(loop);
+})();
+function scorePop(txt, el) {
+  const r = el.getBoundingClientRect(); const d = document.createElement('div');
+  d.className = 'scorepop'; d.textContent = txt; d.style.left = (r.left + r.width / 2 - 30) + 'px'; d.style.top = (r.top - 10) + 'px';
+  document.body.appendChild(d); setTimeout(() => d.remove(), 1200);
+}
+function banner(title, sub) {
+  const b = document.createElement('div'); b.id = 'banner'; b.innerHTML = `<small></small><span></span>`;
+  b.querySelector('small').textContent = sub; b.querySelector('span').textContent = title;
+  document.querySelectorAll('#banner').forEach(x => x.remove()); document.body.appendChild(b); setTimeout(() => b.remove(), 2300);
+}
+
+/* ===================== JUEGO ===================== */
+const ROUNDS = 15, PER_LEVEL = 5, LIVES = 3, TIME = 20;
+const LEVELS = ['', 'Calentamiento', 'Modo Pro', 'Jefe Final'];
+let state = 'title', run = null, cur = null, removed = new Set();
+const screens = {title: $('#title'), game: $('#game'), end: $('#end')};
+function show(name) { for (const k in screens) screens[k].hidden = k !== name; }
+const levelOf = i => Math.min(3, Math.floor(i / PER_LEVEL) + 1);
+
+function buildRun() {
+  const seen = new Set(S.seen);
+  const ids = [];
+  for (let d = 1; d <= 3; d++) {
+    const pool = shuffle(Q.filter(q => q.d === d));
+    pool.sort((a, b) => (seen.has(a.id) ? 1 : 0) - (seen.has(b.id) ? 1 : 0));
+    ids.push(...pool.slice(0, PER_LEVEL).map(q => q.id));
+  }
+  return {qs: ids, i: 0, score: 0, lives: LIVES, streak: 0, maxStreak: 0, correct: 0, fifty: true, name: S.name || 'jugador'};
+}
+function startGame(resume) {
+  ac();
+  if (!resume || !S.run) { S.run = buildRun(); }
+  run = S.run; save();
+  show('game'); moveAkari('#gameSlot'); state = 'intro';
+  renderHud();
+  if (!resume) {
+    const go = once(() => { if (state === 'intro') showQuestion(); });
+    say(`¡Hola, ${run.name}! Soy Akari. Y esto es… ¡el Akari Game Show! Quince preguntas. Tres vidas. ¿Todo listo? ¡Vamos!`, {mood: 'happy', segs: SAY.intro(), onDone: () => setTimeout(go, 250)});
+    react('jump'); SFX.fanfare(); confetti(60); setTimeout(go, 12000);
+  } else {
+    const go = once(() => { if (state === 'intro') showQuestion(); });
+    say(`¡Volviste, ${run.name}! Seguimos donde quedamos.`, {mood: 'smug', segs: SAY.resume(), onDone: () => setTimeout(go, 200)});
+    setTimeout(go, 6000);
+  }
+}
+function renderHud() {
+  $('#hudScore').textContent = run.score;
+  $('#hudStreak').textContent = run.streak;
+  const h = $('#hudLives'); h.innerHTML = '';
+  for (let k = 0; k < LIVES; k++) { const i = document.createElement('i'); i.textContent = '♥'; if (k >= run.lives) i.className = 'lost'; h.appendChild(i); }
+  h.setAttribute('aria-label', `${run.lives} vidas`);
+  $('#fiftyBtn').disabled = !run.fifty || state !== 'asking';
+  $('#fiftyBtn').style.opacity = run.fifty ? '' : '.35';
+}
+function showQuestion() {
+  if (!run || run.i >= run.qs.length || run.lives <= 0) return endGame();
+  const q = Q.find(x => x.id === run.qs[run.i]);
+  cur = {q, order: shuffle([0, 1, 2, 3])}; removed = new Set();
+  const lv = levelOf(run.i);
+  if (run.i > 0 && run.i % PER_LEVEL === 0 && !cur.bannered) {
+    cur.bannered = true; state = 'banner';
+    banner(`NIVEL ${lv}`, LEVELS[lv].toUpperCase()); SFX.level();
+    const t0 = performance.now(), go = once(() => { if (state === 'banner') presentQuestion(lv); });
+    say(lv === 2 ? L.lv2 : L.lv3, {mood: 'fired', segs: lv === 2 ? SAY.lv2() : SAY.lv3(), onDone: () => setTimeout(go, Math.max(200, 2400 - (performance.now() - t0)))});
+    react('lean'); setTimeout(go, 9000);
+    return;
+  }
+  presentQuestion(lv);
+}
+function presentQuestion(lv) {
+  const q = cur.q;
+  state = 'asking';
+  $('#qLevel').textContent = `Nivel ${lv} · ${LEVELS[lv]}`;
+  $('#qCat').textContent = CATS[q.c];
+  $('#qCount').textContent = String(run.i + 1).padStart(2, '0') + '/' + ROUNDS;
+  $('#qText').textContent = q.q;
+  const card = $('#qCard'); card.classList.remove('enter'); void card.offsetWidth; card.classList.add('enter');
+  const box = $('#answers'); box.innerHTML = '';
+  cur.order.forEach((oi, pos) => {
+    const b = document.createElement('button'); b.className = 'ans'; b.type = 'button';
+    b.innerHTML = '<span class="k"></span><span class="t"></span>';
+    b.querySelector('.k').textContent = 'ABCD'[pos]; b.querySelector('.t').textContent = q.o[oi];
+    b.setAttribute('aria-label', `Opción ${'ABCD'[pos]}: ${q.o[oi]}`);
+    b.addEventListener('click', () => answer(pos));
+    box.appendChild(b);
+  });
+  $('#explain').hidden = true; $('#nextBtn').hidden = true; heardEl.textContent = '';
+  renderHud(); micUI();
+  setMood(q.c === 'tr' ? 'smug' : 'think'); react('lean');
+  // El reloj arranca cuando Akari termina de leer la pregunta y las opciones (como mucho a los 16 s)
+  const thisQ = cur, go = once(() => { if (state === 'asking' && cur === thisQ && !timerOn) startTimer(TIME); });
+  resetTimer(TIME); $('#skipBtn').hidden = false;
+  say(`${q.c === 'tr' ? 'Atención… esta tiene trampa. ' : ''}${qLine(run.i + 1)} ${q.q}`, {mood: q.c === 'tr' ? 'smug' : 'neutral', segs: SAY.question(run.i + 1, q, cur.order), onDone: go});
+  SFX.whoosh(); setTimeout(go, 16000);
+}
+let tRAF = 0, tStart = 0, tDur = 0, lastSec = 0, hurried = false, timerOn = false;
+const once = fn => { let did = false; return (...a) => { if (!did) { did = true; fn(...a); } }; };
+// Si el jugador interrumpe la lectura (50:50, micrófono), el reloj arranca ya
+function kickTimer() { if (state === 'asking' && !timerOn) startTimer(TIME); }
+function skipReading() { if (state === 'asking' && !timerOn) { hush(); kickTimer(); } }
+function resetTimer(sec) {
+  cancelAnimationFrame(tRAF); timerOn = false; tDur = sec * 1000;
+  $('#timerFill').style.transform = 'scaleX(1)'; $('#timerNum').textContent = sec; $('#timer').classList.remove('danger');
+}
+function startTimer(sec) {
+  cancelAnimationFrame(tRAF); tDur = sec * 1000; tStart = performance.now(); lastSec = sec; hurried = false; timerOn = true; $('#skipBtn').hidden = true;
+  const fill = $('#timerFill'), num = $('#timerNum'), tm = $('#timer');
+  const loop = () => {
+    const left = Math.max(0, tDur - (performance.now() - tStart)); const s = Math.ceil(left / 1000);
+    fill.style.transform = `scaleX(${left / tDur})`; num.textContent = s; tm.classList.toggle('danger', s <= 5);
+    if (s < lastSec) { lastSec = s; if (s <= 5 && s > 0) SFX.tick(); if (s === 7 && !hurried && !micOn) { hurried = true; say(rnd(L.hurry), {mood: 'smug'}); } }
+    if (left <= 0) { timeUp(); return; }
+    tRAF = requestAnimationFrame(loop);
+  };
+  tRAF = requestAnimationFrame(loop);
+}
+function stopTimer() { cancelAnimationFrame(tRAF); $('#skipBtn').hidden = true; if (!timerOn) return tDur / 1000; timerOn = false; return Math.max(0, tDur - (performance.now() - tStart)) / 1000; }
+function timeUp() { if (state === 'asking') answer(-1); }
+
+function answer(pos) {
+  if (state !== 'asking') return;
+  if (pos >= 0 && removed.has(pos)) return;
+  state = 'revealed';
+  const left = stopTimer(); if (micOn) micStop(); hush();
+  const q = cur.q, correctPos = cur.order.indexOf(q.a), ok = pos === correctPos;
+  const btns = $$('.ans'); btns.forEach((b, k) => { b.disabled = true; if (k === correctPos) b.classList.add('correct'); else if (k === pos) b.classList.add('wrong'); else b.classList.add('dim'); });
+  S.answered++; if (!S.seen.includes(q.id)) S.seen.push(q.id); if (S.seen.length > 30) S.seen = S.seen.slice(-30);
+  const ex = $('#explain'); ex.hidden = false;
+  let line;
+  if (ok) {
+    run.streak++; run.correct++; S.correct++; run.maxStreak = Math.max(run.maxStreak, run.streak);
+    const pts = Math.round((q.d * 100 + Math.round(left * 10)) * (1 + .1 * Math.min(run.streak - 1, 5)));
+    run.score += pts;
+    const sc = $('#hudScore'); sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump'); scorePop('+' + pts, sc);
+    SFX.correct(); const r = btns[correctPos].getBoundingClientRect(); confetti(run.streak >= 3 ? 160 : 90, r.left + r.width / 2, r.top);
+    const segs = SAY.correct(q, run.streak);
+    setMood('happy'); react('jump');
+    ex.className = 'explain'; ex.innerHTML = '<b>¡Correcto! +' + pts + '</b> '; ex.append(q.x);
+    say(segs.filter(g => !g.f).map(g => g.t).join(' '), {mood: 'happy', segs});
+  } else {
+    run.streak = 0; run.lives--;
+    const hearts = $$('#hudLives i'); const lost = hearts[run.lives]; if (lost) { lost.classList.add('lost', 'pop'); }
+    SFX.wrong();
+    if (pos >= 0) { const r = btns[pos].getBoundingClientRect(); sparks(30, r.left + r.width / 2, r.top + r.height / 2); }
+    let m, kind;
+    if (pos < 0) { line = rnd(L.timeout); m = 'surprised'; kind = 'gasp'; }
+    else if (q.c === 'tr') { line = rnd(L.trickWrong); m = 'laugh'; kind = 'shake'; }
+    else { const p = Math.random(); if (p < .45) { line = rnd(L.laugh); m = 'laugh'; kind = 'shake'; } else if (p < .8) { line = rnd(L.surprised); m = 'surprised'; kind = 'gasp'; } else { line = rnd(L.sad); m = 'sad'; kind = 'lean'; } }
+
+    react(kind);
+    const right = q.o[q.a];
+    ex.className = 'explain bad'; ex.innerHTML = '<b>' + (pos < 0 ? '¡Tiempo!' : 'Incorrecto.') + '</b> '; ex.append(`Era «${right}». ${q.x}`);
+    const segs = SAY.wrong(q, line, m === 'sad' ? 'sad' : 'hype', run.lives === 1);
+    say(segs.map(g => g.t).join(' '), {mood: m, segs});
+  }
+  S.bestStreak = Math.max(S.bestStreak, run.maxStreak);
+  run.i++; save();
+  renderHud(); micUI();
+  const nb = $('#nextBtn'); nb.hidden = false;
+  nb.textContent = (run.lives <= 0 || run.i >= run.qs.length) ? 'Ver resultado ➜' : 'Siguiente ➜';
+  nb.focus({preventScroll: true});
+  requestAnimationFrame(() => nb.scrollIntoView({block: 'nearest', behavior: reduceMotion ? 'auto' : 'smooth'}));
+}
+function next() { if (state !== 'revealed') return; SFX.click(); hush(); showQuestion(); }
+function fifty() {
+  if (state !== 'asking' || !run.fifty) return;
+  run.fifty = false; save(); kickTimer();
+  const correctPos = cur.order.indexOf(cur.q.a);
+  const wrong = shuffle([0, 1, 2, 3].filter(p => p !== correctPos)).slice(0, 2);
+  const btns = $$('.ans'); wrong.forEach(p => { removed.add(p); btns[p].classList.add('removed'); btns[p].disabled = true; });
+  SFX.whoosh(); say(L.fifty, {mood: 'smug', segs: SAY.fifty()}); react('lean'); renderHud();
+}
+function endGame() {
+  state = 'end'; stopTimer(); if (micOn) micStop();
+  const r = run; const newRecord = r.score > S.best;
+  S.games++; if (newRecord) S.best = r.score;
+  S.history.unshift({s: r.score, c: r.correct, n: r.i, t: Date.now()}); S.history = S.history.slice(0, 8);
+  S.run = null; save();
+  show('end'); moveAkari('#endSlot');
+  const rank = RANKS.find(x => r.score >= x[0]);
+  $('#endRank').textContent = rank[1];
+  $('#endRecord').hidden = !newRecord;
+  $('#enCorrect').textContent = `${r.correct}/${r.i}`;
+  $('#enAcc').textContent = r.i ? Math.round(r.correct / r.i * 100) + '%' : '0%';
+  $('#enStreak').textContent = r.maxStreak;
+  $('#enBest').textContent = S.best;
+  // contador animado
+  const el = $('#endScore'); const t0 = performance.now(), D = reduceMotion ? 1 : 1200;
+  (function up() { const now = performance.now(); const k = Math.min(1, (now - t0) / D); el.textContent = Math.round(r.score * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(up); })();
+  const lost = r.lives <= 0;
+  const segs = [...(lost ? SAY.lose() : SAY.finish(rank)), ...(newRecord && r.score > 0 ? SAY.record() : [])];
+  const line = segs.map(g => g.t).join(' ');
+  if (lost && !newRecord) { SFX.lose(); say(line, {mood: 'sad', segs}); react('lean'); }
+  else { SFX.fanfare(); confetti(200); say(line, {mood: newRecord || r.score >= 3000 ? 'happy' : 'smug', segs}); react('jump'); }
+  $('#againBtn').focus({preventScroll: true});
+}
+function toTitle() {
+  state = 'title'; stopTimer(); if (micOn) micStop(); hush();
+  show('title'); moveAkari('#titleSlot'); setMood('neutral'); renderTitle();
+  bubble(rnd(L.hello));
+}
+function renderTitle() {
+  $('#nameIn').value = S.name || '';
+  $('#stBest').textContent = S.best; $('#stGames').textContent = S.games;
+  $('#stAcc').textContent = S.answered ? Math.round(S.correct / S.answered * 100) + '%' : '–';
+  $('#stStreak').textContent = S.bestStreak;
+  const c = $('#contBtn'); c.hidden = !S.run; if (S.run) c.textContent = `Continuar partida (pregunta ${S.run.i + 1}/${ROUNDS} · ${S.run.score} pts)`;
+  const h = $('#hist'); h.innerHTML = '';
+  S.history.slice(0, 5).forEach(x => { const li = document.createElement('li'); const d = new Date(x.t);
+    li.innerHTML = '<span></span><b></b>'; li.firstChild.textContent = `${d.toLocaleDateString('es', {day: '2-digit', month: 'short'})} · ${x.c}/${x.n} correctas`; li.lastChild.textContent = x.s + ' pts'; h.appendChild(li); });
+  syncToggles(); syncVoiceMode(); capNote();
+}
+
+/* restart con doble toque (no hay confirm() en todas las vistas) */
+let armTimer = null;
+const restartBtn = $('#restartBtn'); const restartIcon = restartBtn.innerHTML;
+restartBtn.addEventListener('click', () => {
+  if (!restartBtn.classList.contains('armed')) { restartBtn.classList.add('armed'); restartBtn.textContent = '¿Reiniciar?'; clearTimeout(armTimer);
+    armTimer = setTimeout(() => { restartBtn.classList.remove('armed'); restartBtn.innerHTML = restartIcon; }, 2500); return; }
+  clearTimeout(armTimer); restartBtn.classList.remove('armed'); restartBtn.innerHTML = restartIcon;
+  stopTimer(); if (micOn) micStop(); S.run = null; save(); startGame(false);
+});
+
+/* toggles */
+function syncVoiceMode() {
+  $$('.seg [data-vm]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vm === (S.voiceMode === 'device' ? 'device' : 'natural')));
+  $$('.seg [data-vs]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vs === (VSTYLE[S.voiceStyle] ? S.voiceStyle : 'hype')));
+  voiceStatus();
+}
+$$('.seg [data-vs]').forEach(b => b.addEventListener('click', () => {
+  S.voiceStyle = b.dataset.vs; save(); voiceOn(); syncVoiceMode();
+  const d = SAY.demo(); say(d.map(g => g.t).join(' '), {mood: b.dataset.vs === 'mystery' ? 'smug' : 'happy', segs: d}); react('jump');
+}));
+function voiceOn() { if (!S.voice) { S.voice = true; save(); syncToggles(); } }
+$$('.seg [data-vm]').forEach(b => b.addEventListener('click', () => {
+  S.voiceMode = b.dataset.vm; save(); voiceOn(); syncVoiceMode();
+  const d = SAY.demo(); say(d.map(g => g.t).join(' '), {mood: 'happy', segs: d}); react('jump');
+}));
+$('#testVoice').addEventListener('click', () => { voiceOn(); const d = SAY.demo(); say(d.map(g => g.t).join(' '), {mood: 'happy', segs: d}); react('jump'); });
+function syncToggles() { ['tVoice', 'hVoice'].forEach(id => $('#' + id).setAttribute('aria-pressed', S.voice)); ['tSfx', 'hSfx'].forEach(id => $('#' + id).setAttribute('aria-pressed', S.sfx)); }
+function toggleVoice() { S.voice = !S.voice; if (!S.voice) hush(); save(); syncToggles(); voiceStatus(); if (S.voice) say(L.back, {mood: 'happy'}); }
+function toggleSfx() { S.sfx = !S.sfx; save(); syncToggles(); if (S.sfx) SFX.click(); }
+$('#tVoice').addEventListener('click', toggleVoice); $('#hVoice').addEventListener('click', toggleVoice);
+$('#tSfx').addEventListener('click', toggleSfx); $('#hSfx').addEventListener('click', toggleSfx);
+
+$('#nameIn').addEventListener('input', e => { S.name = e.target.value.trim().slice(0, 16); save(); });
+$('#playBtn').addEventListener('click', () => { SFX.click(); S.run = null; startGame(false); });
+$('#contBtn').addEventListener('click', () => { SFX.click(); startGame(true); });
+$('#nextBtn').addEventListener('click', next);
+$('#fiftyBtn').addEventListener('click', fifty);
+$('#skipBtn').addEventListener('click', skipReading);
+$('#homeBtn').addEventListener('click', () => { SFX.click(); toTitle(); });
+$('#againBtn').addEventListener('click', () => { SFX.click(); startGame(false); });
+$('#menuBtn').addEventListener('click', () => { SFX.click(); toTitle(); });
+akWrap.addEventListener('click', () => {
+  if (state === 'revealed' || state === 'intro' || state === 'banner' || (state === 'asking' && !timerOn)) return;
+  const prev = mood; ac(); SFX.click();
+  say(rnd(L.poke), {mood: rnd(['surprised', 'smug', 'fired'])}); react('gasp');
+  setTimeout(() => { if (state === 'asking' || state === 'title' || state === 'end') setMood(prev); }, 1600);
+});
+
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') { if (e.key === 'Enter' && state === 'title') { e.preventDefault(); $('#playBtn').click(); } return; }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (state === 'asking') {
+    const idx = {'1': 0, '2': 1, '3': 2, '4': 3, a: 0, b: 1, c: 2, d: 3}[k];
+    if (idx !== undefined) { e.preventDefault(); answer(idx); return; }
+    if (k === 'm' && !micBtn.hidden) { e.preventDefault(); micStart(); return; }
+    if (k === 'h') { e.preventDefault(); fifty(); return; }
+    if ((k === 'enter' || k === 's') && !timerOn) { e.preventDefault(); skipReading(); return; }
+  } else if (state === 'revealed' && (k === 'enter' || k === ' ')) { e.preventDefault(); next(); }
+  else if (state === 'title' && k === 'enter' && document.activeElement === document.body) { $('#playBtn').click(); }
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) { if (synth) synth.cancel(); if (micOn) micStop(); } });
+
+// Exponer un pequeño gancho para pruebas automatizadas
+window.__akari = {skipReading, get engine() { return lastEngine; }, get timerOn() { return timerOn; }, engineFor, allSpoken, PACK, SAY, get state() { return state; }, get run() { return run; }, get cur() { return cur; }, matchAnswer, Q};
+
+toTitle();
+})();
+</script>
+<!--WRAP-START-->
+</body>
+</html>
