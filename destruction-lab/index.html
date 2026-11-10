@@ -1,0 +1,1227 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Destruction Lab 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-screen 3D viewport; HUD floats on top (status top, tool panel + toolbar bottom). Single dark HUD look on purpose. */
+:root {
+  --ink: #0e131b;
+  --panel: rgba(16, 21, 30, 0.82);
+  --panel-solid: #161d29;
+  --line: rgba(220, 230, 245, 0.14);
+  --fg: #eef2f7;
+  --muted: #9ba8ba;
+  --accent: #ffb02e;
+  --accent-ink: #241600;
+  --hot: #ff6b3d;
+  --ok: #6fd3a0;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; background: var(--ink); color: var(--fg); overflow: hidden; overscroll-behavior: none; }
+body { font-family: var(--body); font-size: 14px; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+#app { position: fixed; inset: 0; touch-action: none; }
+#app canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.hud-top {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 5; pointer-events: none;
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.brand { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px 12px 7px 9px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); min-width: 0; }
+.brand .mark { width: 22px; height: 22px; flex: none; border-radius: 4px; background: repeating-linear-gradient(-45deg, var(--accent) 0 5px, #1a1406 5px 10px); }
+.brand b { display: block; font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: 0.06em; line-height: 1; }
+.brand small { display: block; color: var(--muted); font-size: 11px; margin-top: 3px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-actions { pointer-events: auto; display: flex; gap: 8px; }
+.icon-btn { width: 42px; height: 42px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn[aria-pressed="false"] { color: var(--muted); }
+
+.hud-bottom {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.panel { pointer-events: auto; width: 100%; max-width: 560px; box-sizing: border-box; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: grid; gap: 8px; }
+.hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+.hint strong { color: var(--fg); font-weight: 600; }
+.ctl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ctl[hidden] { display: none !important; }
+.slider { display: flex; align-items: center; gap: 10px; flex: 1 1 200px; min-width: 0; }
+.slider label { font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.slider output { font-family: var(--display); font-weight: 700; font-size: 18px; min-width: 2.2ch; text-align: right; font-variant-numeric: tabular-nums; color: var(--accent); }
+input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height: 28px; }
+.pill-btn { pointer-events: auto; font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 16px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); }
+.pill-btn.stop { background: var(--hot); color: #2a0b00; }
+
+.toolbar { pointer-events: auto; width: 100%; max-width: 560px; box-sizing: border-box; display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 5px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.tool { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 2px 6px; border-radius: 10px; color: var(--muted); }
+.tool svg { width: 22px; height: 22px; }
+.tool span { font-family: var(--display); font-weight: 600; font-size: 12.5px; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tool .short { display: none; }
+@media (max-width: 480px) { .tool .long { display: none; } .tool .short { display: block; } }
+.tool[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.tool.reset { color: var(--fg); }
+.tool .live { position: absolute; }
+.tool.quaking:not([aria-pressed="true"]) { color: var(--hot); }
+
+.toast { position: fixed; z-index: 8; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); background: var(--panel-solid); border: 1px solid var(--line); padding: 8px 14px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+.toast.show { opacity: 1; }
+
+.sheet-wrap { position: fixed; inset: 0; z-index: 10; background: rgba(5, 8, 12, 0.55); display: grid; place-items: end center; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.sheet { width: 100%; max-width: 440px; box-sizing: border-box; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 14px; max-height: 80vh; overflow: auto; }
+.sheet h2 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: 0.05em; text-transform: uppercase; }
+.field { display: grid; gap: 6px; }
+.field > span { font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.field small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.seg { display: flex; gap: 4px; background: rgba(255,255,255,0.05); border-radius: 10px; padding: 4px; }
+.seg button { flex: 1; padding: 9px 4px; border-radius: 7px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.check { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.check input { width: 22px; height: 22px; accent-color: var(--accent); }
+.sheet .row { display: flex; gap: 8px; justify-content: flex-end; }
+.ghost-btn { padding: 9px 16px; border-radius: 9px; border: 1px solid var(--line); font-weight: 600; }
+
+.loader { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #233046 0%, var(--ink) 70%); text-align: center; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.loader h1 { margin: 0 0 6px; font-family: var(--display); font-weight: 700; font-size: clamp(34px, 9vw, 56px); letter-spacing: 0.06em; line-height: 1; }
+.loader p { margin: 0; color: var(--muted); }
+.bar { width: 200px; height: 6px; margin: 18px auto 0; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 40%; border-radius: 3px; background: repeating-linear-gradient(-45deg, var(--accent) 0 6px, #c47f10 6px 12px); animation: slide 1.1s linear infinite; }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) { .bar i { animation: none; width: 100%; } }
+
+.err { position: fixed; z-index: 30; left: 0; right: 0; top: 0; background: #5a1408; color: #ffe2d8; font-size: 12px; padding: 8px 16px; padding-top: calc(8px + env(safe-area-inset-top, 0px)); white-space: pre-wrap; max-height: 40vh; overflow: auto; }
+
+@media (max-width: 480px) { .toolbar { gap: 2px; padding: 4px; } .tool { padding-left: 0; padding-right: 0; } .tool span { letter-spacing: 0; font-size: 12px; } }
+@media (min-width: 900px) { .hud-bottom { align-items: center; } }
+</style>
+
+<div id="app"></div>
+
+<div class="hud-top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"></span>
+    <div style="min-width:0"><b>DESTRUCTION LAB</b><small id="stats">Cargando…</small></div>
+  </div>
+  <div class="top-actions">
+    <button class="icon-btn" id="btn-sound" aria-pressed="true" aria-label="Sonido">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path id="snd-wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+    </button>
+    <button class="icon-btn" id="btn-settings" aria-label="Ajustes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="hud-bottom">
+  <div class="panel" id="panel">
+    <p class="hint" id="hint"></p>
+    <div class="ctl" data-for="meteor" hidden>
+      <div class="slider"><label for="meteor-size">Tamaño</label><input id="meteor-size" type="range" min="1" max="10" value="5"><output id="meteor-size-out">5</output></div>
+    </div>
+    <div class="ctl" data-for="blast" hidden>
+      <div class="slider"><label for="blast-power">Potencia</label><input id="blast-power" type="range" min="1" max="10" value="5"><output id="blast-power-out">5</output></div>
+    </div>
+    <div class="ctl" data-for="quake" hidden>
+      <div class="slider"><label for="quake-int">Intensidad</label><input id="quake-int" type="range" min="1" max="10" value="4"><output id="quake-int-out">4</output></div>
+      <button class="pill-btn" id="quake-btn">Iniciar</button>
+    </div>
+    <div class="ctl" data-for="build" hidden>
+      <div class="slider"><label for="build-floors">Pisos</label><input id="build-floors" type="range" min="2" max="14" value="6"><output id="build-floors-out">6</output></div>
+    </div>
+  </div>
+  <nav class="toolbar" aria-label="Herramientas">
+    <button class="tool" data-tool="camera" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3"/></svg><span class="long">Cámara</span><span class="short">Cámara</span>
+    </button>
+    <button class="tool" data-tool="meteor" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="15" r="5"/><path d="M3 3l7.5 7.5M7 3l5 5M3 7l5 5"/></svg><span class="long">Meteorito</span><span class="short">Meteoro</span>
+    </button>
+    <button class="tool" data-tool="blast" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l2.2 5.6 5.8-2-2.6 5.4L22 13l-5.4 1.4 1.6 5.6-5.2-3-3.4 5-1-5.8L3 17.6l3.4-4.8L2 10l5.6-1L6.6 3.4 11 7z"/></svg><span class="long">Explosión</span><span class="short">Bomba</span>
+    </button>
+    <button class="tool" data-tool="quake" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l2-5 3 10 3-14 3 13 2-4h4"/></svg><span class="long">Terremoto</span><span class="short">Sismo</span>
+    </button>
+    <button class="tool" data-tool="build" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 21V8h7v13M11 21V3h9v18M2 21h20"/><path d="M14 7h3M14 11h3M14 15h3M7 12h1M7 16h1"/></svg><span class="long">Construir</span><span class="short">Crear</span>
+    </button>
+    <button class="tool reset" id="btn-reset" aria-label="Reiniciar ciudad">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span class="long">Reiniciar</span><span class="short">Reset</span>
+    </button>
+  </nav>
+</div>
+
+<div class="sheet-wrap" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-labelledby="settings-title">
+    <h2 id="settings-title">Ajustes</h2>
+    <div class="field">
+      <span>Calidad</span>
+      <div class="seg" id="quality-seg">
+        <button data-q="bajo" aria-pressed="false">Baja</button>
+        <button data-q="medio" aria-pressed="false">Media</button>
+        <button data-q="alto" aria-pressed="false">Alta</button>
+      </div>
+      <small>Baja usa piezas más grandes, sin sombras y menos escombros. Cambiar la calidad reconstruye la ciudad.</small>
+    </div>
+    <div class="field">
+      <div class="slider"><label for="max-debris">Límite de escombros</label><input id="max-debris" type="range" min="40" max="600" step="20" value="180"><output id="max-debris-out">180</output></div>
+      <small>Cuando se supera, los escombros más viejos desaparecen para mantener los FPS.</small>
+    </div>
+    <div class="field">
+      <div class="slider"><label for="max-fx">Límite de partículas</label><input id="max-fx" type="range" min="200" max="3000" step="100" value="1400"><output id="max-fx-out">1400</output></div>
+    </div>
+    <label class="check" for="opt-shadows"><span>Sombras</span><input type="checkbox" id="opt-shadows" checked></label>
+    <div class="row"><button class="ghost-btn" id="settings-close">Listo</button></div>
+  </div>
+</div>
+
+<div class="loader" id="loader">
+  <div>
+    <h1>DESTRUCTION LAB</h1>
+    <p id="loader-msg">Cargando motor de física…</p>
+    <div class="bar"><i></i></div>
+  </div>
+</div>
+<div class="err" id="err" hidden></div>
+
+<script>
+  (function () {
+    var box = document.getElementById('err');
+    function show(msg) { box.hidden = false; box.textContent += (box.textContent ? '\n' : '') + 'Error: ' + msg; }
+    window.addEventListener('error', function (e) { show((e.message || 'desconocido') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')); });
+    window.addEventListener('unhandledrejection', function (e) { show(e.reason && e.reason.message ? e.reason.message : String(e.reason)); });
+    window.__labShowError = show;
+  })();
+</script>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+import RAPIER from 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.12.0/rapier.es.js';
+
+const $ = (s) => document.querySelector(s);
+const isCoarse = matchMedia('(pointer: coarse)').matches;
+const DPR = window.devicePixelRatio || 1;
+
+/* ------------------------------------------------------------------ settings */
+const QUALITY = {
+  bajo:  { dpr: 1,                   shadowSize: 0,    bs: 3, frag: [2, 1, 2], maxDebris: 80,  particles: 600,  fragBudget: 10, substeps: 2 },
+  medio: { dpr: Math.min(DPR, 1.5),  shadowSize: 1024, bs: 2, frag: [2, 2, 2], maxDebris: 180, particles: 1400, fragBudget: 22, substeps: 2 },
+  alto:  { dpr: Math.min(DPR, 2),    shadowSize: 2048, bs: 2, frag: [2, 2, 2], maxDebris: 360, particles: 2600, fragBudget: 40, substeps: 3 },
+};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('dlab.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('dlab.' + k, JSON.stringify(v)); } catch (e) {} },
+};
+const settings = {
+  quality: store.get('quality', isCoarse ? 'medio' : 'alto'),
+  sound: store.get('sound', true),
+  shadows: store.get('shadows', true),
+  maxDebris: null,
+  maxFx: null,
+};
+if (!QUALITY[settings.quality]) settings.quality = 'medio';
+function applyQualityDefaults() {
+  const q = QUALITY[settings.quality];
+  settings.maxDebris = store.get('maxDebris.' + settings.quality, q.maxDebris);
+  settings.maxFx = store.get('maxFx.' + settings.quality, q.particles);
+}
+applyQualityDefaults();
+let Q = QUALITY[settings.quality];
+
+/* ------------------------------------------------------------------ renderer */
+const app = $('#app');
+const renderer = new THREE.WebGLRenderer({ antialias: !isCoarse, powerPreference: 'high-performance' });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xcbd7e2, 110, 300);
+const camera = new THREE.PerspectiveCamera(55, 1, 1, 800);
+
+// sky dome
+{
+  const g = new THREE.SphereGeometry(450, 24, 12);
+  const m = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { top: { value: new THREE.Color(0x3f78c4) }, mid: { value: new THREE.Color(0xd6e3ee) }, bot: { value: new THREE.Color(0xa9b4bc) } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 top; uniform vec3 mid; uniform vec3 bot; varying vec3 vP; void main(){ float h = vP.y; vec3 c = h > 0.0 ? mix(mid, top, pow(h, 0.55)) : mix(mid, bot, min(1.0, -h*4.0)); gl_FragColor = vec4(c,1.0); }',
+  });
+  scene.add(new THREE.Mesh(g, m));
+}
+
+const hemi = new THREE.HemisphereLight(0xe2eeff, 0x6a5b48, 1.15);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff0d8, 2.7);
+sun.position.set(45, 75, 30);
+sun.shadow.camera.left = -62; sun.shadow.camera.right = 62;
+sun.shadow.camera.top = 62; sun.shadow.camera.bottom = -62;
+sun.shadow.camera.near = 10; sun.shadow.camera.far = 220;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.04;
+scene.add(sun);
+const flashLight = new THREE.PointLight(0xffa24a, 0, 90, 1.2);
+scene.add(flashLight);
+
+function applyRenderQuality() {
+  Q = QUALITY[settings.quality];
+  renderer.setPixelRatio(Q.dpr);
+  const sh = settings.shadows && Q.shadowSize > 0;
+  renderer.shadowMap.enabled = sh;
+  sun.castShadow = sh;
+  if (sh) {
+    sun.shadow.mapSize.set(Q.shadowSize, Q.shadowSize);
+    if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+  }
+  scene.traverse((o) => { if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => (m.needsUpdate = true)); } });
+  onResize();
+}
+
+/* ------------------------------------------------------------------ textures */
+function canvasTex(w, h, draw, repeat) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; }
+  return t;
+}
+function speckle(g, w, h, n, a, light) {
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = light ? `rgba(255,255,255,${Math.random() * a})` : `rgba(0,0,0,${Math.random() * a})`;
+    g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 2, 1 + Math.random() * 2);
+  }
+}
+const windowTex = canvasTex(64, 96, (g, w, h) => {
+  g.fillStyle = '#ece7de'; g.fillRect(0, 0, w, h);
+  speckle(g, w, h, 260, 0.06, false);
+  g.fillStyle = '#d2cbc0'; g.fillRect(0, 0, w, 7);
+  g.fillStyle = '#8f897f'; g.fillRect(9, 20, 46, 60);
+  const gr = g.createLinearGradient(0, 23, 0, 77);
+  gr.addColorStop(0, '#355172'); gr.addColorStop(1, '#14212f');
+  g.fillStyle = gr; g.fillRect(12, 23, 40, 54);
+  g.fillStyle = 'rgba(190,220,250,0.22)';
+  g.beginPath(); g.moveTo(12, 50); g.lineTo(34, 23); g.lineTo(44, 23); g.lineTo(12, 62); g.fill();
+  g.fillStyle = '#8f897f'; g.fillRect(31, 23, 2, 54);
+  g.fillStyle = '#c3bcb1'; g.fillRect(7, 80, 50, 4);
+});
+const roofTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#b9b3a9'; g.fillRect(0, 0, w, h); speckle(g, w, h, 400, 0.12, false); });
+const debrisTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#d8d2c8'; g.fillRect(0, 0, w, h); speckle(g, w, h, 700, 0.25, false); speckle(g, w, h, 200, 0.2, true); });
+const grassTex = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#6d8a4c'; g.fillRect(0, 0, w, h); speckle(g, w, h, 1600, 0.12, false); speckle(g, w, h, 600, 0.08, true); }, true);
+grassTex.repeat.set(40, 40);
+const plazaTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#b7b1a6'; g.fillRect(0, 0, w, h); speckle(g, w, h, 900, 0.1, false);
+  g.strokeStyle = 'rgba(60,55,50,0.25)'; g.lineWidth = 2;
+  for (let i = 0; i <= w; i += 32) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); }
+}, true);
+const streetTex = canvasTex(256, 128, (g, w, h) => {
+  g.fillStyle = '#3c3f44'; g.fillRect(0, 0, w, h); speckle(g, w, h, 2500, 0.18, false); speckle(g, w, h, 700, 0.06, true);
+  g.fillStyle = '#e9e5da'; g.fillRect(0, 6, w, 4); g.fillRect(0, h - 10, w, 4);
+  g.fillStyle = '#e8b93a'; for (let x = 0; x < w; x += 64) g.fillRect(x + 8, h / 2 - 2, 36, 4);
+}, true);
+const craterTex = canvasTex(128, 128, (g, w, h) => {
+  const r = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+  r.addColorStop(0, 'rgba(20,14,10,0.95)'); r.addColorStop(0.45, 'rgba(38,28,20,0.85)'); r.addColorStop(0.7, 'rgba(60,45,32,0.45)'); r.addColorStop(1, 'rgba(60,45,32,0)');
+  g.fillStyle = r; g.fillRect(0, 0, w, h);
+});
+craterTex.colorSpace = THREE.SRGBColorSpace;
+const glowTex = canvasTex(64, 64, (g) => {
+  const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,240,200,1)'); r.addColorStop(0.25, 'rgba(255,170,80,0.8)'); r.addColorStop(1, 'rgba(255,90,20,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+});
+
+/* ------------------------------------------------------------------ ground & street (visual, follows quake) */
+const groundGroup = new THREE.Group();
+scene.add(groundGroup);
+const groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(320, 320), new THREE.MeshStandardMaterial({ map: grassTex, roughness: 1 }));
+groundMesh.rotation.x = -Math.PI / 2; groundMesh.receiveShadow = true;
+groundGroup.add(groundMesh);
+function flat(w, d, mat, x, y, z) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat);
+  m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.receiveShadow = true; groundGroup.add(m); return m;
+}
+const plazaMat = new THREE.MeshStandardMaterial({ map: plazaTex, roughness: 0.95 });
+plazaTex.repeat.set(30, 9);
+const streetMat = new THREE.MeshStandardMaterial({ map: streetTex, roughness: 0.9 });
+streetTex.repeat.set(12, 1);
+flat(150, 46, plazaMat, 0, 0.04, 0);
+flat(150, 9, streetMat, 0, 0.08, 0);
+// cross street
+{
+  const t2 = streetTex.clone(); t2.needsUpdate = true; t2.repeat.set(4, 1);
+  const m = flat(46, 9, new THREE.MeshStandardMaterial({ map: t2, roughness: 0.9 }), 0, 0.06, 0);
+  m.rotation.z = Math.PI / 2;
+}
+const craters = [];
+
+/* ------------------------------------------------------------------ instanced pools */
+const BOX = new THREE.BoxGeometry(1, 1, 1);
+class Pool {
+  constructor(mats, cap) {
+    this.mesh = new THREE.InstancedMesh(BOX, mats, cap);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.castShadow = true; this.mesh.receiveShadow = true;
+    this.mesh.frustumCulled = false;
+    this.mesh.setColorAt(0, new THREE.Color(1, 1, 1));
+    this.mesh.count = 0;
+    this.items = [];
+    this.cap = cap;
+    scene.add(this.mesh);
+  }
+  add(item, color) {
+    if (this.items.length >= this.cap) return false;
+    const i = this.items.length;
+    item.idx = i; item.pool = this; item.dirty = true;
+    this.items.push(item);
+    this.mesh.setColorAt(i, color);
+    this.mesh.instanceColor.needsUpdate = true;
+    this.mesh.count = this.items.length;
+    return true;
+  }
+  remove(item) {
+    const i = item.idx;
+    const last = this.items.pop();
+    if (last !== item) {
+      this.items[i] = last; last.idx = i; last.dirty = true;
+      this.mesh.setColorAt(i, last.color);
+      this.mesh.instanceColor.needsUpdate = true;
+    }
+    this.mesh.count = this.items.length;
+  }
+  clear() { this.items.length = 0; this.mesh.count = 0; }
+}
+const sideMat = new THREE.MeshStandardMaterial({ map: windowTex, roughness: 0.78, metalness: 0.04 });
+const topMat = new THREE.MeshStandardMaterial({ map: roofTex, roughness: 0.92 });
+const blocks = new Pool([sideMat, sideMat, topMat, topMat, sideMat, sideMat], 3200);
+const debris = new Pool(new THREE.MeshStandardMaterial({ map: debrisTex, roughness: 0.95 }), 700);
+
+/* ------------------------------------------------------------------ particles */
+class Particles {
+  constructor(max, additive) {
+    this.max = max; this.next = 0; this.limit = max;
+    this.pos = new Float32Array(max * 3); this.col = new Float32Array(max * 3);
+    this.size = new Float32Array(max); this.alpha = new Float32Array(max);
+    this.vel = new Float32Array(max * 3); this.life = new Float32Array(max); this.maxLife = new Float32Array(max);
+    this.grow = new Float32Array(max); this.drag = new Float32Array(max); this.grav = new Float32Array(max); this.a0 = new Float32Array(max);
+    const g = new THREE.BufferGeometry();
+    this.aPos = new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage);
+    this.aCol = new THREE.BufferAttribute(this.col, 3).setUsage(THREE.DynamicDrawUsage);
+    this.aSize = new THREE.BufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage);
+    this.aAlpha = new THREE.BufferAttribute(this.alpha, 1).setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute('position', this.aPos); g.setAttribute('pcolor', this.aCol);
+    g.setAttribute('psize', this.aSize); g.setAttribute('palpha', this.aAlpha);
+    this.mat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false,
+      blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+      uniforms: { uScale: { value: 400 }, uSoft: { value: additive ? 1.6 : 1.0 } },
+      vertexShader: `attribute vec3 pcolor; attribute float psize; attribute float palpha; uniform float uScale; varying vec3 vC; varying float vA;
+        void main(){ vC = pcolor; vA = palpha; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_PointSize = psize * uScale / max(0.5, -mv.z); gl_Position = projectionMatrix * mv; }`,
+      fragmentShader: `uniform float uSoft; varying vec3 vC; varying float vA;
+        void main(){ float d = length(gl_PointCoord - 0.5) * 2.0; if (d > 1.0) discard; float a = pow(1.0 - d, uSoft) * vA; gl_FragColor = vec4(vC, a); }`,
+    });
+    this.points = new THREE.Points(g, this.mat);
+    this.points.frustumCulled = false;
+    scene.add(this.points);
+  }
+  emit(x, y, z, vx, vy, vz, life, size, r, g, b, alpha = 1, grow = 0, drag = 0.5, grav = 0) {
+    const i = this.next; this.next = (i + 1) % this.limit;
+    const j = i * 3;
+    this.pos[j] = x; this.pos[j + 1] = y; this.pos[j + 2] = z;
+    this.vel[j] = vx; this.vel[j + 1] = vy; this.vel[j + 2] = vz;
+    this.col[j] = r; this.col[j + 1] = g; this.col[j + 2] = b;
+    this.life[i] = life; this.maxLife[i] = life; this.size[i] = size; this.a0[i] = alpha;
+    this.grow[i] = grow; this.drag[i] = drag; this.grav[i] = grav;
+  }
+  setLimit(n) { this.limit = Math.max(50, Math.min(this.max, n)); if (this.next >= this.limit) this.next = 0; for (let i = this.limit; i < this.max; i++) { this.life[i] = 0; this.alpha[i] = 0; } }
+  clear() { this.life.fill(0); this.alpha.fill(0); }
+  update(dt) {
+    let any = 0;
+    for (let i = 0; i < this.limit; i++) {
+      if (this.life[i] <= 0) { if (this.alpha[i] !== 0) { this.alpha[i] = 0; any++; } continue; }
+      any++;
+      this.life[i] -= dt;
+      const j = i * 3, k = Math.max(0, 1 - this.drag[i] * dt);
+      this.vel[j] *= k; this.vel[j + 1] = this.vel[j + 1] * k - this.grav[i] * dt; this.vel[j + 2] *= k;
+      this.pos[j] += this.vel[j] * dt; this.pos[j + 1] += this.vel[j + 1] * dt; this.pos[j + 2] += this.vel[j + 2] * dt;
+      if (this.pos[j + 1] < 0.1) { this.pos[j + 1] = 0.1; this.vel[j + 1] *= -0.25; this.vel[j] *= 0.6; this.vel[j + 2] *= 0.6; }
+      this.size[i] += this.grow[i] * dt;
+      const t = this.life[i] / this.maxLife[i];
+      this.alpha[i] = this.life[i] <= 0 ? 0 : this.a0[i] * Math.min(1, t * 2.2) * Math.min(1, (1 - t) * 12 + 0.15);
+    }
+    if (any) { this.aPos.needsUpdate = this.aCol.needsUpdate = this.aSize.needsUpdate = this.aAlpha.needsUpdate = true; }
+  }
+}
+const dust = new Particles(3000, false);
+const fire = new Particles(1200, true);
+function applyFxLimit() { dust.setLimit(settings.maxFx); fire.setLimit(Math.round(settings.maxFx * 0.4)); }
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+/* ------------------------------------------------------------------ sound (WebAudio, synthesized) */
+const Sfx = {
+  ctx: null, master: null, noise: null, rumbleGain: null, lastCrumble: 0,
+  init() {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    try {
+      const ctx = this.ctx = new AC();
+      const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6;
+      this.master = ctx.createGain(); this.master.gain.value = settings.sound ? 0.9 : 0;
+      this.master.connect(comp); comp.connect(ctx.destination);
+      const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.04 * w) / 1.04; d[i] = w * 0.5 + last * 3; }
+      this.noise = buf;
+      // continuous rumble for earthquakes
+      const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 75;
+      this.rumbleGain = ctx.createGain(); this.rumbleGain.gain.value = 0;
+      src.connect(lp); lp.connect(this.rumbleGain); this.rumbleGain.connect(this.master); src.start();
+    } catch (e) { this.ctx = null; }
+  },
+  ok() { return this.ctx && this.ctx.state === 'running' && settings.sound; },
+  setEnabled(on) { if (this.master) this.master.gain.setTargetAtTime(on ? 0.9 : 0, this.ctx.currentTime, 0.05); },
+  noiseSrc(t, dur) { const s = this.ctx.createBufferSource(); s.buffer = this.noise; s.start(t, Math.random() * 1.2); s.stop(t + dur); return s; },
+  boom(s) {
+    if (!this.ok()) return;
+    const c = this.ctx, t = c.currentTime, dur = 1.4 + s * 2.2;
+    const n = this.noiseSrc(t, dur + 0.2);
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(1400 + s * 2500, t); lp.frequency.exponentialRampToValueAtTime(70, t + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 + s * 0.6, t + 0.012); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    n.connect(lp); lp.connect(g); g.connect(this.master);
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(28, t + 0.7);
+    const og = c.createGain(); og.gain.setValueAtTime(0.9, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.9 + s * 0.6);
+    o.connect(og); og.connect(this.master); o.start(t); o.stop(t + 1.6 + s);
+  },
+  whoosh(dur) {
+    if (!this.ok()) return;
+    const c = this.ctx, t = c.currentTime;
+    const n = this.noiseSrc(t, dur + 0.1);
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.2;
+    bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(2200, t + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + dur * 0.9); g.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.1);
+    n.connect(bp); bp.connect(g); g.connect(this.master);
+  },
+  crumble(v = 1) {
+    if (!this.ok()) return;
+    const c = this.ctx, t = c.currentTime;
+    if (t - this.lastCrumble < 0.07) return; this.lastCrumble = t;
+    const n = this.noiseSrc(t, 0.35);
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = rnd(250, 900); bp.Q.value = 0.9;
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12 + 0.18 * Math.min(1, v), t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    n.connect(bp); bp.connect(g); g.connect(this.master);
+  },
+  rumble(level) { if (this.rumbleGain) this.rumbleGain.gain.setTargetAtTime(settings.sound ? level : 0, this.ctx.currentTime, 0.25); },
+};
+
+/* ------------------------------------------------------------------ physics world */
+let world, groundBody, eventQueue;
+const colliderMap = new Map();
+const props = [];        // {kind:'prop', body, obj}
+let debrisQueue = [];
+const tmpV = new THREE.Vector3(), tmpQ = new THREE.Quaternion(), tmpS = new THREE.Vector3(), tmpM = new THREE.Matrix4();
+const GROUND_Y = -0.5;
+
+function createWorld() {
+  world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+  groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(0, GROUND_Y, 0));
+  world.createCollider(RAPIER.ColliderDesc.cuboid(160, 0.5, 160).setFriction(0.95), groundBody);
+}
+
+function addBlock(x, y, z, sx, sy, sz, color, sleeping = true) {
+  if (blocks.items.length >= blocks.cap) return null;
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z).setSleeping(sleeping).setLinearDamping(0.05).setAngularDamping(0.15));
+  const mass = sx * sy * sz;
+  const cd = RAPIER.ColliderDesc.cuboid(sx / 2, sy / 2, sz / 2).setDensity(1).setFriction(0.65).setRestitution(0.02)
+    .setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS).setContactForceEventThreshold(mass * 9.81 * 55);
+  const collider = world.createCollider(cd, body);
+  const item = { kind: 'block', body, collider, sx, sy, sz, color, breakForce: mass * 9.81 * 55, born: simTime };
+  colliderMap.set(collider.handle, item);
+  blocks.add(item, color);
+  return item;
+}
+
+function addDebris(p, q, sx, sy, sz, color, v, w) {
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(p.x, p.y, p.z).setRotation(q)
+    .setLinvel(v.x, v.y, v.z).setAngvel(w).setLinearDamping(0.1).setAngularDamping(0.3));
+  const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(sx / 2, sy / 2, sz / 2).setDensity(1).setFriction(0.85).setRestitution(0.05), body);
+  const item = { kind: 'debris', body, collider, sx, sy, sz, color };
+  if (!debris.add(item, color)) { world.removeRigidBody(body); return null; }
+  debrisQueue.push(item);
+  return item;
+}
+
+function removeItem(item) {
+  if (item.dead) return;
+  item.dead = true;
+  if (item.collider) colliderMap.delete(item.collider.handle);
+  world.removeRigidBody(item.body);
+  if (item.pool) item.pool.remove(item);
+  if (item.obj) { scene.remove(item.obj); const i = props.indexOf(item); if (i >= 0) props.splice(i, 1); }
+}
+
+function enforceDebrisCap() {
+  while (debris.items.length > settings.maxDebris && debrisQueue.length) {
+    const o = debrisQueue.shift();
+    if (!o.dead) {
+      const t = o.body.translation();
+      dust.emit(t.x, t.y, t.z, 0, 0.3, 0, 0.8, 1.2, 0.55, 0.52, 0.48, 0.35, 1.5, 1);
+      removeItem(o);
+    }
+  }
+  if (debrisQueue.length > 4 * debris.cap) debrisQueue = debrisQueue.filter((o) => !o.dead);
+}
+
+const fragV = new THREE.Vector3(), fragO = new THREE.Vector3();
+function fragment(item, origin, vmag) {
+  if (item.dead || item.kind !== 'block') return;
+  const b = item.body, t = b.translation(), r = b.rotation(), lv = b.linvel();
+  const q = new THREE.Quaternion(r.x, r.y, r.z, r.w);
+  const center = new THREE.Vector3(t.x, t.y, t.z);
+  removeItem(item);
+  const [fx, fy, fz] = Q.frag;
+  const px = item.sx / fx, py = item.sy / fy, pz = item.sz / fz;
+  const base = item.color.clone().multiplyScalar(0.92);
+  for (let i = 0; i < fx; i++) for (let j = 0; j < fy; j++) for (let k = 0; k < fz; k++) {
+    fragO.set(((i + 0.5) / fx - 0.5) * item.sx, ((j + 0.5) / fy - 0.5) * item.sy, ((k + 0.5) / fz - 0.5) * item.sz).applyQuaternion(q).add(center);
+    fragV.copy(fragO).sub(origin || center);
+    if (fragV.lengthSq() < 1e-4) fragV.set(rnd(-1, 1), 1, rnd(-1, 1));
+    fragV.normalize();
+    const s = vmag * rnd(0.5, 1.1);
+    const v = { x: lv.x + fragV.x * s + rnd(-1.5, 1.5), y: lv.y + fragV.y * s + Math.abs(s) * 0.25 + rnd(0, 1.5), z: lv.z + fragV.z * s + rnd(-1.5, 1.5) };
+    const w = { x: rnd(-4, 4), y: rnd(-4, 4), z: rnd(-4, 4) };
+    const shrink = rnd(0.82, 0.96);
+    const c = base.clone().multiplyScalar(rnd(0.8, 1.05));
+    addDebris(fragO, q, px * shrink, py * rnd(0.8, 0.96), pz * shrink, c, v, w);
+  }
+  for (let i = 0; i < 5; i++) dust.emit(t.x + rnd(-1, 1), t.y + rnd(-1, 1), t.z + rnd(-1, 1), rnd(-1, 1), rnd(0, 1.2), rnd(-1, 1), rnd(1.8, 3.2), rnd(1.5, 2.6), 0.62, 0.58, 0.53, 0.5, 1.6, 0.9, -0.15);
+  for (let i = 0; i < 6; i++) dust.emit(t.x, t.y, t.z, rnd(-5, 5), rnd(1, 7), rnd(-5, 5), rnd(0.7, 1.4), rnd(0.15, 0.3), 0.35, 0.33, 0.3, 1, 0, 0.2, 9.8);
+  Sfx.crumble(vmag / 10);
+  enforceDebrisCap();
+}
+
+/* ------------------------------------------------------------------ city */
+const PALETTE = [0xf1e3cf, 0xd9c2a5, 0xc9d3dc, 0xe6d6c3, 0xbfc7b6, 0xe8cdb8, 0xd4d7de, 0xf0e6d8, 0xc7b8a6, 0xdcc9d0];
+let cityRand = 1;
+function srand() { cityRand = (cityRand * 16807) % 2147483647; return (cityRand - 1) / 2147483646; }
+
+function addBuilding(cx, cz, wMeters, dMeters, floors, colorHex) {
+  const bs = Q.bs, fh = 3;
+  const nx = Math.max(1, Math.round(wMeters / bs)), nz = Math.max(1, Math.round(dMeters / bs));
+  if (blocks.items.length + nx * nz * floors > blocks.cap) return false;
+  const base = new THREE.Color(colorHex);
+  const gap = 0.012;
+  for (let f = 0; f < floors; f++) {
+    for (let i = 0; i < nx; i++) for (let k = 0; k < nz; k++) {
+      const c = base.clone().multiplyScalar(0.94 + srand() * 0.08);
+      addBlock(cx + (i - (nx - 1) / 2) * bs, f * fh + fh / 2 + 0.001, cz + (k - (nz - 1) / 2) * bs, bs - gap, fh, bs - gap, c);
+    }
+  }
+  return true;
+}
+
+const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4a32, roughness: 0.9 });
+const leafMats = [0x4f7d3a, 0x5d8c3f, 0x3f6c34].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, flatShading: true }));
+const trunkGeo = new THREE.CylinderGeometry(0.16, 0.24, 2.2, 7);
+const leafGeo = new THREE.IcosahedronGeometry(1.35, 0);
+function addTree(x, z) {
+  const h = 1.7;
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, h, z).setSleeping(true).setAngularDamping(0.4));
+  const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(0.55, h, 0.55).setDensity(0.35).setFriction(0.8), body);
+  const obj = new THREE.Group();
+  const tr = new THREE.Mesh(trunkGeo, trunkMat); tr.position.y = -h + 1.1; tr.castShadow = true; obj.add(tr);
+  const lf = new THREE.Mesh(leafGeo, leafMats[Math.floor(srand() * 3)]); lf.position.y = 0.95; lf.scale.set(1, 1.15, 1); lf.rotation.y = srand() * 3; lf.castShadow = true; obj.add(lf);
+  scene.add(obj);
+  const item = { kind: 'prop', body, collider, obj };
+  props.push(item); colliderMap.set(collider.handle, item);
+}
+
+const CAR_COLORS = [0xc8372d, 0x2f5fa8, 0xe3e3e0, 0x2a2d33, 0xe0a526, 0x3f8f6b, 0x8a99a8];
+const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.3, 12); wheelGeo.rotateX(Math.PI / 2);
+const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1b1c1f, roughness: 0.8 });
+const glassMat = new THREE.MeshStandardMaterial({ color: 0x1d2a38, roughness: 0.2, metalness: 0.5 });
+function addCar(x, z, rotY) {
+  const hy = 0.78;
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotY);
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, hy + 0.01, z).setRotation(q).setSleeping(true).setAngularDamping(0.3));
+  const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(2.05, hy, 0.92).setDensity(0.45).setFriction(0.9), body);
+  const obj = new THREE.Group();
+  const paint = new THREE.MeshStandardMaterial({ color: CAR_COLORS[Math.floor(srand() * CAR_COLORS.length)], roughness: 0.35, metalness: 0.3 });
+  const lower = new THREE.Mesh(new THREE.BoxGeometry(4.1, 0.75, 1.84), paint); lower.position.y = -0.12; lower.castShadow = true; obj.add(lower);
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.62, 1.66), glassMat); cab.position.set(-0.25, 0.55, 0); cab.castShadow = true; obj.add(cab);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.08, 1.6), paint); roof.position.set(-0.25, 0.88, 0); obj.add(roof);
+  for (const [wx, wz] of [[1.35, 0.85], [-1.35, 0.85], [1.35, -0.85], [-1.35, -0.85]]) { const w = new THREE.Mesh(wheelGeo, wheelMat); w.position.set(wx, -0.4, wz); obj.add(w); }
+  scene.add(obj);
+  const item = { kind: 'prop', body, collider, obj };
+  props.push(item); colliderMap.set(collider.handle, item);
+}
+
+function populateCity() {
+  cityRand = 7;
+  // one street along X; buildings on both sides, a cross street at x=0
+  const lots = [-30, -17.5, 11, 24];
+  for (const side of [-1, 1]) {
+    lots.forEach((x, i) => {
+      const w = srand() < 0.5 ? 6 : 8;
+      const d = 6 + (srand() < 0.4 ? 2 : 0);
+      const floors = 3 + Math.floor(srand() * 7);
+      addBuilding(x + (srand() - 0.5) * 1.5, side * (10.5 + d / 2), w, d, floors, PALETTE[(i * 2 + (side > 0 ? 1 : 0)) % PALETTE.length]);
+    });
+  }
+  // a tall tower near the crossing
+  addBuilding(-6.5, -15, 6, 6, 12, 0xc9d3dc);
+  for (const x of [-37, -24, -11, 5, 17.5, 31]) { addTree(x, 6.3); addTree(x + 2.5, -6.3); }
+  addCar(-22, 2.4, 0); addCar(-9.5, -2.4, Math.PI); addCar(4, 2.4, 0.05); addCar(16, -2.4, Math.PI); addCar(28, 2.4, 0);
+  addCar(2.3, 14, Math.PI / 2);
+}
+
+/* ------------------------------------------------------------------ effects */
+const effects = [];
+const fireballGeo = new THREE.SphereGeometry(1, 20, 14);
+const ringGeo = new THREE.RingGeometry(0.85, 1, 48); ringGeo.rotateX(-Math.PI / 2);
+let shake = 0;
+
+function blast(P, power, radius, opts = {}) {
+  const vmax = 3.4 * power;
+  Sfx.boom(Math.min(1, power / 10));
+  shake = Math.min(2.2, shake + 0.25 + power * 0.07);
+  flashLight.position.set(P.x, P.y + 3, P.z);
+  flashLight.intensity = 900 + power * 500;
+  // fireball
+  const fb = new THREE.Mesh(fireballGeo, new THREE.MeshBasicMaterial({ color: 0xffb35a, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  fb.position.copy(P); scene.add(fb);
+  const maxR = radius * 0.55;
+  effects.push({ t: 0, dur: 0.6, update(e, k) { const s = maxR * (0.25 + 0.75 * Math.sqrt(k)); fb.scale.setScalar(s); fb.material.opacity = 0.95 * (1 - k); fb.material.color.setHSL(0.09 - k * 0.06, 1, 0.65 - k * 0.3); }, end() { scene.remove(fb); fb.material.dispose(); } });
+  // shock ring
+  const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xfff0d0, transparent: true, opacity: 0.7, depthWrite: false, side: THREE.DoubleSide }));
+  ring.position.set(P.x, Math.max(0.15, P.y * 0.2), P.z); scene.add(ring);
+  effects.push({ t: 0, dur: 0.7, update(e, k) { ring.scale.setScalar(radius * 1.4 * k + 0.5); ring.material.opacity = 0.7 * (1 - k); }, end() { scene.remove(ring); ring.material.dispose(); } });
+  // particles
+  const nFire = Math.round(18 + power * 7), nDust = Math.round(18 + power * 9), nChunk = Math.round(10 + power * 4);
+  for (let i = 0; i < nFire; i++) {
+    tmpV.set(rnd(-1, 1), rnd(-0.2, 1), rnd(-1, 1)).normalize().multiplyScalar(rnd(2, 4 + power * 1.4));
+    fire.emit(P.x, P.y + 0.5, P.z, tmpV.x, tmpV.y + 2, tmpV.z, rnd(0.4, 1.0), rnd(1.2, 2.4) + power * 0.25, 1.0, rnd(0.45, 0.7), 0.15, 1, 2.5, 2.2, -1.5);
+  }
+  for (let i = 0; i < nDust; i++) {
+    tmpV.set(rnd(-1, 1), rnd(0, 0.7), rnd(-1, 1)).normalize().multiplyScalar(rnd(1.5, 2.5 + power * 0.9));
+    const sh = rnd(0.32, 0.5);
+    dust.emit(P.x + tmpV.x * 0.3, P.y + rnd(0, 1.5), P.z + tmpV.z * 0.3, tmpV.x, tmpV.y + 1, tmpV.z, rnd(2.5, 5 + power * 0.3), rnd(2, 3.5) + power * 0.25, sh + 0.06, sh + 0.03, sh, 0.75, 1.4 + power * 0.12, 0.9, -0.3);
+  }
+  for (let i = 0; i < nChunk; i++) {
+    tmpV.set(rnd(-1, 1), rnd(0.4, 1.4), rnd(-1, 1)).normalize().multiplyScalar(rnd(5, 9 + power * 1.5));
+    dust.emit(P.x, P.y + 0.5, P.z, tmpV.x, tmpV.y, tmpV.z, rnd(1, 2), rnd(0.15, 0.32), 0.24, 0.22, 0.2, 1, 0, 0.15, 9.8);
+  }
+
+  // physics: fragment nearest blocks, push everything in range
+  let budget = Math.max(2, Math.round(Q.fragBudget * (0.35 + power / 9)));
+  const nearBlocks = [];
+  const all = blocks.items.concat(debris.items, props);
+  for (const it of all) {
+    if (it.dead) continue;
+    const t = it.body.translation();
+    const dx = t.x - P.x, dy = t.y - P.y, dz = t.z - P.z;
+    const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (d > radius) continue;
+    if (it.kind === 'block' && d < radius * 0.62) { nearBlocks.push([d, it]); continue; }
+    pushBody(it.body, dx, dy, dz, d, vmax * (1 - d / radius));
+  }
+  nearBlocks.sort((a, b) => a[0] - b[0]);
+  for (const [d, it] of nearBlocks) {
+    const f = Math.pow(1 - d / radius, 1.2);
+    if (budget-- > 0) fragment(it, P, vmax * f);
+    else { const t = it.body.translation(); pushBody(it.body, t.x - P.x, t.y - P.y, t.z - P.z, d, vmax * f); }
+  }
+  if (!opts.noCrater) addCrater(P, radius * 0.45);
+}
+function pushBody(body, dx, dy, dz, d, v) {
+  if (d < 0.01) { dx = 0; dy = 1; dz = 0; d = 1; }
+  const m = body.mass();
+  let nx = dx / d, ny = dy / d + 0.45, nz = dz / d;
+  const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l;
+  body.applyImpulse({ x: nx * v * m, y: ny * v * m, z: nz * v * m }, true);
+  const tq = m * v * 0.08;
+  body.applyTorqueImpulse({ x: rnd(-tq, tq), y: rnd(-tq, tq), z: rnd(-tq, tq) }, true);
+}
+function addCrater(P, r) {
+  if (P.y > 2.5) return;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ map: craterTex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 - craters.length * 0.1 }));
+  m.rotation.x = -Math.PI / 2; m.rotation.z = Math.random() * 6;
+  const gp = groundGroup.position;
+  m.position.set(P.x - gp.x, 0.1 + craters.length * 0.003, P.z - gp.z);
+  m.scale.setScalar(r * 2); m.receiveShadow = true;
+  groundGroup.add(m); craters.push(m);
+  if (craters.length > 24) { const o = craters.shift(); groundGroup.remove(o); o.material.dispose(); }
+}
+
+/* meteors */
+const meteors = [];
+const rockMat = new THREE.MeshStandardMaterial({ color: 0x3a2c22, emissive: 0xff5a10, emissiveIntensity: 1.6, roughness: 0.9, flatShading: true });
+function launchMeteor(P, size) {
+  const az = Math.atan2(camera.position.x - controls.target.x, camera.position.z - controls.target.z) + rnd(-0.9, 0.9) + Math.PI * 0.5;
+  const dir = new THREE.Vector3(Math.sin(az) * 0.55, -1, Math.cos(az) * 0.55).normalize();
+  const dist = 110;
+  const start = P.clone().addScaledVector(dir, -dist);
+  const r = 0.55 + size * 0.13;
+  const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), rockMat);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffc080, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
+  glow.scale.setScalar(r * 9); mesh.add(glow);
+  mesh.position.copy(start); scene.add(mesh);
+  const dur = 1.25;
+  meteors.push({ P: P.clone(), start, dir, t: 0, dur, mesh, size, r });
+  Sfx.whoosh(dur);
+}
+function updateMeteors(dt) {
+  for (let i = meteors.length - 1; i >= 0; i--) {
+    const m = meteors[i];
+    m.t += dt;
+    const k = Math.min(1, m.t / m.dur);
+    const ease = k * k * 0.35 + k * 0.65;
+    m.mesh.position.lerpVectors(m.start, m.P, ease);
+    m.mesh.rotation.x += dt * 5; m.mesh.rotation.y += dt * 3;
+    const p = m.mesh.position;
+    for (let j = 0; j < 3; j++) {
+      fire.emit(p.x + rnd(-0.3, 0.3) * m.r, p.y + rnd(-0.3, 0.3) * m.r, p.z + rnd(-0.3, 0.3) * m.r, rnd(-1, 1), rnd(-1, 1), rnd(-1, 1), rnd(0.25, 0.5), m.r * rnd(2.5, 3.6), 1, rnd(0.4, 0.65), 0.12, 1, -m.r * 2, 1);
+      dust.emit(p.x, p.y, p.z, rnd(-0.5, 0.5), rnd(-0.2, 0.5), rnd(-0.5, 0.5), rnd(1.5, 2.6), m.r * rnd(1.6, 2.4), 0.28, 0.26, 0.25, 0.55, 1.6, 0.6, -0.2);
+    }
+    flashLight.position.copy(p); flashLight.intensity = Math.max(flashLight.intensity, 300 + m.size * 60);
+    if (k >= 1) {
+      scene.remove(m.mesh); m.mesh.geometry.dispose(); m.mesh.children[0].material.dispose();
+      meteors.splice(i, 1);
+      const power = 3.2 + m.size * 1.05, radius = 4.5 + m.size * 1.5;
+      blast(m.P, power, radius);
+      // the rock itself remains as a heavy physical body
+      const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(m.P.x - m.dir.x * m.r, m.P.y - m.dir.y * m.r + 0.1, m.P.z - m.dir.z * m.r)
+        .setLinvel(m.dir.x * 28, m.dir.y * 28, m.dir.z * 28).setCcdEnabled(true).setAngularDamping(0.5));
+      const collider = world.createCollider(RAPIER.ColliderDesc.ball(m.r).setDensity(6).setFriction(0.9).setRestitution(0.1), body);
+      const obj = new THREE.Mesh(new THREE.IcosahedronGeometry(m.r, 1), new THREE.MeshStandardMaterial({ color: 0x33271f, emissive: 0xff4a08, emissiveIntensity: 1.4, roughness: 0.95, flatShading: true }));
+      obj.castShadow = true; scene.add(obj);
+      const item = { kind: 'prop', body, collider, obj, cool: 1 };
+      props.push(item); colliderMap.set(collider.handle, item);
+    }
+  }
+}
+function updateEffects(dt) {
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const e = effects[i]; e.t += dt; const k = Math.min(1, e.t / e.dur);
+    e.update(e, k);
+    if (k >= 1) { e.end(); effects.splice(i, 1); }
+  }
+  flashLight.intensity *= Math.exp(-dt * 5.5);
+  if (flashLight.intensity < 1) flashLight.intensity = 0;
+}
+
+/* ------------------------------------------------------------------ earthquake */
+const quake = { on: false, intensity: 4, amp: 0, t: 0, wakeT: 0 };
+function quakeStep(dt) {
+  const target = quake.on ? 1 : 0;
+  quake.amp += (target - quake.amp) * Math.min(1, dt * (quake.on ? 1.2 : 2.0));
+  if (quake.amp < 0.002 && !quake.on) {
+    if (quake.amp !== 0) { quake.amp = 0; groundBody.setNextKinematicTranslation({ x: 0, y: GROUND_Y, z: 0 }); }
+    return;
+  }
+  quake.t += dt;
+  // displacement amplitude grows with intensity: 10 → ~0.5 m, peak acceleration ≈ 2 g
+  const w1 = 2 * Math.PI * 1.05, w2 = 2 * Math.PI * 2.3;
+  const A1 = 0.05 * quake.intensity * (0.6 + quake.intensity * 0.04), A2 = A1 * 0.22;
+  const t = quake.t, s = quake.amp;
+  const x = s * (A1 * Math.sin(w1 * t) + A2 * Math.sin(w2 * t + 1.3));
+  const z = s * (0.8 * A1 * Math.sin(w1 * 1.13 * t + 0.7) + A2 * Math.sin(w2 * 0.91 * t + 2.1));
+  const y = s * 0.25 * A2 * Math.sin(w2 * 1.37 * t);
+  groundBody.setNextKinematicTranslation({ x, y: GROUND_Y + y, z });
+  quake.wakeT -= dt;
+  if (quake.wakeT <= 0) {
+    quake.wakeT = 0.4;
+    // structural fatigue: strong shaking breaks pieces (lower, more loaded floors first)
+    const over = Math.max(0, quake.intensity - 2) * quake.amp;
+    const pBase = 0.4 * 0.00045 * over * over;
+    if (pBase > 0) {
+      const list = blocks.items.slice();
+      let n = 0;
+      for (const it of list) {
+        const y = it.body.translation().y;
+        if (Math.random() < pBase * (1.6 - Math.min(1.2, y / 18)) && n++ < 12) fragment(it, null, 1 + quake.intensity * 0.2);
+      }
+    }
+    for (const it of blocks.items) it.body.wakeUp();
+    for (const it of debris.items) it.body.wakeUp();
+    for (const it of props) it.body.wakeUp();
+  }
+}
+
+/* ------------------------------------------------------------------ camera controls (touch + mouse) */
+const controls = {
+  target: new THREE.Vector3(0, 7, 0), radius: 62, theta: 0.75, phi: 1.02,
+  goal: { radius: 62, theta: 0.75, phi: 1.02, target: new THREE.Vector3(0, 7, 0) },
+  update(dt) {
+    const k = 1 - Math.exp(-dt * 12);
+    this.radius += (this.goal.radius - this.radius) * k;
+    this.theta += (this.goal.theta - this.theta) * k;
+    this.phi += (this.goal.phi - this.phi) * k;
+    this.target.lerp(this.goal.target, k);
+    const sp = Math.sin(this.phi);
+    camera.position.set(this.target.x + this.radius * sp * Math.sin(this.theta), this.target.y + this.radius * Math.cos(this.phi), this.target.z + this.radius * sp * Math.cos(this.theta));
+    camera.lookAt(this.target);
+  },
+  rotate(dx, dy) { this.goal.theta -= dx * 0.006; this.goal.phi = THREE.MathUtils.clamp(this.goal.phi - dy * 0.005, 0.12, 1.5); },
+  zoom(f) { this.userZoomed = true; this.goal.radius = THREE.MathUtils.clamp(this.goal.radius * f, 8, 160); },
+  pan(dx, dy) {
+    const s = this.radius * 0.0016;
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0); right.y = 0; right.normalize();
+    const fwd = new THREE.Vector3(-Math.sin(this.theta), 0, -Math.cos(this.theta));
+    this.goal.target.addScaledVector(right, -dx * s).addScaledVector(fwd, dy * s);
+    this.goal.target.x = THREE.MathUtils.clamp(this.goal.target.x, -70, 70);
+    this.goal.target.z = THREE.MathUtils.clamp(this.goal.target.z, -70, 70);
+  },
+};
+const pointers = new Map();
+let gesture = null;
+const el = renderer.domElement;
+el.addEventListener('contextmenu', (e) => e.preventDefault());
+el.addEventListener('pointerdown', (e) => {
+  Sfx.init();
+  el.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) gesture = { sx: e.clientX, sy: e.clientY, t: performance.now(), moved: 0, multi: false, button: e.button, shift: e.shiftKey };
+  else if (gesture) gesture.multi = true;
+  if (pointers.size === 2) gesture.pinch = pinchState();
+});
+function pinchState() {
+  const [a, b] = [...pointers.values()];
+  return { d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+}
+el.addEventListener('pointermove', (e) => {
+  const p = pointers.get(e.pointerId); if (!p || !gesture) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  p.x = e.clientX; p.y = e.clientY;
+  gesture.moved = Math.max(gesture.moved, Math.hypot(e.clientX - gesture.sx, e.clientY - gesture.sy));
+  if (pointers.size >= 2) {
+    const s = pinchState(), prev = gesture.pinch || s;
+    if (prev.d > 0 && s.d > 0) controls.zoom(prev.d / s.d);
+    controls.pan(s.cx - prev.cx, s.cy - prev.cy);
+    gesture.pinch = s;
+  } else if (gesture.moved > 6) {
+    if (gesture.button === 2 || gesture.button === 1 || gesture.shift) controls.pan(dx, dy);
+    else controls.rotate(dx, dy);
+  }
+});
+function endPointer(e) {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId);
+  if (pointers.size === 1 && gesture) gesture.pinch = null;
+  if (pointers.size === 0 && gesture) {
+    const g = gesture; gesture = null;
+    if (e.type === 'pointerup' && !g.multi && g.moved < 10 && performance.now() - g.t < 450 && g.button === 0) onTap(e.clientX, e.clientY);
+  }
+}
+el.addEventListener('pointerup', endPointer);
+el.addEventListener('pointercancel', endPointer);
+el.addEventListener('wheel', (e) => { e.preventDefault(); controls.zoom(Math.exp(e.deltaY * 0.0012)); }, { passive: false });
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  const map = { '1': 'camera', '2': 'meteor', '3': 'blast', '4': 'quake', '5': 'build' };
+  if (map[e.key]) setTool(map[e.key]);
+  if (e.key === 'r' || e.key === 'R') resetCity();
+});
+
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+function pick(cx, cy, groundOnly) {
+  const r = el.getBoundingClientRect();
+  ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  if (!groundOnly) {
+    blocks.mesh.boundingSphere = null; debris.mesh.boundingSphere = null;
+    const hits = raycaster.intersectObjects([blocks.mesh, debris.mesh], false);
+    if (hits.length) return hits[0].point;
+  }
+  const p = new THREE.Vector3();
+  if (raycaster.ray.intersectPlane(groundPlane, p) && Math.abs(p.x) < 150 && Math.abs(p.z) < 150) return p;
+  return null;
+}
+
+/* ------------------------------------------------------------------ UI */
+const ui = {
+  meteorSize: 5, blastPower: 5, floors: 6,
+};
+let tool = 'meteor';
+const HINTS = {
+  camera: '<strong>Arrastrá</strong> para girar · <strong>pellizcá</strong> o usá la rueda para acercar · <strong>dos dedos</strong> o clic derecho para desplazar.',
+  meteor: '<strong>Tocá un punto</strong> de la ciudad para lanzar un meteorito. Arrastrá para girar la cámara.',
+  blast: '<strong>Tocá dónde detonar</strong> la explosión. La potencia cambia el radio y la fuerza.',
+  quake: 'Elegí la intensidad e <strong>iniciá el terremoto</strong>. Podés cambiarla mientras tiembla.',
+  build: '<strong>Tocá el suelo</strong> para levantar un edificio nuevo y probar su resistencia.',
+};
+function setTool(t) {
+  tool = t;
+  document.querySelectorAll('.tool[data-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === t)));
+  document.querySelectorAll('.ctl').forEach((c) => (c.hidden = c.dataset.for !== t));
+  $('#hint').innerHTML = HINTS[t];
+}
+document.querySelectorAll('.tool[data-tool]').forEach((b) => b.addEventListener('click', () => { Sfx.init(); setTool(b.dataset.tool); }));
+function bindSlider(id, fn) {
+  const inp = $('#' + id), out = $('#' + id + '-out');
+  const h = () => { out.textContent = inp.value; fn(Number(inp.value)); };
+  inp.addEventListener('input', h); h();
+}
+bindSlider('meteor-size', (v) => (ui.meteorSize = v));
+bindSlider('blast-power', (v) => (ui.blastPower = v));
+bindSlider('build-floors', (v) => (ui.floors = v));
+bindSlider('quake-int', (v) => (quake.intensity = v));
+function setQuake(on) {
+  quake.on = on;
+  const b = $('#quake-btn');
+  b.textContent = on ? 'Detener' : 'Iniciar';
+  b.classList.toggle('stop', on);
+  document.querySelector('.tool[data-tool="quake"]').classList.toggle('quaking', on);
+  if (on) { quake.wakeT = 0; toast('Terremoto en curso'); }
+}
+$('#quake-btn').addEventListener('click', () => { Sfx.init(); setQuake(!quake.on); });
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function onTap(cx, cy) {
+  if (tool === 'meteor') {
+    const p = pick(cx, cy); if (!p) return;
+    if (meteors.length >= 6) { toast('Esperá a que caigan los meteoritos en vuelo'); return; }
+    launchMeteor(p, ui.meteorSize);
+  } else if (tool === 'blast') {
+    const p = pick(cx, cy); if (!p) return;
+    const pw = ui.blastPower;
+    blast(p, pw * 1.15 + 1, 3.5 + pw * 1.25);
+  } else if (tool === 'build') {
+    const p = pick(cx, cy, true); if (!p) return;
+    const ok = addBuilding(Math.round(p.x), Math.round(p.z), 6, 6, ui.floors, PALETTE[Math.floor(Math.random() * PALETTE.length)]);
+    if (!ok) { toast('Límite de piezas alcanzado. Reiniciá o destruí algo primero.'); return; }
+    for (let i = 0; i < 24; i++) dust.emit(p.x + rnd(-4, 4), 0.4, p.z + rnd(-4, 4), rnd(-1, 1), rnd(0.2, 1), rnd(-1, 1), rnd(1, 2), rnd(1.5, 2.5), 0.7, 0.67, 0.62, 0.5, 1, 1);
+    Sfx.crumble(0.4);
+    toast(`Edificio de ${ui.floors} pisos construido`);
+  }
+}
+
+// sound + settings
+const sndBtn = $('#btn-sound');
+function renderSound() { sndBtn.setAttribute('aria-pressed', String(settings.sound)); $('#snd-wave').style.opacity = settings.sound ? 1 : 0.15; }
+sndBtn.addEventListener('click', () => { settings.sound = !settings.sound; store.set('sound', settings.sound); Sfx.init(); Sfx.setEnabled(settings.sound); if (!settings.sound) Sfx.rumble(0); renderSound(); toast(settings.sound ? 'Sonido activado' : 'Sonido desactivado'); });
+renderSound();
+const settingsEl = $('#settings');
+$('#btn-settings').addEventListener('click', () => { syncSettingsUI(); settingsEl.hidden = false; });
+$('#settings-close').addEventListener('click', () => (settingsEl.hidden = true));
+settingsEl.addEventListener('click', (e) => { if (e.target === settingsEl) settingsEl.hidden = true; });
+function syncSettingsUI() {
+  document.querySelectorAll('#quality-seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.q === settings.quality)));
+  $('#max-debris').value = settings.maxDebris; $('#max-debris-out').textContent = settings.maxDebris;
+  $('#max-fx').value = settings.maxFx; $('#max-fx-out').textContent = settings.maxFx;
+  $('#opt-shadows').checked = settings.shadows;
+  $('#opt-shadows').disabled = QUALITY[settings.quality].shadowSize === 0;
+}
+document.querySelectorAll('#quality-seg button').forEach((b) => b.addEventListener('click', () => {
+  if (b.dataset.q === settings.quality) return;
+  settings.quality = b.dataset.q; store.set('quality', settings.quality);
+  applyQualityDefaults(); applyRenderQuality(); applyFxLimit(); syncSettingsUI(); resetCity();
+}));
+$('#max-debris').addEventListener('input', (e) => { settings.maxDebris = Number(e.target.value); $('#max-debris-out').textContent = settings.maxDebris; store.set('maxDebris.' + settings.quality, settings.maxDebris); enforceDebrisCap(); });
+$('#max-fx').addEventListener('input', (e) => { settings.maxFx = Number(e.target.value); $('#max-fx-out').textContent = settings.maxFx; store.set('maxFx.' + settings.quality, settings.maxFx); applyFxLimit(); });
+$('#opt-shadows').addEventListener('change', (e) => { settings.shadows = e.target.checked; store.set('shadows', settings.shadows); applyRenderQuality(); });
+
+$('#btn-reset').addEventListener('click', () => { Sfx.init(); resetCity(); });
+
+/* ------------------------------------------------------------------ reset */
+function clearScene() {
+  for (const m of meteors) scene.remove(m.mesh);
+  meteors.length = 0;
+  for (const e of effects) e.end();
+  effects.length = 0;
+  for (const p of props) scene.remove(p.obj);
+  props.length = 0;
+  for (const c of craters) { groundGroup.remove(c); c.material.dispose(); }
+  craters.length = 0;
+  blocks.clear(); debris.clear(); debrisQueue = [];
+  colliderMap.clear();
+  dust.clear(); fire.clear();
+  groundGroup.position.set(0, 0, 0);
+  flashLight.intensity = 0;
+}
+function resetCity() {
+  clearScene();
+  if (eventQueue) eventQueue.clear();
+  if (world) world.free();
+  createWorld();
+  populateCity();
+  quake.t = 0; quake.amp = 0; setQuake(false); Sfx.rumble(0);
+  syncAll(true);
+  toast('Ciudad reconstruida');
+}
+
+/* ------------------------------------------------------------------ main loop */
+let stepMs = 0, simTime = 0, acc = 0, last = performance.now(), awakeCount = 0;
+const DT = 1 / 60;
+const breakQueue = [];
+function handleEvents() {
+  eventQueue.drainContactForceEvents((ev) => {
+    const f = ev.totalForceMagnitude();
+    const a = colliderMap.get(ev.collider1()), b = colliderMap.get(ev.collider2());
+    if (a && a.kind === 'block' && f > a.breakForce && simTime - a.born > 0.5) breakQueue.push(a);
+    if (b && b.kind === 'block' && f > b.breakForce && simTime - b.born > 0.5) breakQueue.push(b);
+  });
+  let n = 0;
+  while (breakQueue.length) {
+    const it = breakQueue.pop();
+    if (it.dead) continue;
+    if (n++ >= 4) continue; // limit per step to keep framerate stable
+    const lv = it.body.linvel();
+    fragment(it, null, 1.5 + Math.min(4, Math.hypot(lv.x, lv.y, lv.z) * 0.15));
+  }
+  breakQueue.length = 0;
+}
+
+function syncPool(pool) {
+  let changed = false;
+  const items = pool.items;
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i];
+    const b = it.body;
+    const sleeping = b.isSleeping();
+    if (!sleeping) awakeCount++;
+    if (!sleeping || it.dirty) {
+      const t = b.translation();
+      if (t.y < -25) { removeItem(it); changed = true; continue; }
+      const r = b.rotation();
+      tmpV.set(t.x, t.y, t.z); tmpQ.set(r.x, r.y, r.z, r.w); tmpS.set(it.sx, it.sy, it.sz);
+      tmpM.compose(tmpV, tmpQ, tmpS);
+      pool.mesh.setMatrixAt(it.idx, tmpM);
+      it.dirty = false; changed = true;
+    }
+  }
+  if (changed) pool.mesh.instanceMatrix.needsUpdate = true;
+}
+function syncAll(force) {
+  awakeCount = 0;
+  if (force) { for (const it of blocks.items) it.dirty = true; for (const it of debris.items) it.dirty = true; }
+  syncPool(blocks); syncPool(debris);
+  for (let i = props.length - 1; i >= 0; i--) {
+    const it = props[i];
+    if (!it.body.isSleeping() || force || !it.synced) {
+      if (!it.body.isSleeping()) awakeCount++;
+      const t = it.body.translation(), r = it.body.rotation();
+      if (t.y < -25) { removeItem(it); continue; }
+      it.obj.position.set(t.x, t.y, t.z); it.obj.quaternion.set(r.x, r.y, r.z, r.w);
+      it.synced = true;
+    }
+    if (it.cool > 0) { it.cool = Math.max(0, it.cool - 0.004); it.obj.material.emissiveIntensity = 1.4 * it.cool; }
+  }
+  const g = groundBody.translation();
+  groundGroup.position.set(g.x, g.y - GROUND_Y, g.z);
+}
+
+let lowFps = 0, lowFpsWarned = false, fpsFrames = 0, fpsTime = 0, fps = 60, paused = false;
+const statsEl = $('#stats');
+function frame(now) {
+  requestAnimationFrame(frame);
+  const fdt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (paused) return;
+  acc += fdt;
+  let n = 0;
+  while (acc >= DT && n < Q.substeps) {
+    quakeStep(DT);
+    const s0 = performance.now();
+    world.step(eventQueue);
+    stepMs = stepMs * 0.95 + (performance.now() - s0) * 0.05;
+    simTime += DT;
+    handleEvents();
+    acc -= DT; n++;
+  }
+  if (n >= Q.substeps) acc = 0;
+  updateMeteors(fdt);
+  updateEffects(fdt);
+  dust.update(fdt); fire.update(fdt);
+  syncAll(false);
+  if (quake.amp > 0.01) {
+    Sfx.rumble(Math.min(1, quake.amp * (0.25 + quake.intensity * 0.08)));
+    shake = Math.max(shake, quake.amp * quake.intensity * 0.05);
+  } else if (!quake.on) Sfx.rumble(0);
+  controls.update(fdt);
+  if (shake > 0.001) {
+    camera.position.x += rnd(-1, 1) * shake * 0.35; camera.position.y += rnd(-1, 1) * shake * 0.35; camera.position.z += rnd(-1, 1) * shake * 0.35;
+    shake *= Math.exp(-fdt * 3.5);
+  }
+  // keep shadow frustum centered around what you look at
+  sun.position.set(controls.target.x + 45, 75, controls.target.z + 30);
+  sun.target.position.set(controls.target.x, 0, controls.target.z); sun.target.updateMatrixWorld();
+  renderer.render(scene, camera);
+  fpsFrames++; fpsTime += fdt;
+  if (fpsTime >= 0.5) {
+    fps = Math.round(fpsFrames / fpsTime); fpsFrames = 0; fpsTime = 0;
+    lowFps = fps < 22 && awakeCount < 30 && settings.quality !== 'bajo' ? lowFps + 1 : 0;
+    if (lowFps === 10 && !lowFpsWarned) { lowFpsWarned = true; toast('Va lento: probá calidad Baja en Ajustes'); }
+    statsEl.textContent = `${fps} FPS · ${blocks.items.length} piezas · ${debris.items.length} escombros · ${awakeCount} en movimiento`;
+  }
+}
+
+function onResize() {
+  const w = app.clientWidth || window.innerWidth, h = app.clientHeight || window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  if (!controls.userZoomed) controls.goal.radius = w / h < 0.8 ? 105 : w / h < 1.2 ? 80 : 64;
+  const sc = (h * renderer.getPixelRatio()) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+  dust.mat.uniforms.uScale.value = sc; fire.mat.uniforms.uScale.value = sc;
+}
+window.addEventListener('resize', onResize);
+document.addEventListener('visibilitychange', () => { paused = document.hidden; last = performance.now(); if (paused) Sfx.rumble(0); });
+
+/* ------------------------------------------------------------------ boot */
+async function boot() {
+  try {
+    await RAPIER.init();
+  } catch (e) {
+    $('#loader-msg').textContent = 'No se pudo iniciar el motor de física: ' + e.message;
+    throw e;
+  }
+  eventQueue = new RAPIER.EventQueue(true);
+  applyRenderQuality();
+  applyFxLimit();
+  controls.radius = controls.goal.radius;
+  createWorld();
+  populateCity();
+  syncAll(true);
+  setTool('meteor');
+  $('#loader').hidden = true;
+  requestAnimationFrame((t) => { last = t; frame(t); });
+}
+
+// hooks for automated checks
+window.__lab = {
+  counts: () => ({ sim: +simTime.toFixed(1), stepMs: +stepMs.toFixed(2), blocks: blocks.items.length, debris: debris.items.length, props: props.length, awake: awakeCount, fps, meteors: meteors.length, quake: quake.on, ground: groundBody.translation() }),
+  meteor: (x, y, z, s = 5) => launchMeteor(new THREE.Vector3(x, y, z), s),
+  blast: (x, y, z, p = 5) => blast(new THREE.Vector3(x, y, z), p * 1.15 + 1, 3.5 + p * 1.25),
+  quake: (on, i) => { if (i) quake.intensity = i; setQuake(on); },
+  build: (x, z, f = 6) => addBuilding(x, z, 6, 6, f, 0xd9c2a5),
+  reset: () => resetCity(),
+  tool: (t) => setTool(t),
+  heights: () => blocks.items.reduce((m, it) => Math.max(m, it.body.translation().y), 0),
+};
+boot();
+</script>
