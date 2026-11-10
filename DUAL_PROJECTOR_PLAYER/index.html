@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dual Projector Player</title>
+<meta name="description" content="Reproductor de doble salida: divide cada fotograma entre dos proyectores con edge blending.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 20%22%3E%3Crect width=%2220%22 height=%2218%22 rx=%223%22 fill=%22%23ffa050%22/%3E%3Crect x=%2212%22 width=%2220%22 height=%2218%22 rx=%223%22 fill=%22%234fb8ff%22 opacity=%22.85%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/player.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo"><i></i><i></i></span><div><b>DUAL PROJECTOR PLAYER</b><small>v7 · reproductor real de doble salida · el simulador v6 sigue en <a href="../DUAL_PROJECTOR_LAB/index.html">DUAL_PROJECTOR_LAB</a></small></div></div>
+  <div id="stats" class="stats mono">–</div>
+</header>
+
+<main class="wrap">
+  <!-- 1. Fuente -->
+  <section class="card src">
+    <h2>1 · Video</h2>
+    <div class="row">
+      <label class="btn primary file">🎬 Abrir video local…<input type="file" id="file" accept="video/*,.mp4,.webm,.mkv,.mov,.m4v"></label>
+      <button id="testVid" class="btn">Video de prueba (sincronización)</button>
+    </div>
+    <p id="srcInfo" class="muted">Ningún video cargado.</p>
+    <video id="video" playsinline preload="auto"></video>
+    <div class="transport">
+      <button id="play" class="btn big" disabled>▶</button>
+      <input type="range" id="seek" min="0" max="1000" value="0" disabled aria-label="Posición">
+      <span id="time" class="mono">0:00 / 0:00</span>
+      <button id="mute" class="btn">🔊</button>
+      <label class="chk"><input type="checkbox" id="loop" checked> Repetir</label>
+    </div>
+  </section>
+
+  <!-- 2. Salidas -->
+  <section class="card outs">
+    <h2>2 · Salidas a proyectores</h2>
+    <div class="row">
+      <button id="openA" class="btn a">Abrir ventana A</button>
+      <button id="openB" class="btn b">Abrir ventana B</button>
+      <button id="openBoth" class="btn primary">Abrir A y B (2 clics)</button>
+      <button id="closeAll" class="btn">Cerrar ventanas</button>
+    </div>
+    <div class="row">
+      <button id="screens" class="btn">🖥 Detectar pantallas</button>
+      <label class="inl">A en <select id="scrA"><option value="">esta pantalla</option></select></label>
+      <label class="inl">B en <select id="scrB"><option value="">esta pantalla</option></select></label>
+    </div>
+    <p class="muted small">Llevá cada ventana a su proyector (arrastrándola, o con «Detectar pantallas» en Chrome/Edge) y tocá <b>⛶</b> dentro de la ventana, o hacé doble clic, o pulsá <b>F</b>. <b>Espacio</b> pausa en cualquier ventana.</p>
+    <div class="previews">
+      <figure><canvas id="pvA" width="480" height="270"></canvas><figcaption><span class="dot a"></span>Salida A <span id="stA" class="mono muted">cerrada</span></figcaption></figure>
+      <figure><canvas id="pvB" width="480" height="270"></canvas><figcaption><span class="dot b"></span>Salida B <span id="stB" class="mono muted">cerrada</span></figcaption></figure>
+    </div>
+  </section>
+
+  <!-- 3. Unión de las dos imágenes -->
+  <section class="card join">
+    <h2>3 · Unión y edge blending</h2>
+    <div class="seg" role="group" aria-label="Disposición">
+      <button data-o="0.15">▭▭ Panorámica <small>15 %</small></button>
+      <button data-o="0.5">◫ Híbrida <small>50 %</small></button>
+      <button data-o="1">⧉ Superpuesta <small>100 %</small></button>
+    </div>
+    <label class="ctl">Solapamiento <output id="oV"></output><input type="range" id="o" min="0" max="1" step="0.01"></label>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="blend" checked> Edge blending</label>
+      <label class="chk"><input type="checkbox" id="grid"> Cuadrícula de calibración</label>
+    </div>
+    <label class="ctl">Gamma de compensación <output id="gV"></output><input type="range" id="gamma" min="1" max="3" step="0.05"></label>
+    <label class="ctl">Proporción de la película
+      <select id="fit"><option value="contain">Encajar (sin recortar ni deformar)</option><option value="cover">Llenar (recorta, sin deformar)</option><option value="stretch">Estirar (deforma)</option></select>
+    </label>
+    <p id="geom" class="muted small mono"></p>
+  </section>
+
+  <!-- 4. Alineación fina -->
+  <section class="card align">
+    <h2>4 · Alineación fina por salida</h2>
+    <div class="nudges">
+      <div><b class="ta">A</b>
+        <button data-n="0,-1,0">◀</button><button data-n="0,1,0">▶</button><button data-n="0,0,-1">▲</button><button data-n="0,0,1">▼</button>
+        <span id="nA" class="mono small">0, 0 px</span>
+        <label class="ctl small">Brillo A <output id="bAV"></output><input type="range" id="bA" min="0.3" max="1" step="0.01"></label></div>
+      <div><b class="tb">B</b>
+        <button data-n="1,-1,0">◀</button><button data-n="1,1,0">▶</button><button data-n="1,0,-1">▲</button><button data-n="1,0,1">▼</button>
+        <span id="nB" class="mono small">0, 0 px</span>
+        <label class="ctl small">Brillo B <output id="bBV"></output><input type="range" id="bB" min="0.3" max="1" step="0.01"></label></div>
+    </div>
+    <button id="resetAlign" class="btn">↺ Restablecer alineación</button>
+  </section>
+
+  <section class="card note">
+    <h2>Qué hace y qué no</h2>
+    <ul class="small">
+      <li>Reproduce un archivo de video local y lo reparte entre dos ventanas con <b>un único decodificador</b>: A y B leen el mismo fotograma.</li>
+      <li>La salida física depende de Windows: cada ventana va a la pantalla donde la pongas. <b>La salida por HDMI a proyectores reales todavía no se probó.</b></li>
+      <li>No captura la PS4 ni contenido protegido. La entrada por capturadora HDMI está diseñada (ver <code>docs/ARQUITECTURA_PS4.md</code>) pero no implementada.</li>
+    </ul>
+  </section>
+</main>
+<div id="toast" class="toast" hidden></div>
+<script src="js/core.js"></script>
+<script src="js/player.js"></script>
+</body>
+</html>

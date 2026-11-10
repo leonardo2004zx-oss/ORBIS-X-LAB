@@ -1,0 +1,21 @@
+Navegador visible 153.0.8010.12 en pantalla virtual 1920×1080 · http://127.0.0.1:8790/index.html?test=1
+PASA  · Abre un video local — 1280×720, 20.0 s
+PASA  · Se abren dos ventanas independientes (A y B) con el bloqueador de ventanas activo — Proyector A — Dual Projector Player | Proyector B — Dual Projector Player · botón: «Ahora tocá para abrir B ▸» → «A y B abiertas ✓»
+posición de las ventanas (x, y, ancho, alto): A 0, 545, 955, 535 · B 965, 545, 955, 535
+Tramo de reproducción continua en la grabación: 9.2–14.4 s
+PASA  · Cada ventana pinta exactamente el fotograma actual del único decodificador — 100.0 % de los dibujos coinciden (±1) con el fotograma de la fuente
+PASA  · Sincronía en pantalla entre A y B — 186 instantes comparados: mismo fotograma en 98.9 %, diferencia media 0.01, máxima 1 fotograma(s) (1 fotograma = 33 ms); un mismo fotograma aparece en A y en B con 4.7 ms de diferencia (mediana), 11.3 ms (p95)
+PASA  · Los fotogramas avanzan al reproducir — A: 0 → 180, B: 0 → 180
+PASA  · Rendimiento (FPS, CPU, memoria) — FPS dibujados A 30 / B 30 (video de 30 fps) · ventanas 955×500 y 955×500 · CPU del navegador 53 % de un núcleo · memoria del navegador (PSS) 985 MB con las dos ventanas reproduciendo, 454 MB solo con el panel (RSS sumado 1599 MB) · JS 3.8 MB
+PASA  · Cada ventana muestra una parte diferente del mismo video — A: letra «A» naranja 0.4 %, «B» celeste 0.00 % · B: «A» 0.00 %, «B» 0.4 %
+PASA  · Pausa: ambas ventanas quedan quietas en el mismo fotograma — A 189→189 · B 189→189
+PASA  · Saltar a 10 s cambia el fotograma en ambas ventanas — fotograma A 300, B 300 (esperado 300)
+PASA  · Edge blending atenúa realmente el borde compartido de A — brillo del borde derecho de A: con blending 23, sin blending 86 (centro 166)
+PASA  · Solapamiento: en Superpuesta A y B muestran la misma imagen completa — diferencia A/B: panorámica 102.5 → superpuesta 0.0
+PASA  · Híbrida (50 %): A y B comparten la mitad — diferencia A/B 66.5
+PASA  · «Encajar» mantiene la proporción original (16:9); «Estirar» la deforma — proporción con Encajar 1.778 (16:9 = 1,778), con Estirar 3.53; borde izquierdo de A: negro 0 (barra lateral) vs. imagen 164
+PASA  · Alineación fina: ▶ mueve la imagen de B 2 píxeles — desplazamiento medido 2 px
+PASA  · Cuadrícula de calibración se dibuja en las ventanas — brillo medio 49.0 → 52.1
+PASA  · Pantalla completa en la ventana A (pedido aceptado por el navegador) — requestFullscreen → true; tamaño del lienzo 955×500 (esta pantalla virtual no tiene gestor de ventanas, por eso no cambió el tamaño: NO verificado visualmente)
+PASA  · Sin errores de JavaScript — []
+17/17 pruebas pasaron.

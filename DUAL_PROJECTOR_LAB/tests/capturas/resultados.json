@@ -1,0 +1,137 @@
+[
+  {
+    "name": "La aplicación carga sin errores",
+    "ok": true,
+    "detail": "tiempo hasta lista: 505 ms; errores: []"
+  },
+  {
+    "name": "Cambio 2D ⇄ 3D y vistas frontal / técnica / sillón",
+    "ok": true,
+    "detail": "2d → 3d → tech → seat → front"
+  },
+  {
+    "name": "A y B proyectan partes diferentes (no es la misma imagen duplicada)",
+    "ok": true,
+    "detail": "sunset: 14.7, city: 13.6, grid: 17.7 niveles de diferencia media en el mismo punto local"
+  },
+  {
+    "name": "La zona de superposición muestra el mismo contenido en A y B (panorama continuo)",
+    "ok": true,
+    "detail": "sunset: 0.0, city: 0.0, grid: 0.0 niveles en la franja compartida"
+  },
+  {
+    "name": "Modo A: la unión se ve más brillante",
+    "ok": true,
+    "detail": "{\"base\":141,\"max\":180.6,\"min\":137,\"brightPts\":11}"
+  },
+  {
+    "name": "Modo B (rampa lineal, gamma 1): aparece una banda oscura",
+    "ok": true,
+    "detail": "{\"base\":141,\"max\":145,\"min\":98.3,\"brightPts\":0}"
+  },
+  {
+    "name": "Modo C: transición casi invisible (variación < 6 niveles)",
+    "ok": true,
+    "detail": "{\"base\":145,\"max\":146,\"min\":145,\"brightPts\":0}"
+  },
+  {
+    "name": "El control de superposición cambia el ancho de la franja",
+    "ok": true,
+    "detail": "puntos brillantes con 5 %: 4, con 30 %: 27"
+  },
+  {
+    "name": "El control de intensidad del Edge Blending elimina la franja",
+    "ok": true,
+    "detail": "sin blending: pico +40.0; con blending: variación 1.0"
+  },
+  {
+    "name": "Mover un control de calibración pasa a Modo B (manual)",
+    "ok": true,
+    "detail": "modo actual: B"
+  },
+  {
+    "name": "Posición horizontal de B mueve su imagen",
+    "ok": true,
+    "detail": "centro X: 1.411 → 1.611 m; cambio de píxeles 27.5"
+  },
+  {
+    "name": "Control \"Posición vertical\" modifica la proyección",
+    "ok": true,
+    "detail": "0.000 → 0.100"
+  },
+  {
+    "name": "Control \"Distancia (cambia el tamaño)\" modifica la proyección",
+    "ok": true,
+    "detail": "3.321 → 4.286"
+  },
+  {
+    "name": "Control \"Tamaño / zoom\" modifica la proyección",
+    "ok": true,
+    "detail": "4.286 → 4.714"
+  },
+  {
+    "name": "Control \"Rotación\" modifica la proyección",
+    "ok": true,
+    "detail": "0.000 → 0.035"
+  },
+  {
+    "name": "Brillo de B lo oscurece",
+    "ok": true,
+    "detail": "228.0 → 192.0"
+  },
+  {
+    "name": "Corrección de color (azul de B) cambia el tono",
+    "ok": true,
+    "detail": "RGB 192,192,129"
+  },
+  {
+    "name": "Apagar B deja su zona sin imagen",
+    "ok": true,
+    "detail": "luminancia 17.0"
+  },
+  {
+    "name": "Tamaños 100″–300″ calculan 16:9 correctamente",
+    "ok": true,
+    "detail": "300″ → 664×374 cm; 100″ → 221.4×124.5 cm"
+  },
+  {
+    "name": "Video local: se carga, se reproduce y la imagen cambia",
+    "ok": true,
+    "detail": "t 0.51 → 1.89 s; cambio de píxeles 6.9"
+  },
+  {
+    "name": "Video sincronizado: una sola fuente; la franja compartida es idéntica en A y B",
+    "ok": true,
+    "detail": "textura única de video: true; dif. franja 0.0; dif. partes propias 139.6"
+  },
+  {
+    "name": "Botón \"Cargar imagen…\" abre el selector y carga la imagen",
+    "ok": true,
+    "detail": "fuente actual: imagen"
+  },
+  {
+    "name": "Interfaz liviana con CPU 4× más lenta",
+    "ok": true,
+    "detail": "carga 461 ms; memoria JS 13.6 MB; render mediano 2.2 ms (GPU por software); respuesta a un control 70 ms"
+  },
+  {
+    "name": "En reposo no se redibuja (no consume GPU)",
+    "ok": true,
+    "detail": "cuadros dibujados en 1,5 s quieta: 0"
+  },
+  {
+    "name": "No usa bloqueo del puntero",
+    "ok": true,
+    "detail": "pointerLockElement = null"
+  },
+  {
+    "name": "Pantalla angosta sin desplazamiento horizontal",
+    "ok": true,
+    "detail": "exceso: 0 px"
+  },
+  {
+    "name": "Sin errores de JavaScript durante toda la prueba",
+    "ok": true,
+    "detail": "[]"
+  }
+]

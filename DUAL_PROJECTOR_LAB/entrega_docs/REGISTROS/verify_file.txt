@@ -1,0 +1,29 @@
+PASA  · La aplicación carga sin errores — tiempo hasta lista: 487 ms; errores: []
+PASA  · Cambio 2D ⇄ 3D y vistas frontal / técnica / sillón — 2d → 3d → tech → seat → front
+PASA  · A y B proyectan partes diferentes (no es la misma imagen duplicada) — sunset: 15.0, city: 16.6, grid: 13.4 niveles de diferencia media en el mismo punto local
+PASA  · La zona de superposición muestra el mismo contenido en A y B (panorama continuo) — sunset: 0.0, city: 0.0, grid: 0.0 niveles en la franja compartida
+PASA  · Modo A: la unión se ve más brillante — {"base":141,"max":180.6,"min":137,"brightPts":11}
+PASA  · Modo B (rampa lineal, gamma 1): aparece una banda oscura — {"base":141,"max":145,"min":98.3,"brightPts":0}
+PASA  · Modo C: transición casi invisible (variación < 6 niveles) — {"base":145,"max":146,"min":145,"brightPts":0}
+PASA  · El control de superposición cambia el ancho de la franja — puntos brillantes con 5 %: 4, con 30 %: 27
+PASA  · El control de intensidad del Edge Blending elimina la franja — sin blending: pico +40.0; con blending: variación 1.0
+PASA  · Mover un control de calibración pasa a Modo B (manual) — modo actual: B
+PASA  · Posición horizontal de B mueve su imagen — centro X: 1.411 → 1.611 m; cambio de píxeles 18.8
+PASA  · Control "Posición vertical" modifica la proyección — 0.000 → 0.100
+PASA  · Control "Distancia (cambia el tamaño)" modifica la proyección — 3.321 → 4.286
+PASA  · Control "Tamaño / zoom" modifica la proyección — 4.286 → 4.714
+PASA  · Control "Rotación" modifica la proyección — 0.000 → 0.035
+PASA  · Brillo de B lo oscurece — 228.0 → 192.0
+PASA  · Corrección de color (azul de B) cambia el tono — RGB 192,192,129
+PASA  · Apagar B deja su zona sin imagen — luminancia 17.0
+PASA  · Tamaños 100″–300″ calculan 16:9 correctamente — 300″ → 664×374 cm; 100″ → 221.4×124.5 cm
+PASA  · Video local: se carga, se reproduce y la imagen cambia — t 0.52 → 2.27 s; cambio de píxeles 17.8
+PASA  · Video sincronizado: una sola fuente; la franja compartida es idéntica en A y B — textura única de video: true; dif. franja 0.0; dif. partes propias 132.8
+PASA  · Botón "Cargar imagen…" abre el selector y carga la imagen — fuente actual: imagen
+PASA  · Interfaz liviana con CPU 4× más lenta — carga 520 ms; memoria JS 10.7 MB; render mediano 1.3 ms (GPU por software); respuesta a un control 71 ms
+PASA  · En reposo no se redibuja (no consume GPU) — cuadros dibujados en 1,5 s quieta: 0
+PASA  · No usa bloqueo del puntero — pointerLockElement = null
+PASA  · Pantalla angosta sin desplazamiento horizontal — exceso: 0 px
+PASA  · Sin errores de JavaScript durante toda la prueba — []
+
+27/27 pruebas pasaron.

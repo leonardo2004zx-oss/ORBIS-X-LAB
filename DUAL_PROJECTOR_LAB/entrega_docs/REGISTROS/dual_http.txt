@@ -1,0 +1,18 @@
+Pixel 7 emulado (Chrome Android, táctil), horizontal 839×412
+PASA  · Botón «💡 Dual» abre la demostración dual — panel visible con 3 modos
+PASA  · A y B proyectan porciones distintas de la imagen — diferencia media entre la parte propia de A y la de B: 12.5
+PASA  · Superpuesta: mismo tamaño que un proyector y el doble de luz — ancho 3.32 m = 1 proyector; luz simulada 2.01×; brillo medido en pantalla 250 vs. un solo proyector 228
+PASA  · Panorámica: 1,85× más ancha con luz pareja de 1× — ancho 6.14 m (1.85×), uniformidad 100 %, brillo medido izq./centro/der. 228/229/228
+PASA  · Híbrida: 1,5× más ancha, pareja con blending — ancho 4.98 m, uniformidad 100 %, brillo medido 228/229/228
+PASA  · Sin blending la zona compartida brilla de más; con blending se corrige — brillo medido borde/centro — sin blending 228/250 (luz 1.00–2.01×) · con blending 228/229 (luz 1.00–1.01×)
+PASA  · − / + cambian el solapamiento y el tamaño — solapamiento 50 → 60 % (ancho 4.65 m) → 45 % (ancho 5.15 m)
+PASA  · Mapa de luz: mismo color en toda la pantalla con blending; otro color en el centro sin blending — con blending borde rgb(251,218,56) centro rgb(251,218,56) · sin blending borde rgb(251,218,56) centro rgb(254,254,254) · leyenda visible: true
+PASA  · Calculadora: 4,2 m ÷ 1,4 = 3,00 m de ancho por proyector (y la escena 3D usa el mismo tamaño) — ancho 3.00 m, alto 1.69 m; híbrida 4.50 m de ancho
+PASA  · Calculadora avisa si los proyectores no entran lado a lado — con gabinete de 60 cm y 85 % compartido: "Lentes separadas 0,45 m: no entran lado a lado (gabinete de 60 cm): hay que apilarlos.📐 calculado tamaño, diagonal, superficie y separación (geometría exacta con tus valores)."
+PASA  · Distingue calculado / simulado / requiere medición, y aclara que no controla proyectores — {"calc":true,"sim":true,"med":true,"noctrl":true}
+PASA  · «📊 Comparar modos» muestra los 3 modos y «Probar» aplica uno — ⧉ Superpuesta (100 % compartido) | ▭▭ Panorámica (15 % compartido) | ◫ Híbrida (50 % compartido) → probar Superpuesta: solapamiento 100 %
+PASA  · La vista 3D muestra la proyección superpuesta — píxeles [[250,250,250],[250,250,250]]
+PASA  · «▦ Cuadrícula» (prueba de calibración) cambia la imagen — diferencia 60.6
+PASA  · La barra Dual no tapa la vista (horizontal y vertical) — horizontal {"tapa":false,"over":0} · vertical {"tapa":false,"over":0,"alto":452}
+PASA  · Consola sin errores — []
+16/16 pruebas pasaron.
