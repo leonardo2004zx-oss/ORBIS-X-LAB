@@ -96,6 +96,7 @@
         glitter: [0, 1].map(() => this._renderGlitter(4.2)),
         strobe: [0, 1].map(() => this._renderStrobe(2.6)),
         sizzle: [0, 1].map(() => this._renderGlitter(1.8, true)),
+        zap: [0, 1].map(() => this._renderZap(2.6)),
       };
 
       this.ready = true;
@@ -217,6 +218,29 @@
         const y = hp * 0.35 + 1.34 * bp1 - 0.72 * bp2; bp2 = bp1; bp1 = y;
         const strike = t < 0.09 ? 2.2 * Math.exp(-t / 0.03) : 0;
         d[i] = (y * 0.32 * g + w * strike * 0.6) * Math.min(1, (sec - t) * 8);
+      }
+      return buf;
+    }
+
+    // Arcos eléctricos: ráfagas de onda cuadrada grave + chisporroteo, como un cable pelado
+    _renderZap(sec) {
+      const ctx = this.ctx, sr = ctx.sampleRate, n = Math.floor(sec * sr);
+      const buf = ctx.createBuffer(2, n, sr);
+      const L = buf.getChannelData(0), R = buf.getChannelData(1);
+      let t = Math.floor(sr * 0.02);
+      while (t < n - sr * 0.15) {
+        const len = Math.floor(sr * rnd(0.025, 0.14)), f = rnd(55, 150), pan = Math.random();
+        const amp = rnd(0.25, 0.75) * Math.pow(1 - t / n, 0.7);
+        let ph = 0, hp = 0;
+        for (let i = 0; i < len; i++) {
+          ph += f / sr * (1 + 0.3 * Math.random());
+          const sq = (ph % 1) < 0.5 ? 1 : -1;
+          const w = Math.random() * 2 - 1; const hi = w - hp; hp = w;
+          const env = Math.min(1, i / 40) * Math.min(1, (len - i) / 200);
+          const sm = (sq * 0.55 + hi * 0.6 * (Math.random() < 0.3 ? 1 : 0.2)) * amp * env;
+          L[t + i] += sm * (1 - pan * 0.7); R[t + i] += sm * (0.3 + pan * 0.7);
+        }
+        t += len + Math.floor(sr * rnd(0.01, 0.12));
       }
       return buf;
     }
@@ -380,6 +404,50 @@
         nz.connect(nf); nf.connect(ngn); ngn.connect(am);
         o.start(t0); lfo.start(t0);
         h.o1 = o; h.lp = lp; h.lfo = lfo; nodes.push(o, lfo, nz);
+      } else if (A.kind === 'tourbillon') {
+        // torbellino: soplo que late y gira de un oído al otro al ritmo del giro
+        const nz = this._noise(this.white, t0, 30);
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 2.2;
+        const am = ctx.createGain(); am.gain.value = 0.55;
+        const lfo = ctx.createOscillator(); lfo.frequency.value = A.spin;
+        const lfoG = ctx.createGain(); lfoG.gain.value = 0.45;
+        lfo.connect(lfoG); lfoG.connect(am.gain);
+        const sp = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+        if (sp.pan) { const pg = ctx.createGain(); pg.gain.value = 0.7; lfo.connect(pg); pg.connect(sp.pan); }
+        nz.connect(bp); bp.connect(am); am.connect(sp); sp.connect(out);
+        lfo.start(t0);
+        h.bp = bp; h.lfo = lfo; nodes.push(nz, lfo);
+      } else if (A.kind === 'zap') {
+        // FM de ciencia ficción: portadora + moduladora con índice alto → "piuuuu" metálico
+        const car = ctx.createOscillator(); car.type = 'sine';
+        const mod = ctx.createOscillator(); mod.type = 'sine';
+        const modG = ctx.createGain(); modG.gain.value = 400;
+        mod.connect(modG); modG.connect(car.frequency);
+        const wob = ctx.createOscillator(); wob.frequency.value = 9;
+        const wobG = ctx.createGain(); wobG.gain.value = 60;
+        wob.connect(wobG); wobG.connect(car.frequency);
+        car.connect(out); [car, mod, wob].forEach(x => x.start(t0));
+        h.o1 = car; h.o2 = mod; h.modG = modG; nodes.push(car, mod, wob);
+      } else if (A.kind === 'melody') {
+        // escala pentatónica que sube nota a nota mientras el cohete asciende
+        const o = ctx.createOscillator(); o.type = 'triangle';
+        const o2 = ctx.createOscillator(); o2.type = 'sine';
+        const g2 = ctx.createGain(); g2.gain.value = 0.35;
+        const ng = ctx.createGain(); ng.gain.value = 0;
+        o.connect(ng); o2.connect(g2); g2.connect(ng); ng.connect(out);
+        o.start(t0); o2.start(t0);
+        h.o1 = o; h.o2 = o2; h.ng = ng; h.lastIdx = -1; nodes.push(o, o2);
+      } else if (A.kind === 'theremin') {
+        // seno puro con vibrato ancho que se desliza hacia abajo: inquietante
+        const o = ctx.createOscillator(); o.type = 'sine';
+        const o2 = ctx.createOscillator(); o2.type = 'sine';
+        const g2 = ctx.createGain(); g2.gain.value = 0.12;
+        const vib = ctx.createOscillator(); vib.frequency.value = 5.3;
+        const vibG = ctx.createGain(); vibG.gain.value = 14;
+        vib.connect(vibG); vibG.connect(o.frequency);
+        o.connect(out); o2.connect(g2); g2.connect(out);
+        [o, o2, vib].forEach(x => x.start(t0));
+        h.o1 = o; h.o2 = o2; h.vibG = vibG; nodes.push(o, o2, vib);
       } else {
         // 'hiss' (siseo), 'roar' (rugido), 'crackle' (siseo con chispas)
         const nz = this._noise(A.kind === 'roar' ? this.brown : this.white, t0, 30);
@@ -426,10 +494,31 @@
         h.lfo.frequency.setTargetAtTime((A.rate || 24) * (0.8 + prog * 0.6) * sl, t, 0.05);
         h.lp.frequency.setTargetAtTime(900 + 1800 * prog, t, 0.05);
         g = A.gain * fadeIn;
+      } else if (A.kind === 'zap') {
+        const f = (A.f0 + (A.f1 - A.f0) * prog) * sl;
+        h.o1.frequency.setTargetAtTime(f, t, 0.03);
+        h.o2.frequency.setTargetAtTime(f * 1.41, t, 0.03);
+        h.modG.gain.setTargetAtTime(f * (2.5 - prog * 1.8), t, 0.05);
+        g = A.gain * fadeIn;
+      } else if (A.kind === 'melody') {
+        const N = A.notes, x = Math.min(0.999, prog) * N.length, idx = Math.floor(x), fr = x - idx;
+        const f = N[idx] * sl;
+        if (idx !== h.lastIdx) {
+          h.lastIdx = idx;
+          h.o1.frequency.setValueAtTime(f, t); h.o2.frequency.setValueAtTime(f * 2, t);
+          h.ng.gain.cancelScheduledValues(t); h.ng.gain.setValueAtTime(1, t); h.ng.gain.setTargetAtTime(0.35, t + 0.02, 0.12);
+        }
+        g = A.gain * fadeIn;
+      } else if (A.kind === 'theremin') {
+        const f = (A.f0 + (A.f1 - A.f0) * prog * prog) * sl;
+        h.o1.frequency.setTargetAtTime(f, t, 0.08);
+        h.o2.frequency.setTargetAtTime(f * 3.01, t, 0.08);
+        h.vibG.gain.setTargetAtTime(f * (0.02 + prog * 0.05), t, 0.1);
+        g = A.gain * fadeIn;
       } else {
         const f = (A.f0 + (A.f1 - A.f0) * prog) * sl;
         h.bp.frequency.setTargetAtTime(f, t, 0.04);
-        g = A.gain * fadeIn * Math.pow(1 - prog * 0.75, 1.3);
+        g = A.gain * fadeIn * (A.kind === 'tourbillon' ? 1 : Math.pow(1 - prog * 0.75, 1.3));
       }
       h.out.gain.setTargetAtTime(g, t, 0.04);
     }
@@ -508,6 +597,67 @@
         s.start(t0 + (T.delay || 0) / ts);
         this._count('tail:' + T.kind);
       }
+    }
+
+    // Campanas FM: un arpegio que "canta" junto con la figura dibujada en el cielo
+    chime(pos, notes, gap) {
+      if (!this.ready) return;
+      this._count('chime');
+      const ctx = this.ctx, sl = this.timeScale < 1 ? 0.5 : 1, sp0 = this._spatial(pos);
+      const t0 = ctx.currentTime + sp0.delay + 0.05;
+      const v = this._voice(pos, t0, notes.length * gap / sl + 4, { reverb: 1.0, echo: 0.35, bright: 1.5 });
+      notes.forEach((f0, i) => {
+        const t = t0 + i * gap / sl, f = f0 * sl;
+        const car = ctx.createOscillator(), mod = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain();
+        car.frequency.value = f; mod.frequency.value = f * 3.5;
+        mg.gain.setValueAtTime(f * 2.2, t); mg.gain.exponentialRampToValueAtTime(f * 0.05, t + 1.2 / sl);
+        mod.connect(mg); mg.connect(car.frequency); car.connect(g); g.connect(v.inp);
+        this._env(g, t, 0.003, 0.32, 2.2 / sl, 3);
+        car.start(t); mod.start(t); car.stop(t + 3 / sl); mod.stop(t + 3 / sl);
+      });
+    }
+
+    // Enjambre: varios zumbadores desafinados que se mueven por el estéreo
+    swarm(pos, dur, n) {
+      if (!this.ready) return;
+      this._count('swarm');
+      const ctx = this.ctx, sl = this.timeScale < 1 ? 0.55 : 1, D = dur / Math.max(0.25, this.timeScale);
+      const t0 = ctx.currentTime + this._spatial(pos).delay;
+      const v = this._voice(pos, t0, D + 1, { reverb: 0.55, echo: 0.1, panAmt: 0.4 });
+      for (let i = 0; i < n; i++) {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = rnd(170, 430) * sl;
+        const glide = ctx.createOscillator(); glide.frequency.value = rnd(0.6, 2.4);
+        const gg = ctx.createGain(); gg.gain.value = rnd(25, 70) * sl; glide.connect(gg); gg.connect(o.frequency);
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600;
+        const am = ctx.createGain(); am.gain.value = 0.5;
+        const flap = ctx.createOscillator(); flap.type = 'square'; flap.frequency.value = rnd(22, 38) * sl;
+        const fg = ctx.createGain(); fg.gain.value = 0.5; flap.connect(fg); fg.connect(am.gain);
+        const p = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+        if (p.pan) { const pl = ctx.createOscillator(); pl.frequency.value = rnd(0.2, 0.7); const pg = ctx.createGain(); pg.gain.value = 0.9; pl.connect(pg); pg.connect(p.pan); pl.start(t0); pl.stop(t0 + D + 0.2); }
+        const env = ctx.createGain();
+        env.gain.setValueAtTime(0, t0); env.gain.linearRampToValueAtTime(0.11, t0 + 0.15 + i * 0.03);
+        env.gain.setValueAtTime(0.11, t0 + D * 0.6); env.gain.linearRampToValueAtTime(0, t0 + D);
+        o.connect(lp); lp.connect(am); am.connect(env); env.connect(p); p.connect(v.inp);
+        [o, glide, flap].forEach(x => { x.start(t0); x.stop(t0 + D + 0.2); });
+      }
+    }
+
+    // Crescendo invertido (como un platillo al revés) que desemboca en la implosión
+    swell(pos, dur) {
+      if (!this.ready) return;
+      this._count('swell');
+      const ctx = this.ctx, D = dur / Math.max(0.25, this.timeScale), t0 = ctx.currentTime;
+      const v = this._voice(pos, t0, D + 1, { reverb: 0.9, bright: 1.3 });
+      const n = this._noise(this.pink, t0, D);
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.4;
+      bp.frequency.setValueAtTime(250, t0); bp.frequency.exponentialRampToValueAtTime(7000, t0 + D);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.002, t0); g.gain.exponentialRampToValueAtTime(0.9, t0 + D * 0.98); g.gain.linearRampToValueAtTime(0, t0 + D);
+      n.connect(bp); bp.connect(g); g.connect(v.inp);
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(28, t0); o.frequency.exponentialRampToValueAtTime(90, t0 + D);
+      const og = ctx.createGain(); og.gain.setValueAtTime(0.001, t0); og.gain.exponentialRampToValueAtTime(0.6, t0 + D * 0.97); og.gain.linearRampToValueAtTime(0, t0 + D);
+      o.connect(og); og.connect(v.inp); o.start(t0); o.stop(t0 + D + 0.05);
     }
 
     // micro-estallido aislado (crossette, crepitado sincronizado con la imagen)

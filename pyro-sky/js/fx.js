@@ -14,6 +14,7 @@
     GLITTER: 16,   // purpurina: destellos finos aleatorios
     SPLIT: 32,     // crossette: se divide en 4
     LATEFADE: 64,  // mantiene brillo y cae al final (sauce)
+    SWARM: 128,    // vuelo errático de insecto (param = aceleración)
   };
 
   const SPARK_VS = `
@@ -129,6 +130,10 @@
         }
         const dr = Math.exp(-this.drag[i] * dt);
         this.v[i3] *= dr; this.v[i3 + 1] = this.v[i3 + 1] * dr + G * this.grav[i] * dt; this.v[i3 + 2] *= dr;
+        if (fl & F.SWARM) {
+          const a = this.param[i] * dt;
+          this.v[i3] += (Math.random() * 2 - 1) * a; this.v[i3 + 1] += (Math.random() * 2 - 1) * a; this.v[i3 + 2] += (Math.random() * 2 - 1) * a;
+        }
         this.p[i3] += this.v[i3] * dt; this.p[i3 + 1] += this.v[i3 + 1] * dt; this.p[i3 + 2] += this.v[i3 + 2] * dt;
         if (this.p[i3 + 1] < 0.3) { this._kill(i); i--; continue; }
 

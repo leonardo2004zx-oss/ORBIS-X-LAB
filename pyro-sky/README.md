@@ -19,6 +19,13 @@ Proyecto independiente: no depende de ninguna otra parte del repositorio.
 | Crisantemo Crepitante | Pétalos lima que revientan en "huevos de dragón" | Siseo agudo, ráfaga de crujidos sincronizada |
 | Palmera Titán | Nueve hojas de cometa gruesas | Rugido grave, trueno con retumbo de 5 s |
 | Saturno Estrobo | Planeta magenta + anillo turquesa + estrobos | Zumbido eléctrico, tic-tic estroboscópico |
+| Espiral Fénix | Sube en sacacorchos y abre una galaxia espiral | Torbellino sincronizado con el giro, que pasa de un oído al otro |
+| Medusa Eléctrica | Campana azul con tentáculos violeta que caen | Láser FM al subir, arcos eléctricos tras el estallido |
+| Triple Salto | Tres estallidos encadenados, cada uno más alto y grande | Pa · pa · ¡BUM!, cada golpe más grave |
+| Pirograma Musical | Corazón, estrella o sonrisa que mira a la cámara | Sube tocando una escala y suena un acorde de campanas |
+| Enjambre Zumbador | Chispas que vuelan erráticas como abejas | Coro de zumbidos que se mueven por el estéreo |
+| Agujero Negro | Nube que implosiona y estalla en una onda | Theremin, crescendo al revés e implosión muy grave |
+| Cruz de Diamantes | Estrellas doradas que se parten en 4 cometas plateados | Silbido descendente y tableteo de crujidos |
 
 ## Audio
 Todo el sonido se sintetiza con la Web Audio API (no hay muestras externas, así que no hay licencias de terceros).

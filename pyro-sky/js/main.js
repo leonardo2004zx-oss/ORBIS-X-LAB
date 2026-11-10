@@ -56,6 +56,8 @@
   function launch(id, pad, scale) {
     const type = CATALOG.find(c => c.id === id) || CATALOG[0];
     if (g.rockets.length > 40) return null;
+    // las figuras y la carcasa de tres etapas se lanzan desde el centro para que entren en pantalla vertical
+    if (!pad && type.centered) pad = world.pads[1 + ((padIdx++) % 3)];
     const r = new Rocket(g, type, pad || nextPad(), scale);
     g.rockets.push(r);
     return r;
@@ -96,6 +98,7 @@
       b.title = t.desc;
       const cv = document.createElement('canvas'); drawIcon(cv, t);
       b.appendChild(cv);
+      if (t.tag) b.insertAdjacentHTML('beforeend', `<em class="badge">${t.tag}</em>`);
       b.insertAdjacentHTML('beforeend', `<b>${t.short}</b><span class="spec">${t.caliber} mm · ${t.height} m</span><span class="snd">${t.sound}</span>`);
       b.addEventListener('click', () => select(t.id, true));
       rack.appendChild(b);
