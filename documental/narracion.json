@@ -1,0 +1,47 @@
+{
+  "titulo": "La rama humana",
+  "subtitulo": "66 millones de años de evolución",
+  "intro": 8.0,
+  "outro": 14.0,
+  "escenas": [
+    {"id": "impacto", "era": "Cretácico · hace 66 millones de años", "pre": 1.0, "post": 4.2, "lineas": [
+      "Hace sesenta y seis millones de años, la Tierra pertenecía a los dinosaurios. Bosques de helechos y coníferas cubrían continentes que todavía no tenían su forma actual.",
+      "Entonces, una roca de unos diez kilómetros de diámetro cruzó el cielo... y se estrelló en lo que hoy es la península de Yucatán."
+    ]},
+    {"id": "invierno", "era": "Límite Cretácico–Paleógeno", "pre": 1.2, "post": 1.4, "lineas": [
+      "El impacto liberó más energía que miles de millones de bombas atómicas. Incendios, tsunamis y una nube de polvo y hollín oscurecieron el planeta durante años.",
+      "Cerca de tres de cada cuatro especies desaparecieron. Los dinosaurios no avianos se extinguieron... aunque sus descendientes, las aves, siguen entre nosotros.",
+      "Pero bajo tierra esperaban algunos sobrevivientes: pequeños mamíferos, capaces de esconderse y de comer casi cualquier cosa."
+    ]},
+    {"id": "mamiferos", "era": "Paleoceno y Eoceno · hace 60 a 50 millones de años", "pre": 1.0, "post": 1.4, "lineas": [
+      "Sin los grandes dinosaurios, los mamíferos se diversificaron como nunca. En pocos millones de años surgieron los antepasados de caballos, ballenas, murciélagos... y de nosotros.",
+      "Hace unos cincuenta y cinco millones de años, en bosques cálidos y húmedos, ya vivían los primeros primates: pequeños trepadores, con manos capaces de sujetar y ojos dirigidos hacia adelante."
+    ]},
+    {"id": "arbol", "era": "Mioceno · hace 7 millones de años", "pre": 1.0, "post": 1.6, "lineas": [
+      "Aquí conviene aclarar algo importante: los seres humanos no descendemos de los monos actuales. Chimpancés, gorilas y humanos somos primos; compartimos antepasados que ya no existen.",
+      "Hace entre seis y siete millones de años, en África, un linaje de simios se dividió. Una rama llevaría a los chimpancés y bonobos. La otra, a los homininos.",
+      "Y la evolución no fue una escalera, sino un arbusto lleno de ramas: muchas especies convivieron, y la mayoría se extinguió sin dejar descendientes."
+    ]},
+    {"id": "australopithecus", "era": "Plioceno · hace 3,6 millones de años", "pre": 1.0, "post": 1.4, "lineas": [
+      "Hace casi cuatro millones de años, mientras los bosques africanos se fragmentaban, recorría el este de África Australopithecus afarensis.",
+      "Medían poco más de un metro y tenían un cerebro parecido al de un chimpancé... pero ya caminaban erguidos. En Laetoli, Tanzania, sus huellas quedaron grabadas en ceniza volcánica."
+    ]},
+    {"id": "erectus", "era": "Pleistoceno · hace 1,8 millones de años", "pre": 1.0, "post": 1.4, "lineas": [
+      "Hace unos dos millones de años apareció Homo erectus: alto, de piernas largas, hecho para recorrer grandes distancias.",
+      "Fabricó hachas de piedra simétricas, con el tiempo aprendió a usar el fuego... y fue de los primeros homininos en salir de África, hasta llegar a Asia."
+    ]},
+    {"id": "neandertales", "era": "Europa glacial · hace 400 000 a 40 000 años", "pre": 1.0, "post": 1.4, "lineas": [
+      "Mucho después, en la Europa de las glaciaciones, vivieron los neandertales. Robustos y adaptados al frío, cazaban grandes animales, cuidaban a sus heridos y enterraban a sus muertos.",
+      "No eran una versión atrasada de nosotros, sino otra forma de ser humano. Y no estaban solos: también existieron los denisovanos y, en la isla de Flores, el pequeño Homo floresiensis."
+    ]},
+    {"id": "sapiens", "era": "Homo sapiens · desde hace 300 000 años", "pre": 1.0, "post": 1.4, "lineas": [
+      "Nuestra especie, Homo sapiens, surgió en África hace unos trescientos mil años, y desde allí se expandió por todo el planeta.",
+      "En el camino se encontró con neandertales y denisovanos, y tuvo descendencia con ellos: muchas personas todavía llevan en su genoma una pequeña parte de esa herencia.",
+      "Pintamos las paredes de las cuevas, contamos historias junto al fuego... y hace unos doce mil años empezamos a cultivar la tierra."
+    ]},
+    {"id": "hoy", "era": "Hoy", "pre": 1.0, "post": 2.0, "lineas": [
+      "Hoy somos más de ocho mil millones de personas: la única especie humana que queda. Somos el resultado de sesenta y seis millones de años de azar, supervivencia y cambio.",
+      "Una rama más del gran árbol de la vida... que sigue creciendo."
+    ]}
+  ]
+}

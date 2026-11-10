@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La rama humana · Documental</title>
+<meta name="description" content="Documental animado original sobre la evolución humana: de la extinción de los dinosaurios no avianos hasta hoy.">
+<style>
+  @font-face { font-family: Cinzel; src: url(render/assets/Cinzel.ttf); font-display: swap; }
+  @font-face { font-family: Montserrat; src: url(render/assets/Montserrat.ttf); font-display: swap; }
+  :root {
+    --bg: #0b0907; --panel: #15110d; --line: #2c241b; --text: #f1e6d4; --muted: #b9a991; --accent: #e7b46c; --accent-2: #7fd9c8;
+  }
+  :root[data-theme="light"] { --bg: #f6f0e6; --panel: #fffaf2; --line: #e3d6c2; --text: #241c13; --muted: #6e5e48; --accent: #9a5d12; --accent-2: #1e7f70; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) { --bg: #f6f0e6; --panel: #fffaf2; --line: #e3d6c2; --text: #241c13; --muted: #6e5e48; --accent: #9a5d12; --accent-2: #1e7f70; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 400 17px/1.6 Montserrat, system-ui, sans-serif; }
+  header { padding: 40px 16px 18px; text-align: center; }
+  h1 { font: 700 clamp(34px, 6vw, 64px)/1.1 Cinzel, Georgia, serif; letter-spacing: .08em; margin: 0; }
+  .sub { color: var(--muted); letter-spacing: .18em; text-transform: uppercase; font-size: 13px; margin-top: 10px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 0 16px 60px; }
+  .player { background: #000; border-radius: 10px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+  video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 14px 0 6px; }
+  .bar a, .bar button { color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font: 500 14px Montserrat, sans-serif; text-decoration: none; cursor: pointer; }
+  .bar a:hover, .bar button:hover { border-color: var(--accent); }
+  h2 { font: 700 22px Cinzel, Georgia, serif; letter-spacing: .06em; margin: 38px 0 12px; color: var(--accent); }
+  ol.chapters { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+  ol.chapters button { width: 100%; text-align: left; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: 500 15px Montserrat, sans-serif; cursor: pointer; display: flex; gap: 10px; }
+  ol.chapters button:hover, ol.chapters button.on { border-color: var(--accent); }
+  ol.chapters time { color: var(--accent); font-variant-numeric: tabular-nums; min-width: 42px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card p, .card li { color: var(--muted); margin: 0; font-size: 15px; }
+  .card ul { margin: 0; padding-left: 18px; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 0 16px 40px; }
+  @media (max-width: 600px) { body { font-size: 16px; } header { padding-top: 26px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>La rama humana</h1>
+  <div class="sub">66 millones de años de evolución · documental animado</div>
+</header>
+<main>
+  <div class="player">
+    <video id="v" controls preload="metadata" playsinline poster="poster.jpg">
+      <source src="la-rama-humana.mp4" type="video/mp4">
+      <track kind="subtitles" src="subtitulos.vtt" srclang="es" label="Español">
+      Tu navegador no puede reproducir video MP4.
+    </video>
+  </div>
+  <div class="bar">
+    <span style="color:var(--muted);font-size:14px">4 min 37 s · 1920×1080 · narración en español latino</span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="cc" type="button">Subtítulos: no</button>
+      <a href="la-rama-humana.mp4" download>Descargar MP4</a>
+    </span>
+  </div>
+
+  <h2>Capítulos</h2>
+  <ol class="chapters" id="chapters"></ol>
+
+  <h2>Rigor científico</h2>
+  <div class="grid">
+    <div class="card"><h3>La evolución no es una escalera</h3><p>Se representa como un arbusto: muchas especies de homininos convivieron y la mayoría se extinguió sin descendientes. Las relaciones exactas entre varias de ellas siguen en debate.</p></div>
+    <div class="card"><h3>No descendemos de los monos actuales</h3><p>Humanos, chimpancés y bonobos compartimos un antepasado común, ya extinto, que vivió en África hace unos 7 a 6 millones de años. Somos primos, no descendientes.</p></div>
+    <div class="card"><h3>Fechas aproximadas</h3><ul>
+      <li>Impacto de Chicxulub: ~66 M.a.</li>
+      <li>Primeros primates: ~55 M.a.</li>
+      <li><i>A. afarensis</i>: 3,9–2,9 M.a.; huellas de Laetoli ~3,66 M.a.</li>
+      <li><i>H. erectus</i>: ~1,9 M.a.–110 000 años</li>
+      <li>Neandertales: ~400 000–40 000 años</li>
+      <li><i>H. sapiens</i>: ~300 000 años (Jebel Irhoud)</li>
+      <li>Agricultura: ~12 000 años</li></ul></div>
+    <div class="card"><h3>Lo que es interpretación</h3><p>Siluetas, colores y paisajes son ilustraciones artísticas. Del aspecto de los denisovanos se sabe muy poco: por eso aparecen como una silueta con signo de pregunta.</p></div>
+  </div>
+
+  <h2>Cómo se hizo</h2>
+  <div class="grid">
+    <div class="card"><h3>Animación</h3><p>Más de 6600 fotogramas dibujados por código (Canvas 2D en Chromium sin interfaz): paisajes con paralaje, criaturas articuladas con ciclos de marcha, partículas, luz y mapas.</p></div>
+    <div class="card"><h3>Narración</h3><p>Voz neuronal libre Piper (modelo es_MX), ejecutada localmente, sin servicios pagos.</p></div>
+    <div class="card"><h3>Música y sonido</h3><p>Cuerdas, coro, timbales, viento, fuego, aves e impacto sintetizados con numpy; la música baja automáticamente bajo la voz.</p></div>
+  </div>
+</main>
+<footer>Mapas: Natural Earth (dominio público) · Tipografías Cinzel y Montserrat (OFL) · Video MP4 H.264 + AAC</footer>
+<script>
+  const chapters = [
+    [0, 'Apertura'], [8.0, 'El impacto (Cretácico)'], [34.1, 'Invierno de impacto'], [68.7, 'La era de los mamíferos'],
+    [97.5, 'Un árbol, no una escalera'], [137.2, 'Australopithecus'], [162.5, 'Homo erectus'], [183.5, 'Neandertales'],
+    [212.2, 'Homo sapiens'], [244.2, 'Hoy'], [263.2, 'Créditos'],
+  ];
+  const v = document.getElementById('v'), list = document.getElementById('chapters');
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  const buttons = chapters.map(([t, name]) => {
+    const li = document.createElement('li'), b = document.createElement('button');
+    b.type = 'button'; b.innerHTML = `<time>${fmt(t)}</time><span>${name}</span>`;
+    b.onclick = () => { v.currentTime = t + 0.05; v.play(); };
+    li.appendChild(b); list.appendChild(li); return b;
+  });
+  v.addEventListener('timeupdate', () => {
+    let i = chapters.length - 1; while (i > 0 && v.currentTime < chapters[i][0]) i--;
+    buttons.forEach((b, k) => b.classList.toggle('on', k === i));
+  });
+  const cc = document.getElementById('cc');
+  cc.onclick = () => {
+    const tr = v.textTracks[0]; if (!tr) return;
+    tr.mode = tr.mode === 'showing' ? 'hidden' : 'showing';
+    cc.textContent = 'Subtítulos: ' + (tr.mode === 'showing' ? 'sí' : 'no');
+  };
+</script>
+</body>
+</html>
