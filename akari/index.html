@@ -402,6 +402,9 @@ kbd{font-family:var(--f-hud);background:var(--ink);border:1px solid var(--line);
             <div class="seg" role="group" aria-label="Tipo de voz">
               <button type="button" data-vm="natural">Natural</button><button type="button" data-vm="device">Del celular</button>
             </div>
+            <div class="seg" role="group" aria-label="Estilo de locución">
+              <button type="button" data-vs="neutral">Neutral</button><button type="button" data-vs="hype">Entusiasta</button><button type="button" data-vs="mystery">Misteriosa</button>
+            </div>
             <button type="button" class="chip-toggle" id="testVoice"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Probar voz</button>
           </div>
           <p class="note"><b id="voiceStatus">Voz: cargando…</b> ¿No escuchás nada? Subí el volumen y sacá el modo silencio.</p>
@@ -496,49 +499,49 @@ const CATS = {
 };
 // d: dificultad 1-3 · a: índice de la respuesta correcta · x: explicación
 const Q = [
-  {id:1,c:'cg',d:1,q:'¿Qué órganos producen la orina?',o:['La vejiga urinaria','Los riñones','Los uréteres','El hígado'],a:1,x:'Los riñones la producen. La vejiga solo la guarda.'},
-  {id:2,c:'cg',d:1,q:'¿Cuál es el planeta más grande del sistema solar?',o:['Saturno','Júpiter','Neptuno','La Tierra'],a:1,x:'Júpiter: le entran más de mil Tierras adentro.'},
-  {id:3,c:'cg',d:1,q:'¿En qué país están las pirámides de Guiza?',o:['México','Perú','Egipto','Sudán'],a:2,x:'Están en Egipto, al lado de El Cairo.'},
-  {id:4,c:'cg',d:2,q:'¿Cuál es el símbolo químico del oro?',o:['Ag','Au','Or','Go'],a:1,x:'Au, del latín aurum. Ag es la plata.'},
-  {id:5,c:'cg',d:2,q:'¿Cuál es el hueso más largo del cuerpo humano?',o:['La tibia','El húmero','El fémur','El peroné'],a:2,x:'El fémur, en el muslo.'},
-  {id:6,c:'cg',d:3,q:'¿Cuántos corazones tiene un pulpo?',o:['Uno','Dos','Tres','Ocho'],a:2,x:'Tres: uno principal y dos para las branquias.'},
-  {id:7,c:'cg',d:3,q:'Contando sus territorios, ¿qué país tiene más husos horarios?',o:['Rusia','Estados Unidos','Francia','China'],a:2,x:'Francia, gracias a sus territorios de ultramar.'},
-  {id:8,c:'an',d:1,q:'¿Qué sueña llegar a ser Naruto Uzumaki?',o:['Hokage','Rey de los Piratas','Cazador','Maestro Pokémon'],a:0,x:'Hokage, el líder de la Aldea de la Hoja.'},
-  {id:9,c:'an',d:1,q:'En One Piece, ¿qué quiere ser Luffy?',o:['Hokage','Almirante','Rey de los Piratas','Shinigami'],a:2,x:'¡El Rey de los Piratas!'},
-  {id:10,c:'an',d:1,q:'En Dragon Ball, ¿cuántas esferas del dragón hay que reunir?',o:['Cinco','Siete','Nueve','Doce'],a:1,x:'Siete esferas para invocar a Shenlong.'},
-  {id:11,c:'an',d:2,q:'¿Qué shinigami deja caer la Death Note en el mundo humano?',o:['Ryuk','Rem','Light','L'],a:0,x:'Ryuk, el de las manzanas.'},
-  {id:12,c:'an',d:2,q:'¿Qué estudio hizo «El viaje de Chihiro»?',o:['Toei Animation','Studio Ghibli','MAPPA','Kyoto Animation'],a:1,x:'Studio Ghibli, con Hayao Miyazaki.'},
-  {id:13,c:'an',d:2,q:'Al empezar Attack on Titan, ¿cuántas murallas protegen a la humanidad?',o:['Dos','Tres','Cuatro','Cinco'],a:1,x:'Tres: María, Rose y Sina.'},
-  {id:14,c:'an',d:3,q:'¿Cuál es la ley básica de la alquimia en Fullmetal Alchemist?',o:['Intercambio equivalente','Conservación del alma','La ley del más fuerte','El poder de la amistad'],a:0,x:'Intercambio equivalente: para obtener algo, hay que dar algo del mismo valor.'},
-  {id:15,c:'an',d:3,q:'¿Qué respiración usa Tanjiro al empezar Demon Slayer?',o:['Del Agua','Del Fuego','Del Trueno','De la Bestia'],a:0,x:'La Respiración del Agua, que le enseñó Urokodaki.'},
-  {id:16,c:'vg',d:1,q:'¿Qué empresa creó la consola PlayStation?',o:['Nintendo','Sega','Sony','Microsoft'],a:2,x:'Sony, en 1994.'},
-  {id:17,c:'vg',d:1,q:'¿Qué come Pac-Man para poder comerse a los fantasmas?',o:['Cerezas','Píldoras de poder','Hongos','Monedas'],a:1,x:'Las píldoras de poder, las grandes de las esquinas.'},
-  {id:18,c:'vg',d:1,q:'¿En qué juego aparecen los Creepers?',o:['Terraria','Minecraft','Roblox','Fortnite'],a:1,x:'Minecraft. Sssss… ¡bum!'},
-  {id:19,c:'vg',d:2,q:'¿En qué región empieza Pokémon Rojo y Azul?',o:['Johto','Kanto','Hoenn','Sinnoh'],a:1,x:'Kanto, saliendo de Pueblo Paleta.'},
-  {id:20,c:'vg',d:2,q:'¿Cómo se llama el protagonista de Half-Life?',o:['Gordon Freeman','Master Chief','Solid Snake','Isaac Clarke'],a:0,x:'Gordon Freeman, el físico de la palanca.'},
-  {id:21,c:'vg',d:2,q:'En la saga Zelda, ¿quién suele ser el gran villano?',o:['Bowser','Ganondorf','Dr. Wily','Ridley'],a:1,x:'Ganondorf, o su forma Ganon.'},
-  {id:22,c:'vg',d:3,q:'¿En qué año se creó el primer Tetris?',o:['1979','1984','1989','1995'],a:1,x:'En 1984, por Alekséi Pázhitnov.'},
-  {id:23,c:'te',d:1,q:'Según la leyenda, ¿qué criatura le teme al ajo?',o:['El hombre lobo','El vampiro','El zombi','La momia'],a:1,x:'El vampiro. El hombre lobo le teme a la plata.'},
-  {id:24,c:'te',d:1,q:'¿Cómo se llama el payaso de «It», de Stephen King?',o:['Pennywise','Chucky','Jason','Freddy'],a:0,x:'Pennywise, el payaso bailarín.'},
-  {id:25,c:'te',d:2,q:'¿Quién escribió «Frankenstein»?',o:['Bram Stoker','Mary Shelley','Edgar Allan Poe','H. P. Lovecraft'],a:1,x:'Mary Shelley, en 1818.'},
-  {id:26,c:'te',d:2,q:'¿En qué ciudad ficticia transcurre Resident Evil 2?',o:['Silent Hill','Raccoon City','Derry','Haddonfield'],a:1,x:'Raccoon City. Derry es la de «It».'},
-  {id:27,c:'te',d:2,q:'¿Qué escritor creó a Cthulhu?',o:['H. P. Lovecraft','Edgar Allan Poe','Stephen King','Bram Stoker'],a:0,x:'H. P. Lovecraft, en 1928.'},
-  {id:28,c:'te',d:3,q:'¿En qué pueblo ocurre «Halloween» (1978), con Michael Myers?',o:['Haddonfield','Derry','Springwood','Crystal Lake'],a:0,x:'Haddonfield, Illinois.'},
-  {id:29,c:'te',d:3,q:'¿En qué película una cinta maldita mata a los siete días de verla?',o:['El exorcista','The Ring (El aro)','Saw','Hereditary'],a:1,x:'The Ring. La original japonesa es Ringu.'},
-  {id:30,c:'lo',d:1,q:'¿Qué número sigue? 2, 4, 8, 16…',o:['24','32','30','20'],a:1,x:'Cada número es el doble del anterior: 32.'},
-  {id:31,c:'lo',d:2,q:'¿Qué número sigue? 1, 1, 2, 3, 5, 8…',o:['11','12','13','15'],a:2,x:'Fibonacci: se suman los dos anteriores. 5 + 8 = 13.'},
-  {id:32,c:'lo',d:2,q:'¿Qué letra sigue? L, M, X, J, V, S…',o:['D','L','M','T'],a:0,x:'Son los días de la semana. Sigue D, de domingo.'},
-  {id:33,c:'lo',d:3,q:'Un bate y una pelota cuestan 1,10 en total. El bate cuesta 1 más que la pelota. ¿Cuánto cuesta la pelota?',o:['0,10','0,05','0,15','0,01'],a:1,x:'0,05: el bate cuesta 1,05 y juntos suman 1,10.'},
-  {id:34,c:'lo',d:3,q:'Si 5 máquinas hacen 5 piezas en 5 minutos, ¿cuánto tardan 100 máquinas en hacer 100 piezas?',o:['100 minutos','5 minutos','20 minutos','1 minuto'],a:1,x:'5 minutos: cada máquina hace una pieza cada 5 minutos.'},
-  {id:35,c:'tr',d:1,q:'¿Cuántos meses del año tienen 28 días?',o:['Uno','Doce','Dos','Ninguno'],a:1,x:'¡Todos! Los doce tienen al menos 28 días.'},
-  {id:36,c:'tr',d:1,q:'¿Qué pesa más: un kilo de plumas o un kilo de hierro?',o:['El hierro','Las plumas','Pesan lo mismo','Depende del día'],a:2,x:'Un kilo es un kilo.'},
-  {id:37,c:'tr',d:1,q:'Tenés 3 manzanas y te llevás 2. ¿Cuántas manzanas tenés vos?',o:['1','2','3','0'],a:1,x:'Las 2 que te llevaste.'},
-  {id:38,c:'tr',d:2,q:'En una carrera, adelantás al que va segundo. ¿En qué puesto quedás?',o:['Primero','Segundo','Tercero','Último'],a:1,x:'Segundo: ocupás su lugar.'},
-  {id:39,c:'tr',d:2,q:'El papá de María tiene cinco hijas: Nana, Nene, Nini y Nono. ¿Cómo se llama la quinta?',o:['Nunu','María','Nina','Nadia'],a:1,x:'¡María! Estaba en la pregunta.'},
-  {id:40,c:'tr',d:2,q:'¿Qué se rompe con solo nombrarlo?',o:['Un espejo','El silencio','Una promesa','El hielo'],a:1,x:'El silencio.'},
-  {id:41,c:'tr',d:3,q:'Un avión cae justo en la frontera entre dos países. ¿Dónde entierran a los sobrevivientes?',o:['En el país de origen','En el país de destino','En la frontera','A los sobrevivientes no se los entierra'],a:3,x:'¡Están vivos! No se entierra a nadie.'},
-  {id:42,c:'tr',d:3,q:'¿Cuántos animales de cada especie subió Moisés al arca?',o:['Dos','Siete','Uno','Ninguno'],a:3,x:'Ninguno: el del arca fue Noé, no Moisés.'},
-  {id:43,c:'lo',d:3,q:'Un caracol sube por un pozo de 10 metros. De día sube 3 y de noche resbala 2. ¿En qué día sale?',o:['Día 10','Día 8','Día 7','Día 9'],a:1,x:'Día 8: al final del día 7 está a 7 metros y el día 8 sube los 3 que faltan.'},
+  {id:1,k:'producen',c:'cg',d:1,q:'¿Qué órganos producen la orina?',o:['La vejiga urinaria','Los riñones','Los uréteres','El hígado'],a:1,x:'Los riñones la producen. La vejiga solo la guarda.'},
+  {id:2,c:'cg',d:1,k:'más grande',q:'¿Cuál es el planeta más grande del sistema solar?',o:['Saturno','Júpiter','Neptuno','La Tierra'],a:1,x:'Júpiter: le entran más de mil Tierras adentro.'},
+  {id:3,c:'cg',d:1,k:'pirámides',q:'¿En qué país están las pirámides de Guiza?',o:['México','Perú','Egipto','Sudán'],a:2,x:'Están en Egipto, al lado de El Cairo.'},
+  {id:4,c:'cg',d:2,k:'oro',q:'¿Cuál es el símbolo químico del oro?',o:['Ag','Au','Or','Go'],a:1,x:'Au, del latín aurum. Ag es la plata.'},
+  {id:5,c:'cg',d:2,k:'más largo',q:'¿Cuál es el hueso más largo del cuerpo humano?',o:['La tibia','El húmero','El fémur','El peroné'],a:2,x:'El fémur, en el muslo.'},
+  {id:6,c:'cg',d:3,k:'corazones',q:'¿Cuántos corazones tiene un pulpo?',o:['Uno','Dos','Tres','Ocho'],a:2,x:'Tres: uno principal y dos para las branquias.'},
+  {id:7,c:'cg',d:3,k:'husos horarios',q:'Contando sus territorios, ¿qué país tiene más husos horarios?',o:['Rusia','Estados Unidos','Francia','China'],a:2,x:'Francia, gracias a sus territorios de ultramar.'},
+  {id:8,c:'an',d:1,k:'sueña',q:'¿Qué sueña llegar a ser Naruto Uzumaki?',o:['Hokage','Rey de los Piratas','Cazador','Maestro Pokémon'],a:0,x:'Hokage, el líder de la Aldea de la Hoja.'},
+  {id:9,c:'an',d:1,k:'Luffy',q:'En One Piece, ¿qué quiere ser Luffy?',o:['Hokage','Almirante','Rey de los Piratas','Shinigami'],a:2,x:'¡El Rey de los Piratas!'},
+  {id:10,c:'an',d:1,k:'esferas',q:'En Dragon Ball, ¿cuántas esferas del dragón hay que reunir?',o:['Cinco','Siete','Nueve','Doce'],a:1,x:'Siete esferas para invocar a Shenlong.'},
+  {id:11,c:'an',d:2,k:'Death Note',q:'¿Qué shinigami deja caer la Death Note en el mundo humano?',o:['Ryuk','Rem','Light','L'],a:0,x:'Ryuk, el de las manzanas.'},
+  {id:12,c:'an',d:2,k:'estudio',q:'¿Qué estudio hizo «El viaje de Chihiro»?',o:['Toei Animation','Studio Ghibli','MAPPA','Kyoto Animation'],a:1,x:'Studio Ghibli, con Hayao Miyazaki.'},
+  {id:13,c:'an',d:2,k:'murallas',q:'Al empezar Attack on Titan, ¿cuántas murallas protegen a la humanidad?',o:['Dos','Tres','Cuatro','Cinco'],a:1,x:'Tres: María, Rose y Sina.'},
+  {id:14,c:'an',d:3,k:'ley básica',q:'¿Cuál es la ley básica de la alquimia en Fullmetal Alchemist?',o:['Intercambio equivalente','Conservación del alma','La ley del más fuerte','El poder de la amistad'],a:0,x:'Intercambio equivalente: para obtener algo, hay que dar algo del mismo valor.'},
+  {id:15,c:'an',d:3,k:'respiración',q:'¿Qué respiración usa Tanjiro al empezar Demon Slayer?',o:['Del Agua','Del Fuego','Del Trueno','De la Bestia'],a:0,x:'La Respiración del Agua, que le enseñó Urokodaki.'},
+  {id:16,c:'vg',d:1,k:'PlayStation',q:'¿Qué empresa creó la consola PlayStation?',o:['Nintendo','Sega','Sony','Microsoft'],a:2,x:'Sony, en 1994.'},
+  {id:17,c:'vg',d:1,k:'fantasmas',q:'¿Qué come Pac-Man para poder comerse a los fantasmas?',o:['Cerezas','Píldoras de poder','Hongos','Monedas'],a:1,x:'Las píldoras de poder, las grandes de las esquinas.'},
+  {id:18,c:'vg',d:1,k:'Creepers',q:'¿En qué juego aparecen los Creepers?',o:['Terraria','Minecraft','Roblox','Fortnite'],a:1,x:'Minecraft. Sssss… ¡bum!'},
+  {id:19,c:'vg',d:2,k:'región',q:'¿En qué región empieza Pokémon Rojo y Azul?',o:['Johto','Kanto','Hoenn','Sinnoh'],a:1,x:'Kanto, saliendo de Pueblo Paleta.'},
+  {id:20,c:'vg',d:2,k:'protagonista',q:'¿Cómo se llama el protagonista de Half-Life?',o:['Gordon Freeman','Master Chief','Solid Snake','Isaac Clarke'],a:0,x:'Gordon Freeman, el físico de la palanca.'},
+  {id:21,c:'vg',d:2,k:'villano',q:'En la saga Zelda, ¿quién suele ser el gran villano?',o:['Bowser','Ganondorf','Dr. Wily','Ridley'],a:1,x:'Ganondorf, o su forma Ganon.'},
+  {id:22,c:'vg',d:3,k:'año',q:'¿En qué año se creó el primer Tetris?',o:['1979','1984','1989','1995'],a:1,x:'En 1984, por Alekséi Pázhitnov.'},
+  {id:23,c:'te',d:1,k:'ajo',q:'Según la leyenda, ¿qué criatura le teme al ajo?',o:['El hombre lobo','El vampiro','El zombi','La momia'],a:1,x:'El vampiro. El hombre lobo le teme a la plata.'},
+  {id:24,c:'te',d:1,k:'payaso',q:'¿Cómo se llama el payaso de «It», de Stephen King?',o:['Pennywise','Chucky','Jason','Freddy'],a:0,x:'Pennywise, el payaso bailarín.'},
+  {id:25,c:'te',d:2,k:'Frankenstein',q:'¿Quién escribió «Frankenstein»?',o:['Bram Stoker','Mary Shelley','Edgar Allan Poe','H. P. Lovecraft'],a:1,x:'Mary Shelley, en 1818.'},
+  {id:26,c:'te',d:2,k:'ciudad ficticia',q:'¿En qué ciudad ficticia transcurre Resident Evil 2?',o:['Silent Hill','Raccoon City','Derry','Haddonfield'],a:1,x:'Raccoon City. Derry es la de «It».'},
+  {id:27,c:'te',d:2,k:'Cthulhu',q:'¿Qué escritor creó a Cthulhu?',o:['H. P. Lovecraft','Edgar Allan Poe','Stephen King','Bram Stoker'],a:0,x:'H. P. Lovecraft, en 1928.'},
+  {id:28,c:'te',d:3,k:'pueblo',q:'¿En qué pueblo ocurre «Halloween» (1978), con Michael Myers?',o:['Haddonfield','Derry','Springwood','Crystal Lake'],a:0,x:'Haddonfield, Illinois.'},
+  {id:29,c:'te',d:3,k:'cinta maldita',q:'¿En qué película una cinta maldita mata a los siete días de verla?',o:['El exorcista','The Ring (El aro)','Saw','Hereditary'],a:1,x:'The Ring. La original japonesa es Ringu.'},
+  {id:30,c:'lo',d:1,k:'sigue',q:'¿Qué número sigue? 2, 4, 8, 16…',o:['24','32','30','20'],a:1,x:'Cada número es el doble del anterior: 32.'},
+  {id:31,c:'lo',d:2,k:'sigue',q:'¿Qué número sigue? 1, 1, 2, 3, 5, 8…',o:['11','12','13','15'],a:2,x:'Fibonacci: se suman los dos anteriores. 5 + 8 = 13.'},
+  {id:32,c:'lo',d:2,k:'letra',q:'¿Qué letra sigue? L, M, X, J, V, S…',o:['D','L','M','T'],a:0,x:'Son los días de la semana. Sigue D, de domingo.'},
+  {id:33,c:'lo',d:3,k:'pelota',q:'Un bate y una pelota cuestan 1,10 en total. El bate cuesta 1 más que la pelota. ¿Cuánto cuesta la pelota?',o:['0,10','0,05','0,15','0,01'],a:1,x:'0,05: el bate cuesta 1,05 y juntos suman 1,10.'},
+  {id:34,c:'lo',d:3,k:'cuánto tardan',q:'Si 5 máquinas hacen 5 piezas en 5 minutos, ¿cuánto tardan 100 máquinas en hacer 100 piezas?',o:['100 minutos','5 minutos','20 minutos','1 minuto'],a:1,x:'5 minutos: cada máquina hace una pieza cada 5 minutos.'},
+  {id:35,c:'tr',d:1,k:'28 días',q:'¿Cuántos meses del año tienen 28 días?',o:['Uno','Doce','Dos','Ninguno'],a:1,x:'¡Todos! Los doce tienen al menos 28 días.'},
+  {id:36,c:'tr',d:1,k:'pesa más',q:'¿Qué pesa más: un kilo de plumas o un kilo de hierro?',o:['El hierro','Las plumas','Pesan lo mismo','Depende del día'],a:2,x:'Un kilo es un kilo.'},
+  {id:37,c:'tr',d:1,k:'vos',q:'Tenés 3 manzanas y te llevás 2. ¿Cuántas manzanas tenés vos?',o:['1','2','3','0'],a:1,x:'Las 2 que te llevaste.'},
+  {id:38,c:'tr',d:2,k:'segundo',q:'En una carrera, adelantás al que va segundo. ¿En qué puesto quedás?',o:['Primero','Segundo','Tercero','Último'],a:1,x:'Segundo: ocupás su lugar.'},
+  {id:39,c:'tr',d:2,k:'quinta',q:'El papá de María tiene cinco hijas: Nana, Nene, Nini y Nono. ¿Cómo se llama la quinta?',o:['Nunu','María','Nina','Nadia'],a:1,x:'¡María! Estaba en la pregunta.'},
+  {id:40,c:'tr',d:2,k:'nombrarlo',q:'¿Qué se rompe con solo nombrarlo?',o:['Un espejo','El silencio','Una promesa','El hielo'],a:1,x:'El silencio.'},
+  {id:41,c:'tr',d:3,k:'sobrevivientes',q:'Un avión cae justo en la frontera entre dos países. ¿Dónde entierran a los sobrevivientes?',o:['En el país de origen','En el país de destino','En la frontera','A los sobrevivientes no se los entierra'],a:3,x:'¡Están vivos! No se entierra a nadie.'},
+  {id:42,c:'tr',d:3,k:'Moisés',q:'¿Cuántos animales de cada especie subió Moisés al arca?',o:['Dos','Siete','Uno','Ninguno'],a:3,x:'Ninguno: el del arca fue Noé, no Moisés.'},
+  {id:43,c:'lo',d:3,k:'día',q:'Un caracol sube por un pozo de 10 metros. De día sube 3 y de noche resbala 2. ¿En qué día sale?',o:['Día 10','Día 8','Día 7','Día 9'],a:1,x:'Día 8: al final del día 7 está a 7 metros y el día 8 sube los 3 que faltan.'},
 ];
 
 /* ===================== FRASES DE AKARI ===================== */
@@ -570,27 +573,63 @@ const L = {
 const RANKS = [[5000, 'Leyenda del Show', 'Sos una leyenda. Ok, oficialmente me ganaste. Por hoy.'], [3000, 'Estrella Gamer', '¡Qué partidón! Casi me hacés llorar de orgullo.'], [1500, 'Promesa del Plató', 'Nada mal. Con un poco de práctica me vas a dar pelea.'], [0, 'Aprendiz del Plató', 'Bueno… lo importante es participar. ¡Jeje!']];
 const streakLine = k => `¡Racha de ${k}!`;
 const qLine = n => `Pregunta ${n}.`;
-const eraLine = q => `Era: ${q.o[q.a]}.`;
-// Todas las frases que Akari puede decir en voz alta (scripts/build_akari_voice.py las graba)
-// Cada frase lleva un estilo de grabación: hype (festejo/burla), play (normal, con energía) o sad.
+// Guion hablado: cada frase es una lista de segmentos {t: texto, s: estilo de grabación, p: pausa después (ms), f: banderas}.
+// Estilos: hype (festejo/burla), play (normal con energía), ask (pregunta con énfasis en q.k), list (opciones, tono llano),
+// calm (suspenso), key (palabra que se revela con énfasis), sad.
+// Banderas: x = interjección (no va en estilo neutral), m = solo en estilo misterioso.
+const SEG = (t, s = 'play', p = 220, f = '') => ({t, s, p, f});
+const LETTERS = ['A.', 'Be.', 'Ce.', 'De.'];
+const optSay = o => /[.!?]$/.test(o) ? o : o + '.';
+const ansSay = q => optSay(q.o[q.a]);
+const SAY = {
+  intro: () => [SEG('¡Hola!', 'hype', 200), SEG('Soy Akari.', 'play', 250), SEG('Y esto es…', 'calm', 250), SEG('¡El Akari Game Show!', 'hype', 450),
+    SEG('Quince preguntas.', 'play', 150), SEG('Tres vidas.', 'play', 300), SEG('¿Todo listo?', 'play', 200), SEG('¡Vamos!', 'hype', 0, 'x')],
+  resume: () => [SEG('¡Volviste!', 'hype', 250), SEG('Seguimos donde quedamos.', 'play', 0)],
+  trick: () => [SEG('Atención…', 'calm', 350), SEG('Esta tiene trampa.', 'key', 300)],
+  question: (n, q, order) => [
+    ...(q.c === 'tr' ? SAY.trick() : [SEG('Atención…', 'calm', 350, 'm')]),
+    SEG(qLine(n), 'play', 300), SEG(q.q, 'ask', 450),
+    ...order.flatMap((oi, pos) => [SEG(LETTERS[pos], 'list', 90), SEG(optSay(q.o[oi]), 'list', pos < 3 ? 260 : 0)])],
+  correct: (q, streak) => [SEG('A ver…', 'calm', 400, 'x'),
+    ...(q.c === 'tr' ? [SEG(rnd(L.trickRight), 'hype', 300)]
+      : streak >= 3 ? [SEG(streakLine(Math.min(streak, 15)), 'hype', 250), SEG(rnd(L.streakTail), 'play', 300)]
+      : [SEG(rnd(L.correct), 'hype', 300)]),
+    SEG(q.x, 'play', 0)],
+  lastLife: () => [SEG('Cuidado.', 'calm', 300), SEG('Te queda…', 'calm', 300), SEG('una sola vida.', 'key', 400)],
+  wrong: (q, line, style, lastLife) => [SEG(line, style, 400), ...(lastLife ? SAY.lastLife() : []),
+    SEG('La respuesta era…', 'calm', 500), SEG(ansSay(q), 'key', 300), SEG(q.x, 'play', 0)],
+  lv2: () => [SEG('Nivel dos.', 'calm', 400), SEG('Se terminó el calentamiento.', 'play', 300), SEG('Ahora…', 'calm', 300), SEG('voy en serio.', 'key', 0)],
+  lv3: () => [SEG('Nivel tres.', 'calm', 400), SEG('El jefe final.', 'play', 300), SEG('O sea…', 'calm', 250), SEG('yo.', 'key', 300), SEG('¡A ver cómo te va!', 'hype', 0)],
+  fifty: () => [SEG('¿Comodín cincuenta y cincuenta?', 'play', 250), SEG('Dale.', 'hype', 200), SEG('Saco dos…', 'play', 300), SEG('pero te estoy mirando.', 'hype', 0)],
+  record: () => [SEG('Y es…', 'calm', 400), SEG('¡nuevo récord!', 'key', 250), SEG('Lo voy a anunciar en todos lados.', 'hype', 0)],
+  finish: rank => [SEG('¡Llegaste al final!', 'hype', 400), SEG(rank[2], rank[0] === 0 ? 'play' : 'hype', 300)],
+  lose: () => [SEG('¡Game over!', 'hype', 300), SEG('Te quedaste sin vidas…', 'sad', 300), SEG('pero la revancha está a un toque.', 'play', 0)],
+  demo: () => [SEG('Atención…', 'calm', 350, 'm'), SEG(rnd(L.test), 'hype', 0)],
+  one: (t, st = 'hype') => [SEG(t, st, 0)],
+};
+// Todos los segmentos que pueden sonar, con su estilo (scripts/build_akari_voice.py los graba)
 function spokenStyles() {
-  const out = new Map(); const add = (x, st) => (Array.isArray(x) ? x : [x]).forEach(t => { if (!out.has(t)) out.set(t, st); });
-  ['introSay', 'resume', 'correct', 'streakTail', 'laugh', 'surprised', 'trickWrong', 'trickRight', 'timeout', 'hurry', 'fifty', 'lastLife', 'lv2', 'lv3', 'poke', 'record', 'finish', 'test', 'back'].forEach(k => add(L[k], 'hype'));
-  ['sad', 'lose'].forEach(k => add(L[k], 'sad'));
-  add(L.noHear, 'play');
-  for (let k = 3; k <= 15; k++) add(streakLine(k), 'hype');
-  for (let n = 1; n <= 15; n++) add(qLine(n), 'play');
-  Q.forEach(q => { add(q.q, 'play'); add(q.x, 'play'); add(eraLine(q), 'play'); });
-  RANKS.forEach((r, i) => add(r[2], i === 3 ? 'play' : 'hype'));
-  return [...out];
+  const out = new Map();
+  const add = (segs, q) => segs.forEach(g => { const key = g.s + '|' + g.t; if (!out.has(key)) out.set(key, [g.t, g.s, g.s === 'ask' ? q.k : '']); });
+  const all = (arr, st) => arr.forEach(t => add([SEG(t, st)]));
+  add(SAY.intro()); add(SAY.resume()); add(SAY.trick()); add(SAY.lastLife()); add(SAY.lv2()); add(SAY.lv3()); add(SAY.fifty());
+  add(SAY.record()); add(SAY.lose()); add([SEG('Atención…', 'calm'), SEG('A ver…', 'calm'), SEG('La respuesta era…', 'calm'), SEG('¡Llegaste al final!', 'hype')]);
+  RANKS.forEach(r => add(SAY.finish(r).slice(1)));
+  for (let k = 3; k <= 15; k++) add([SEG(streakLine(k), 'hype')]);
+  for (let n = 1; n <= 15; n++) add([SEG(qLine(n), 'play')]);
+  LETTERS.forEach(l => add([SEG(l, 'list')]));
+  all(L.correct, 'hype'); all(L.trickRight, 'hype'); all(L.streakTail, 'play');
+  all(L.laugh, 'hype'); all(L.surprised, 'hype'); all(L.trickWrong, 'hype'); all(L.timeout, 'hype'); all(L.sad, 'sad');
+  all(L.hurry, 'hype'); all(L.poke, 'hype'); all(L.test, 'hype'); all([L.back], 'hype'); all([L.noHear], 'play');
+  Q.forEach(q => { add([SEG(q.q, 'ask')], q); q.o.forEach(o => add([SEG(optSay(o), 'list')])); add([SEG(ansSay(q), 'key'), SEG(q.x, 'play')]); });
+  return [...out.values()];
 }
-// Todas las frases que Akari puede decir en voz alta (scripts/build_akari_voice.py las graba)
-function allSpoken() { return spokenStyles().map(x => x[0]); }
+function allSpoken() { return spokenStyles().map(x => x[1] + '|' + x[0]); }
 /*SPEECH-END*/
 
 /* ===================== MEMORIA LOCAL ===================== */
 const KEY = 'akari-gameshow-v1';
-const DEF = {best: 0, games: 0, correct: 0, answered: 0, bestStreak: 0, history: [], seen: [], name: '', voice: true, voiceMode: 'natural', sfx: true, run: null};
+const DEF = {best: 0, games: 0, correct: 0, answered: 0, bestStreak: 0, history: [], seen: [], name: '', voice: true, voiceMode: 'natural', voiceStyle: 'hype', sfx: true, run: null};
 let S = Object.assign({}, DEF);
 try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
@@ -669,6 +708,14 @@ function moveAkari(slot) { $(slot).appendChild(akStage); }
 const PACK = window.AKARI_VOICE || {};
 const hasPack = Object.keys(PACK).length > 0;
 const synth = ('speechSynthesis' in window && window.SpeechSynthesisUtterance) ? window.speechSynthesis : null;
+// Estilos de locución elegibles en el menú
+const VSTYLE = {
+  neutral: {drop: 'xm', pause: .85, rate: 1, fx: false, label: 'Neutral: clara y directa.'},
+  hype: {drop: 'm', pause: 1, rate: 1, fx: false, label: 'Entusiasta: presentadora de tele.'},
+  mystery: {drop: '', pause: 1.5, rate: .92, fx: true, label: 'Misteriosa: más grave, lenta y con eco.'},
+};
+const vstyle = () => VSTYLE[S.voiceStyle] || VSTYLE.hype;
+const activeSegs = segs => segs.filter(g => ![...g.f].some(f => vstyle().drop.includes(f)));
 let voice = null, lastEngine = 'none', keepUtt = null, curSrcs = [], analyser = null, lipRAF = 0;
 const bufCache = new Map();
 function pickVoice() {
@@ -681,7 +728,8 @@ function pickVoice() {
   voiceStatus();
 }
 if (synth) { pickVoice(); try { synth.addEventListener('voiceschanged', pickVoice); } catch (e) { synth.onvoiceschanged = pickVoice; } }
-const inPack = parts => hasPack && parts.every(t => PACK[t]);
+const segKey = g => g.s + '|' + g.t;
+const inPack = segs => hasPack && segs.every(g => PACK[segKey(g)]);
 function engineFor(parts) {
   if ((S.voiceMode === 'device' || !inPack(parts)) && synth) return 'device';
   return inPack(parts) ? 'natural' : 'none';
@@ -690,7 +738,7 @@ function voiceStatus() {
   const el = $('#voiceStatus'); if (!el) return;
   if (!S.voice) { el.textContent = 'Voz apagada.'; return; }
   if (S.voiceMode === 'device' && synth) el.textContent = `Voz del celular${voice ? ' (' + voice.name.replace(/\s*\(.*\)/, '') + ')' : ''}.`;
-  else el.textContent = hasPack ? 'Voz natural de Akari.' : (synth ? 'Voz del celular.' : 'No hay voz disponible: Akari habla con texto.');
+  else el.textContent = hasPack ? 'Voz natural de Akari · ' + vstyle().label : (synth ? 'Voz del celular.' : 'No hay voz disponible: Akari habla con texto.');
 }
 // Desbloqueo de audio en el primer toque (iOS/Android lo exigen)
 let unlocked = false;
@@ -745,14 +793,29 @@ function lipStart() {
   };
   lipRAF = requestAnimationFrame(loop);
 }
-function playNatural(parts, id, done, fail) {
+let fxIn = null;
+function fxChain(a, out) {
+  // eco suave y filtro para el estilo misterioso
+  if (fxIn) return fxIn;
+  try {
+    const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5200;
+    const dl = a.createDelay(1); dl.delayTime.value = .16; const fb = a.createGain(); fb.gain.value = .28; const wet = a.createGain(); wet.gain.value = .26;
+    lp.connect(out); lp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(out);
+    fxIn = lp;
+  } catch (e) { fxIn = out; }
+  return fxIn;
+}
+function playNatural(segs, id, done, fail) {
   const a = ac(); if (!a) return fail();
-  Promise.all(parts.map(getBuf)).then(bufs => {
+  Promise.all(segs.map(g => getBuf(segKey(g)))).then(bufs => {
     if (id !== sayId) return;
     if (!analyser) { try { analyser = a.createAnalyser(); analyser.fftSize = 512; analyser.connect(a.destination); } catch (e) { analyser = null; } }
-    const out = analyser || a.destination;
+    const vs = vstyle(), base = analyser || a.destination, out = vs.fx ? fxChain(a, base) : base;
     let t = a.currentTime + .04; curSrcs = [];
-    bufs.forEach(b => { const src = a.createBufferSource(); src.buffer = b; src.connect(out); src.start(t); t += b.duration + .14; curSrcs.push(src); });
+    bufs.forEach((b, i) => {
+      const src = a.createBufferSource(); src.buffer = b; src.playbackRate.value = vs.rate; src.connect(out); src.start(t);
+      t += b.duration / vs.rate + (segs[i].p || 0) * vs.pause / 1000; curSrcs.push(src);
+    });
     lastEngine = 'natural'; lipStart();
     clearTimeout(sayFallback); sayFallback = setTimeout(done, (t - a.currentTime) * 1000 + 150);
   }, fail);
@@ -775,15 +838,16 @@ function speakDevice(spoken, id, done, fail) {
   lastEngine = 'device'; talkStart();
   clearTimeout(sayFallback); sayFallback = setTimeout(done, spoken.length * 95 + 4000);
 }
-// say(texto en el globo, {parts: frases a decir en voz alta, mood})
+// say(texto en el globo, {segs: segmentos a decir en voz alta, mood, onDone})
 function say(text, opt = {}) {
   const id = ++sayId;
   if (opt.mood) setMood(opt.mood);
   bubble(text);
   clearTimeout(sayFallback);
-  const parts = opt.parts || [text];
-  const spoken = parts.join(' ').replace(/[«»]/g, '');
-  const done = () => { if (id !== sayId) return; clearTimeout(sayFallback); talkStop(); };
+  const segs = activeSegs(opt.segs || SAY.one(text));
+  const parts = segs;
+  const spoken = segs.map(g => g.t).join(' ').replace(/[«»]/g, '');
+  const done = () => { if (id !== sayId) return; clearTimeout(sayFallback); talkStop(); if (opt.onDone) opt.onDone(); };
   const silent = () => { if (id !== sayId) return; lastEngine = 'none'; talkStart(); clearTimeout(sayFallback); sayFallback = setTimeout(done, Math.min(5000, spoken.length * 42 + 300)); };
   stopAudio();
   if (!S.voice || micOn) return silent();
@@ -831,7 +895,7 @@ if (inViewer) {
 }
 function micStart() {
   if (micOn) { micStop(); return; }
-  hush();
+  hush(); kickTimer();
   heardEl.textContent = '';
   if (micMode === 'dict' && dict) {
     dict.start(dictLangOk ? {language: 'es'} : undefined).catch(err => {
@@ -957,11 +1021,13 @@ function startGame(resume) {
   show('game'); moveAkari('#gameSlot'); state = 'intro';
   renderHud();
   if (!resume) {
-    say(L.introSay.replace('¡Hola!', `¡Hola, ${run.name}!`), {mood: 'happy', parts: [L.introSay]}); react('jump'); SFX.fanfare(); confetti(60);
-    setTimeout(() => showQuestion(), 2600);
+    const go = once(() => { if (state === 'intro') showQuestion(); });
+    say(`¡Hola, ${run.name}! Soy Akari. Y esto es… ¡el Akari Game Show! Quince preguntas. Tres vidas. ¿Todo listo? ¡Vamos!`, {mood: 'happy', segs: SAY.intro(), onDone: () => setTimeout(go, 250)});
+    react('jump'); SFX.fanfare(); confetti(60); setTimeout(go, 12000);
   } else {
-    say(L.resume.replace('¡Volviste!', `¡Volviste, ${run.name}!`), {mood: 'smug', parts: [L.resume]});
-    setTimeout(() => showQuestion(), 1500);
+    const go = once(() => { if (state === 'intro') showQuestion(); });
+    say(`¡Volviste, ${run.name}! Seguimos donde quedamos.`, {mood: 'smug', segs: SAY.resume(), onDone: () => setTimeout(go, 200)});
+    setTimeout(go, 6000);
   }
 }
 function renderHud() {
@@ -981,8 +1047,9 @@ function showQuestion() {
   if (run.i > 0 && run.i % PER_LEVEL === 0 && !cur.bannered) {
     cur.bannered = true; state = 'banner';
     banner(`NIVEL ${lv}`, LEVELS[lv].toUpperCase()); SFX.level();
-    say(lv === 2 ? L.lv2 : L.lv3, {mood: 'fired'}); react('lean');
-    setTimeout(() => presentQuestion(lv), 2400);
+    const t0 = performance.now(), go = once(() => { if (state === 'banner') presentQuestion(lv); });
+    say(lv === 2 ? L.lv2 : L.lv3, {mood: 'fired', segs: lv === 2 ? SAY.lv2() : SAY.lv3(), onDone: () => setTimeout(go, Math.max(200, 2400 - (performance.now() - t0)))});
+    react('lean'); setTimeout(go, 9000);
     return;
   }
   presentQuestion(lv);
@@ -1007,13 +1074,22 @@ function presentQuestion(lv) {
   $('#explain').hidden = true; $('#nextBtn').hidden = true; heardEl.textContent = '';
   renderHud(); micUI();
   setMood(q.c === 'tr' ? 'smug' : 'think'); react('lean');
-  say(`${qLine(run.i + 1)} ${q.q}`, {mood: q.c === 'tr' ? 'smug' : 'neutral', parts: [qLine(run.i + 1), q.q]});
-  SFX.whoosh();
-  startTimer(TIME);
+  // El reloj arranca cuando Akari termina de leer la pregunta y las opciones (como mucho a los 16 s)
+  const thisQ = cur, go = once(() => { if (state === 'asking' && cur === thisQ && !timerOn) startTimer(TIME); });
+  resetTimer(TIME);
+  say(`${q.c === 'tr' ? 'Atención… esta tiene trampa. ' : ''}${qLine(run.i + 1)} ${q.q}`, {mood: q.c === 'tr' ? 'smug' : 'neutral', segs: SAY.question(run.i + 1, q, cur.order), onDone: go});
+  SFX.whoosh(); setTimeout(go, 16000);
 }
-let tRAF = 0, tStart = 0, tDur = 0, lastSec = 0, hurried = false;
+let tRAF = 0, tStart = 0, tDur = 0, lastSec = 0, hurried = false, timerOn = false;
+const once = fn => { let did = false; return (...a) => { if (!did) { did = true; fn(...a); } }; };
+// Si el jugador interrumpe la lectura (50:50, micrófono), el reloj arranca ya
+function kickTimer() { if (state === 'asking' && !timerOn) startTimer(TIME); }
+function resetTimer(sec) {
+  cancelAnimationFrame(tRAF); timerOn = false; tDur = sec * 1000;
+  $('#timerFill').style.transform = 'scaleX(1)'; $('#timerNum').textContent = sec; $('#timer').classList.remove('danger');
+}
 function startTimer(sec) {
-  cancelAnimationFrame(tRAF); tDur = sec * 1000; tStart = performance.now(); lastSec = sec; hurried = false;
+  cancelAnimationFrame(tRAF); tDur = sec * 1000; tStart = performance.now(); lastSec = sec; hurried = false; timerOn = true;
   const fill = $('#timerFill'), num = $('#timerNum'), tm = $('#timer');
   const loop = () => {
     const left = Math.max(0, tDur - (performance.now() - tStart)); const s = Math.ceil(left / 1000);
@@ -1024,7 +1100,7 @@ function startTimer(sec) {
   };
   tRAF = requestAnimationFrame(loop);
 }
-function stopTimer() { cancelAnimationFrame(tRAF); return Math.max(0, tDur - (performance.now() - tStart)) / 1000; }
+function stopTimer() { cancelAnimationFrame(tRAF); if (!timerOn) return tDur / 1000; timerOn = false; return Math.max(0, tDur - (performance.now() - tStart)) / 1000; }
 function timeUp() { if (state === 'asking') answer(-1); }
 
 function answer(pos) {
@@ -1043,11 +1119,10 @@ function answer(pos) {
     run.score += pts;
     const sc = $('#hudScore'); sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump'); scorePop('+' + pts, sc);
     SFX.correct(); const r = btns[correctPos].getBoundingClientRect(); confetti(run.streak >= 3 ? 160 : 90, r.left + r.width / 2, r.top);
-    const lp = q.c === 'tr' ? [rnd(L.trickRight)] : run.streak >= 3 ? [streakLine(Math.min(run.streak, 15)), rnd(L.streakTail)] : [rnd(L.correct)];
-    line = lp.join(' ');
+    const segs = SAY.correct(q, run.streak);
     setMood('happy'); react('jump');
     ex.className = 'explain'; ex.innerHTML = '<b>¡Correcto! +' + pts + '</b> '; ex.append(q.x);
-    say(line + ' ' + q.x, {mood: 'happy', parts: [...lp, q.x]});
+    say(segs.filter(g => !g.f).map(g => g.t).join(' '), {mood: 'happy', segs});
   } else {
     run.streak = 0; run.lives--;
     const hearts = $$('#hudLives i'); const lost = hearts[run.lives]; if (lost) { lost.classList.add('lost', 'pop'); }
@@ -1057,11 +1132,12 @@ function answer(pos) {
     if (pos < 0) { line = rnd(L.timeout); m = 'surprised'; kind = 'gasp'; }
     else if (q.c === 'tr') { line = rnd(L.trickWrong); m = 'laugh'; kind = 'shake'; }
     else { const p = Math.random(); if (p < .45) { line = rnd(L.laugh); m = 'laugh'; kind = 'shake'; } else if (p < .8) { line = rnd(L.surprised); m = 'surprised'; kind = 'gasp'; } else { line = rnd(L.sad); m = 'sad'; kind = 'lean'; } }
-    const lp = [line]; if (run.lives === 1) lp.push(L.lastLife); line = lp.join(' ');
+
     react(kind);
     const right = q.o[q.a];
     ex.className = 'explain bad'; ex.innerHTML = '<b>' + (pos < 0 ? '¡Tiempo!' : 'Incorrecto.') + '</b> '; ex.append(`Era «${right}». ${q.x}`);
-    say(`${line} ${eraLine(q)} ${q.x}`, {mood: m, parts: [...lp, eraLine(q), q.x]});
+    const segs = SAY.wrong(q, line, m === 'sad' ? 'sad' : 'hype', run.lives === 1);
+    say(segs.map(g => g.t).join(' '), {mood: m, segs});
   }
   S.bestStreak = Math.max(S.bestStreak, run.maxStreak);
   run.i++; save();
@@ -1074,11 +1150,11 @@ function answer(pos) {
 function next() { if (state !== 'revealed') return; SFX.click(); hush(); showQuestion(); }
 function fifty() {
   if (state !== 'asking' || !run.fifty) return;
-  run.fifty = false; save();
+  run.fifty = false; save(); kickTimer();
   const correctPos = cur.order.indexOf(cur.q.a);
   const wrong = shuffle([0, 1, 2, 3].filter(p => p !== correctPos)).slice(0, 2);
   const btns = $$('.ans'); wrong.forEach(p => { removed.add(p); btns[p].classList.add('removed'); btns[p].disabled = true; });
-  SFX.whoosh(); say(L.fifty, {mood: 'smug'}); react('lean'); renderHud();
+  SFX.whoosh(); say(L.fifty, {mood: 'smug', segs: SAY.fifty()}); react('lean'); renderHud();
 }
 function endGame() {
   state = 'end'; stopTimer(); if (micOn) micStop();
@@ -1098,11 +1174,10 @@ function endGame() {
   const el = $('#endScore'); const t0 = performance.now(), D = reduceMotion ? 1 : 1200;
   (function up() { const now = performance.now(); const k = Math.min(1, (now - t0) / D); el.textContent = Math.round(r.score * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(up); })();
   const lost = r.lives <= 0;
-  const lp = lost ? [L.lose] : [L.finish, rank[2]];
-  if (newRecord && r.score > 0) lp.push(L.record);
-  const line = lp.join(' ');
-  if (lost && !newRecord) { SFX.lose(); say(line, {mood: 'sad', parts: lp}); react('lean'); }
-  else { SFX.fanfare(); confetti(200); say(line, {mood: newRecord || r.score >= 3000 ? 'happy' : 'smug', parts: lp}); react('jump'); }
+  const segs = [...(lost ? SAY.lose() : SAY.finish(rank)), ...(newRecord && r.score > 0 ? SAY.record() : [])];
+  const line = segs.map(g => g.t).join(' ');
+  if (lost && !newRecord) { SFX.lose(); say(line, {mood: 'sad', segs}); react('lean'); }
+  else { SFX.fanfare(); confetti(200); say(line, {mood: newRecord || r.score >= 3000 ? 'happy' : 'smug', segs}); react('jump'); }
   $('#againBtn').focus({preventScroll: true});
 }
 function toTitle() {
@@ -1133,13 +1208,21 @@ restartBtn.addEventListener('click', () => {
 });
 
 /* toggles */
-function syncVoiceMode() { $$('.seg [data-vm]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vm === (S.voiceMode === 'device' ? 'device' : 'natural'))); voiceStatus(); }
+function syncVoiceMode() {
+  $$('.seg [data-vm]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vm === (S.voiceMode === 'device' ? 'device' : 'natural')));
+  $$('.seg [data-vs]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vs === (VSTYLE[S.voiceStyle] ? S.voiceStyle : 'hype')));
+  voiceStatus();
+}
+$$('.seg [data-vs]').forEach(b => b.addEventListener('click', () => {
+  S.voiceStyle = b.dataset.vs; save(); voiceOn(); syncVoiceMode();
+  const d = SAY.demo(); say(d.map(g => g.t).join(' '), {mood: b.dataset.vs === 'mystery' ? 'smug' : 'happy', segs: d}); react('jump');
+}));
 function voiceOn() { if (!S.voice) { S.voice = true; save(); syncToggles(); } }
 $$('.seg [data-vm]').forEach(b => b.addEventListener('click', () => {
   S.voiceMode = b.dataset.vm; save(); voiceOn(); syncVoiceMode();
-  say(L.test[0], {mood: 'happy'}); react('jump');
+  const d = SAY.demo(); say(d.map(g => g.t).join(' '), {mood: 'happy', segs: d}); react('jump');
 }));
-$('#testVoice').addEventListener('click', () => { voiceOn(); say(rnd(L.test), {mood: 'happy'}); react('jump'); });
+$('#testVoice').addEventListener('click', () => { voiceOn(); const d = SAY.demo(); say(d.map(g => g.t).join(' '), {mood: 'happy', segs: d}); react('jump'); });
 function syncToggles() { ['tVoice', 'hVoice'].forEach(id => $('#' + id).setAttribute('aria-pressed', S.voice)); ['tSfx', 'hSfx'].forEach(id => $('#' + id).setAttribute('aria-pressed', S.sfx)); }
 function toggleVoice() { S.voice = !S.voice; if (!S.voice) hush(); save(); syncToggles(); voiceStatus(); if (S.voice) say(L.back, {mood: 'happy'}); }
 function toggleSfx() { S.sfx = !S.sfx; save(); syncToggles(); if (S.sfx) SFX.click(); }
@@ -1155,7 +1238,7 @@ $('#homeBtn').addEventListener('click', () => { SFX.click(); toTitle(); });
 $('#againBtn').addEventListener('click', () => { SFX.click(); startGame(false); });
 $('#menuBtn').addEventListener('click', () => { SFX.click(); toTitle(); });
 akWrap.addEventListener('click', () => {
-  if (state === 'revealed' || state === 'intro' || state === 'banner') return;
+  if (state === 'revealed' || state === 'intro' || state === 'banner' || (state === 'asking' && !timerOn)) return;
   const prev = mood; ac(); SFX.click();
   say(rnd(L.poke), {mood: rnd(['surprised', 'smug', 'fired'])}); react('gasp');
   setTimeout(() => { if (state === 'asking' || state === 'title' || state === 'end') setMood(prev); }, 1600);
@@ -1176,7 +1259,7 @@ addEventListener('keydown', e => {
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (synth) synth.cancel(); if (micOn) micStop(); } });
 
 // Exponer un pequeño gancho para pruebas automatizadas
-window.__akari = {get engine() { return lastEngine; }, engineFor, allSpoken, PACK, get state() { return state; }, get run() { return run; }, get cur() { return cur; }, matchAnswer, Q};
+window.__akari = {get engine() { return lastEngine; }, get timerOn() { return timerOn; }, engineFor, allSpoken, PACK, SAY, get state() { return state; }, get run() { return run; }, get cur() { return cur; }, matchAnswer, Q};
 
 toTitle();
 })();
