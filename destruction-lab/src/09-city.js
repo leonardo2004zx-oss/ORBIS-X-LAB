@@ -2,6 +2,7 @@
 const PALETTE = [0xf1e3cf, 0xd9c2a5, 0xc9d3dc, 0xe6d6c3, 0xbfc7b6, 0xe8cdb8, 0xd4d7de, 0xf0e6d8, 0xc7b8a6, 0xdcc9d0];
 const GLASS_TINTS = [0xd8e6f0, 0xc9dccf, 0xe4dccc, 0xc6cfe0, 0xdfe7e9];
 const BRICK_TINTS = [0xffffff, 0xf0d8c8, 0xe0c0b0, 0xd8d0c8];
+const METAL_TINTS = [0xffffff, 0xdfe6ee, 0xe8dccb, 0xc9d4c8];
 let cityRand = 1;
 function srand() { cityRand = (cityRand * 16807) % 2147483647; return (cityRand - 1) / 2147483646; }
 const pickOf = (arr) => arr[Math.floor(srand() * arr.length)];
@@ -15,7 +16,7 @@ const pickOf = (arr) => arr[Math.floor(srand() * arr.length)];
 function addBuilding(cx, cz, wMeters, dMeters, floors, colorHex, type = 'tower') {
   const bs = Q.bs, fh = 3, gap = 0.012;
   const nx = Math.max(1, Math.round(wMeters / bs)), nz = Math.max(1, Math.round(dMeters / bs));
-  const pool = type === 'glass' ? glassBlocks : type === 'brick' ? brickBlocks : blocks;
+  const pool = type === 'glass' ? glassBlocks : type === 'brick' ? brickBlocks : type === 'stepped' ? stoneBlocks : type === 'lshape' || type === 'metal' ? metalBlocks : blocks;
   if (pool.items.length + nx * nz * floors > pool.cap) return false;
   const base = new THREE.Color(colorHex);
   const lobby = base.clone().multiplyScalar(0.62);
@@ -46,6 +47,11 @@ function addBuilding(cx, cz, wMeters, dMeters, floors, colorHex, type = 'tower')
     if (cell[0] === 'ac') { addBlock(cell[1], cell[3] + 0.36, cell[2], 1.2, 0.7, 0.9, grey, true, plainBlocks); continue; }
     if (srand() < (type === 'brick' ? 0.15 : 0.35)) addBlock(cell[0] + rnd(-0.3, 0.3), roofY + 0.35, cell[1] + rnd(-0.3, 0.3), 1.1, 0.7, 0.8, grey.clone().multiplyScalar(0.9 + srand() * 0.2), true, plainBlocks);
   }
+  if ((type === 'tower' || type === 'metal') && roofCells.length > 3 && srand() < 0.6) { // elevator / stair housing
+    const [x, z] = roofCells[Math.floor(srand() * roofCells.length)];
+    addBlock(x, roofY + 1.1, z, Math.min(bs, 2) - 0.1, 2.2, Math.min(bs, 2) - 0.1, grey.clone().multiplyScalar(1.05), true, plainBlocks);
+  }
+  if (type === 'tower' && roofCells.length > 2 && srand() < 0.5) { const [x, z] = roofCells[roofCells.length - 1]; addBlock(x, roofY + 1.6, z, 0.12, 3.2, 0.12, dark, true, plainBlocks); addBlock(x, roofY + 3.25, z, 0.9, 0.1, 0.9, dark, true, plainBlocks); }
   if (type === 'glass' && roofCells.length) { const [x, z] = roofCells[Math.floor(roofCells.length / 2)]; const h = 3 + srand() * 4; addBlock(x, roofY + h / 2, z, 0.3, h, 0.3, dark, true, plainBlocks); }
   if (type === 'brick' && roofCells.length) { const [x, z] = roofCells[0]; addBlock(x, roofY + 0.9, z, 1.6, 1.8, 1.6, new THREE.Color(0x6e5848), true, plainBlocks); }
   return true;
@@ -107,7 +113,7 @@ function addLamp(x, z, facing) {
   const obj = new THREE.Group();
   const pole = new THREE.Mesh(lampGeo, propMat); pole.castShadow = true; obj.add(pole);
   obj.add(new THREE.Mesh(lampHeadGeo, lampMat));
-  addProp(body, collider, obj);
+  addLampFX(addProp(body, collider, obj));
 }
 
 const CAR_COLORS = [0xc8372d, 0x2f5fa8, 0xe3e3e0, 0x2a2d33, 0x3f8f6b, 0x8a99a8, 0x7a3b5c, 0xd9d4c4];
@@ -181,15 +187,15 @@ function populateCity() {
     let x = x0 + 2.5;
     while (x < x1 - 7) {
       const roll = srand();
-      const type = roll < 0.24 ? 'glass' : roll < 0.45 ? 'tower' : roll < 0.66 ? 'brick' : roll < 0.82 ? 'stepped' : 'lshape';
+      const type = roll < 0.22 ? 'glass' : roll < 0.4 ? 'tower' : roll < 0.58 ? 'brick' : roll < 0.72 ? 'stepped' : roll < 0.86 ? 'metal' : 'lshape';
       let w = snap(type === 'stepped' || (type === 'glass' && srand() < 0.3) ? 8 : 6);
       if (x + w > x1 - 2.5) w = snap(x1 - 2.5 - x);
       if (w < 6) break;
       // small plazas break up the rows
       if (srand() < 0.2 && x1 - x0 > 20) { addTree(x + 2, front + sgn * 4); addTree(x + 4, front + sgn * 8); x += 7; continue; }
       const d = snap(type === 'lshape' || type === 'stepped' ? 8 : 6);
-      const floors = type === 'glass' ? 9 + Math.floor(srand() * 6) : type === 'brick' ? 3 + Math.floor(srand() * 3) : type === 'stepped' ? 7 + Math.floor(srand() * 4) : 4 + Math.floor(srand() * 5);
-      const color = type === 'glass' ? pickOf(GLASS_TINTS) : type === 'brick' ? pickOf(BRICK_TINTS) : pickOf(PALETTE);
+      const floors = type === 'metal' ? 5 + Math.floor(srand() * 5) : type === 'glass' ? 9 + Math.floor(srand() * 6) : type === 'brick' ? 3 + Math.floor(srand() * 3) : type === 'stepped' ? 7 + Math.floor(srand() * 4) : 4 + Math.floor(srand() * 5);
+      const color = type === 'glass' ? pickOf(GLASS_TINTS) : type === 'brick' ? pickOf(BRICK_TINTS) : type === 'metal' ? pickOf(METAL_TINTS) : pickOf(PALETTE);
       addBuilding(x + w / 2, front + sgn * (2.5 + d / 2), w, d, floors, color, type);
       // a second, lower row behind on deep lots
       if (Math.abs(z1 - z0) > 22 && srand() < 0.4) {

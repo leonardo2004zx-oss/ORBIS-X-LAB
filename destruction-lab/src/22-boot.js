@@ -7,6 +7,10 @@ async function boot() {
     throw e;
   }
   eventQueue = new RAPIER.EventQueue(true);
+  $('#loader-msg').textContent = 'Preparando materiales y efectos…';
+  await initPost();
+  buildHDMaterials();
+  buildDecor();
   applyRenderQuality();
   applyFxLimit();
   controls.radius = controls.goal.radius;
@@ -14,7 +18,7 @@ async function boot() {
   populateCity();
   syncAll(true);
   setTool('meteor');
-  syncHourUI(); refreshRunning();
+  syncHourUI(); refreshRunning(); applyGfx(true);
   $('#loader').hidden = true;
   requestAnimationFrame((t) => { last = t; frame(t); });
 }
@@ -49,5 +53,10 @@ window.__lab = {
   velStats: () => { const v = []; for (const it of allBlocks()) if (!it.body.isSleeping()) { const l = it.body.linvel(), a = it.body.angvel(); v.push([Math.hypot(l.x, l.y, l.z), Math.hypot(a.x, a.y, a.z), it.still || 0]); } v.sort((a, b) => a[0] - b[0]); const q = (k) => v.length ? v[Math.floor(k * (v.length - 1))].map((x) => +x.toFixed(3)) : null; return { n: v.length, p10: q(0.1), p50: q(0.5), p90: q(0.9) }; },
   traffic: () => props.filter((p) => p.drive).length,
   shockwaves: () => shockwaves.length,
+  renderMs: () => { const gl = renderer.getContext(); gl.finish(); const t0 = performance.now(); renderFrame(); gl.finish(); const a = performance.now() - t0; const t1 = performance.now(); renderer.render(scene, camera); gl.finish(); return { composer: +a.toFixed(1), direct: +(performance.now() - t1).toFixed(1) }; },
+  prof: () => { const gl = renderer.getContext(), px = new Uint8Array(4); const sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const T = (f) => { sync(); const t = performance.now(); f(); sync(); return +(performance.now() - t).toFixed(1); };
+    return { particles: T(() => { dust.update(0.016); fire.update(0.016); }), sparks: T(() => sparks.update(0.016)), sync: T(() => syncAll(false)), light: T(() => updateLighting(0.016)), step: T(() => world.step(eventQueue)), renderDirect: T(() => renderer.render(scene, camera)), renderFrame: T(() => renderFrame()) }; },
+  gfx: (on) => { if (on !== undefined) setGfx(on); return { enhanced: gfx.enhanced, post: gfx.ready && gfx.post, env: !!scene.environment, rubble: rubble.count }; },
 };
 boot();

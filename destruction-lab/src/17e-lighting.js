@@ -1,11 +1,12 @@
 /* ------------------------------------------------------------------ day/night cycle + storm/ash lighting */
+const fogLin = scene.fog, fogExp = new THREE.FogExp2(0xcbd7e2, 0.0035);
 const env = { hour: 15, auto: false, ash: 0, ashTarget: 0, night: 0 };
 const C = (h) => new THREE.Color(h);
 const LIGHT_PRESETS = {
   night: { top: C(0x060b1a), mid: C(0x1a2540), bot: C(0x0b0f17), fog: C(0x111a2b), sun: 0.45, sunCol: C(0x9fb6e8), hemi: 0.5, sky: C(0x5a6f99), ground: C(0x1a1814), night: 1 },
   dawn: { top: C(0x2d4778), mid: C(0xf2a77a), bot: C(0x5e5050), fog: C(0xd9a588), sun: 1.7, sunCol: C(0xffb27a), hemi: 0.85, sky: C(0xffd2b0), ground: C(0x5a4a40), night: 0.35 },
   day: { top: C(0x3f78c4), mid: C(0xd6e3ee), bot: C(0xa9b4bc), fog: C(0xcbd7e2), sun: 2.7, sunCol: C(0xfff0d8), hemi: 1.15, sky: C(0xe2eeff), ground: C(0x6a5b48), night: 0 },
-  dusk: { top: C(0x2a3466), mid: C(0xff8a5a), bot: C(0x4a3a40), fog: C(0xc9876a), sun: 1.5, sunCol: C(0xff9a5a), hemi: 0.75, sky: C(0xffb89a), ground: C(0x4a3a34), night: 0.45 },
+  dusk: { top: C(0x34427a), mid: C(0xf2a07a), bot: C(0x5a4a4c), fog: C(0xbfa08e), sun: 1.6, sunCol: C(0xffb07a), hemi: 0.8, sky: C(0xf0c0a8), ground: C(0x4a4038), night: 0.35 },
 };
 const LIGHT_KEYS = [[0, 'night'], [5, 'night'], [6.5, 'dawn'], [8.5, 'day'], [16.5, 'day'], [18.5, 'dusk'], [20, 'night'], [24, 'night']];
 const ASH = { sky: C(0x4a3a32), fog: C(0x6a5040) };
@@ -38,8 +39,8 @@ function updateLighting(dt) {
   env.night = night;
   const sky = scene.userData.skyMat.uniforms;
   for (const k of ['top', 'mid', 'bot']) sky[k].value.copy(cur[k]).lerp(SKY1[k], d * (1 - night * 0.6)).lerp(ASH.sky, ash).lerp(FLASH, skyFlash * 0.7);
-  scene.fog.color.copy(cur.fog).lerp(SKY1.fog, d * (1 - night * 0.6)).lerp(ASH.fog, ash);
-  scene.fog.near = 110 - d * 50 - ash * 50; scene.fog.far = 300 - d * 120 - ash * 110;
+  fogLin.color.copy(cur.fog).lerp(SKY1.fog, d * (1 - night * 0.6)).lerp(ASH.fog, ash);
+  fogLin.near = 110 - d * 50 - ash * 50; fogLin.far = 300 - d * 120 - ash * 110;
   hemi.color.copy(cur.sky); hemi.groundColor.copy(cur.ground);
   hemi.intensity = cur.hemi * (1 - 0.55 * d) * (1 - 0.35 * ash) + skyFlash * 2.5;
   sun.color.copy(cur.sunCol); if (ash > 0.05) sun.color.lerp(C(0xff9a6a), ash * 0.6);
@@ -58,4 +59,28 @@ function updateLighting(dt) {
   const fl = 1 - 0.6 * Math.max(d, night * 0.9);
   for (const m of funnel.children) m.material.uniforms.uLight.value = fl;
   renderer.toneMappingExposure = 1.05 + night * 0.25;
+  // enhanced look: image-based ambient light, deeper fog, bloom and grading per time of day
+  const lightLevel = THREE.MathUtils.clamp((hemi.intensity + sun.intensity * 0.35) / 2.1, 0.12, 1.15);
+  dust.mat.uniforms.uLight.value = lightLevel;
+  if (gfx.enhanced) {
+    hemi.intensity *= 0.42 + night * 0.3;
+    sun.intensity *= 1.1;
+    if (scene.fog !== fogExp) scene.fog = fogExp;
+    fogExp.color.copy(fogLin.color); fogExp.density = 0.0034 + d * 0.004 + ash * 0.006 + cur.night * 0.0006;
+    const dusk = Math.max(0, 1 - Math.abs(env.hour - 18.6) / 1.6) + Math.max(0, 1 - Math.abs(env.hour - 6.6) / 1.4);
+    if (gfx.bloom) { gfx.bloom.strength = 0.32 + night * 0.28 + d * 0.15 + ash * 0.08; gfx.bloom.threshold = 0.9 - night * 0.12; gfx.bloom.radius = 0.45; }
+    if (gfx.grade) {
+      const tint = gfx.grade.uniforms.uTint.value.setRGB(1.0, 0.99, 0.97);
+      tint.lerp(C(0xffe2cc), Math.min(1, dusk) * 0.3).lerp(C(0xd8e2ff), night * 0.35).lerp(C(0xe8c4a8), ash * 0.25);
+      gfx.grade.uniforms.uVignette.value = 0.3 + night * 0.2 + d * 0.15;
+      gfx.grade.uniforms.uContrast.value = 1.06 + night * 0.06;
+    }
+    updateEnvironment(false);
+    fire.mat.uniforms.uBoost.value = 2.2;
+  } else {
+    if (scene.fog !== fogLin) scene.fog = fogLin;
+    if (scene.environment) scene.environment = null;
+    fire.mat.uniforms.uBoost.value = 1;
+  }
+  updateDecor(lit, d);
 }

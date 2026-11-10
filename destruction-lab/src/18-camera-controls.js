@@ -70,6 +70,7 @@ window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
   const map = { '1': 'camera', '2': 'meteor', '3': 'blast', '4': 'quake', '5': 'tornado', '6': 'tsunami', '7': 'storm', '8': 'volcano', '9': 'blackhole', '0': 'build' };
   if (e.key === 'l' || e.key === 'L') toggleSlowmo();
+  if (e.key === 'g' || e.key === 'G') setGfx(!gfx.enhanced);
   if (map[e.key]) setTool(map[e.key]);
   if (e.key === 'r' || e.key === 'R') resetCity();
 });

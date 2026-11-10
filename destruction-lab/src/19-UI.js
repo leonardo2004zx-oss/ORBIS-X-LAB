@@ -168,3 +168,20 @@ $('#opt-shadows').addEventListener('change', (e) => { settings.shadows = e.targe
 
 $('#btn-reset').addEventListener('click', () => { Sfx.init(); resetCity(); });
 
+
+/* graphics: classic ("antes") vs enhanced ("después") on the same scene */
+function applyGfx(silent) {
+  applyGfxMaterials(); applyGfxDecor();
+  dust.hd = fire.hd = gfx.enhanced;
+  dust.mat.uniforms.uTextured.value = fire.mat.uniforms.uTextured.value = gfx.enhanced ? 1 : 0;
+  if (!gfx.enhanced) sparks.clear();
+  sun.shadow.radius = gfx.enhanced ? 3 : 1;
+  if (gfx.enhanced) updateEnvironment(true); else scene.environment = null;
+  $('#btn-gfx').setAttribute('aria-pressed', String(gfx.enhanced));
+  $('#btn-gfx').querySelector('span').textContent = gfx.enhanced ? 'Después' : 'Antes';
+  $('#opt-post').checked = gfx.post; $('#opt-post').disabled = !gfx.enhanced || !gfx.ready || !Q.post;
+  if (!silent) toast(gfx.enhanced ? 'Gráficos mejorados (después)' : 'Gráficos clásicos (antes)');
+}
+function setGfx(on) { gfx.enhanced = on; store.set('gfx', on); applyGfx(); }
+$('#btn-gfx').addEventListener('click', () => setGfx(!gfx.enhanced));
+$('#opt-post').addEventListener('change', (e) => { gfx.post = e.target.checked; store.set('post', gfx.post); });

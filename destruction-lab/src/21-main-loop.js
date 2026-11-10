@@ -36,12 +36,17 @@ function syncPool(pool) {
       } else it.still = 0;
     }
     if (!sleeping) awakeCount++;
+    // settled debris on the ground becomes static rubble: it stays visible but costs no physics
+    if (sleeping && pool === debris && gfx.enhanced && simTime - it.born > 4) {
+      const t = b.translation();
+      if (t.y < 1.6 && quake.amp < 0.01) { addRubble(it); removeItem(it); changed = true; continue; }
+    }
     if (!sleeping || it.dirty) {
       const t = b.translation();
       if (t.y < -25) { removeItem(it); changed = true; continue; }
       if (!sleeping && collapseDust > 0 && t.y < 2.5 && it.kind === 'block') {
         const v = b.linvel();
-        if (v.y < -4) { collapseDust--; const g = rnd(0.5, 0.62); dust.emit(t.x, 0.6, t.z, rnd(-3, 3), rnd(0.5, 2), rnd(-3, 3), rnd(2.5, 4.5), rnd(2.5, 4), g + 0.05, g + 0.02, g - 0.02, 0.6, 1.8, 1); }
+        if (v.y < -4) { collapseDust--; const g = rnd(0.5, 0.62), hd = gfx.enhanced ? 1.6 : 1; for (let q = 0; q < (gfx.enhanced ? 2 : 1); q++) dust.emit(t.x + rnd(-1, 1), 0.6, t.z + rnd(-1, 1), rnd(-4, 4), rnd(0.5, 2.5), rnd(-4, 4), rnd(3, 6) * hd, rnd(2.5, 4) * hd, g + 0.05, g + 0.02, g - 0.02, 0.65, 1.8 * hd, 0.8); }
       }
       const r = b.rotation();
       tmpV.set(t.x, t.y, t.z); tmpQ.set(r.x, r.y, r.z, r.w); tmpS.set(it.sx, it.sy, it.sz);
@@ -54,7 +59,7 @@ function syncPool(pool) {
 }
 let collapseDust = 0;
 function syncAll(force) {
-  awakeCount = 0; collapseDust = 6;
+  awakeCount = 0; collapseDust = gfx.enhanced ? 10 : 6;
   if (force) { for (const p of BLOCK_POOLS) for (const it of p.items) it.dirty = true; for (const it of debris.items) it.dirty = true; }
   for (const p of BLOCK_POOLS) syncPool(p);
   syncPool(debris);
@@ -130,7 +135,7 @@ function frame(now) {
   // keep the shadow frustum centered on what you look at; light comes from the sun (or the moon)
   sun.position.set(controls.target.x + sunDir.x * 90, sunDir.y * 90, controls.target.z + sunDir.z * 90);
   sun.target.position.set(controls.target.x, 0, controls.target.z); sun.target.updateMatrixWorld();
-  renderer.render(scene, camera);
+  renderFrame();
   fpsFrames++; fpsTime += fdt;
   if (fpsTime >= 0.5) {
     fps = Math.round(fpsFrames / fpsTime); fpsFrames = 0; fpsTime = 0;
@@ -153,6 +158,11 @@ function onResize() {
   if (!controls.userZoomed) controls.goal.radius = w / h < 0.8 ? 105 : w / h < 1.2 ? 80 : 64;
   const sc = (h * renderer.getPixelRatio()) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
   dust.mat.uniforms.uScale.value = sc; fire.mat.uniforms.uScale.value = sc;
+  if (gfx.composer) {
+    const pr = renderer.getPixelRatio();
+    gfx.composer.setPixelRatio(pr); gfx.composer.setSize(w, h);
+    if (Q.bloomScale < 1) gfx.bloom.setSize(w * pr * Q.bloomScale, h * pr * Q.bloomScale); // cheaper bloom on phones
+  }
 }
 window.addEventListener('resize', onResize);
 document.addEventListener('visibilitychange', () => { paused = document.hidden; last = performance.now(); if (paused) { Sfx.rumble(0); for (const k of ['wind', 'water', 'rain', 'hum', 'lava']) Sfx.loop(k, 0); } });

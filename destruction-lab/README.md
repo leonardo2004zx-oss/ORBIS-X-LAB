@@ -20,6 +20,16 @@ Las físicas son aproximaciones simplificadas pensadas para verse bien y correr 
 ## Cine
 Sacudida de cámara según la distancia, iluminación dinámica (destellos, luz de lava, relámpagos), sonido sintetizado (impactos, derrumbes, viento, agua, truenos, lava), **cámara lenta** (botón de reloj de arena o tecla L) y **ciclo de día y noche** (botón de sol/luna o Ajustes), con ventanas y farolas encendidas de noche.
 
+## Gráficos: antes / después
+El botón **Gráficos** (arriba, o tecla G) alterna sobre la misma escena entre el aspecto clásico y el mejorado:
+- Fachadas PBR generadas por código: hormigón, vidrio, ladrillo, metal y piedra, con relieve, rugosidad, partes metálicas, vidrio que refleja el cielo (mapa de entorno), variación por bloque (tono del vidrio, cortinas, luces encendidas de noche) y oscurecimiento en la base de los edificios.
+- Bloom y corrección de color (posprocesado); niebla exponencial; silueta de ciudad y colinas en el horizonte.
+- Bola de fuego animada con ruido 3D, humo texturizado con sombreado, chispas, onda expansiva con borde visible, luz temporal que ilumina los edificios cercanos.
+- Fragmentos de tamaños irregulares; polvo al impactar; los escombros asentados quedan como restos persistentes.
+- Veredas con cordón, sendas peatonales, asfalto y baldosas con relieve, charcos de luz bajo las farolas de noche, lava con brillo.
+
+Son aproximaciones visuales en WebGL: no hay humo volumétrico real, reflejos de otros edificios, iluminación global ni destrucción por vóxeles.
+
 ## Rendimiento
 Calidad baja/media/alta, límites de escombros y de partículas, resolución dinámica y piezas que se duermen solas cuando quedan quietas.
 

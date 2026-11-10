@@ -5,6 +5,7 @@ function clearScene() {
   for (const e of effects) e.end();
   effects.length = 0;
   for (const p of props) scene.remove(p.obj);
+  clearLampFX(); clearRubble(); sparks.clear();
   props.length = 0;
   for (const c of craters) { groundGroup.remove(c); c.material.dispose(); }
   craters.length = 0;

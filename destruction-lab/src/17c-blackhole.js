@@ -10,8 +10,8 @@ const diskMat = new THREE.ShaderMaterial({
       float a = atan(c.y, c.x);
       float band = sin(a * 3.0 + r * 18.0 - uTime * 6.0) * 0.5 + 0.5;
       float band2 = sin(a * 7.0 - r * 30.0 - uTime * 9.0) * 0.5 + 0.5;
-      float fall = smoothstep(1.0, 0.45, r) * smoothstep(0.3, 0.38, r);
-      vec3 col = mix(vec3(1.0, 0.45, 0.1), vec3(1.0, 0.92, 0.75), smoothstep(0.6, 0.35, r));
+      float fall = (1.0 - smoothstep(0.45, 1.0, r)) * smoothstep(0.3, 0.38, r);
+      vec3 col = mix(vec3(1.0, 0.45, 0.1), vec3(1.0, 0.92, 0.75), (1.0 - smoothstep(0.35, 0.6, r)));
       col = mix(col, vec3(0.55, 0.3, 1.0), (1.0 - band) * 0.25);
       gl_FragColor = vec4(col * (0.55 + 0.6 * band * band2), fall * uOpacity); }`,
 });

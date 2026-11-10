@@ -2,21 +2,21 @@
 const tsunami = { phase: 'idle', height: 6, front: -200, depth: 0, crest: 0, t: 0, dir: new THREE.Vector2(0, 1), speed: 10, start: -95, end: 95 };
 const waterMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, side: THREE.DoubleSide,
-  uniforms: { uDir: { value: tsunami.dir }, uFront: { value: -200 }, uDepth: { value: 0 }, uCrest: { value: 0 }, uTime: { value: 0 }, uSun: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() }, uDark: { value: 0 } },
+  uniforms: { uDir: { value: tsunami.dir }, uFront: { value: -200 }, uDepth: { value: 0 }, uCrest: { value: 0 }, uTime: { value: 0 }, uSun: { value: new THREE.Vector3(0.5, 0.8, 0.3).normalize() }, uDark: { value: 0 }, uHD: { value: 0 } },
   vertexShader: `uniform vec2 uDir; uniform float uFront, uDepth, uCrest, uTime; varying float vFoam; varying vec3 vW;
     void main(){ vec4 w = modelMatrix * vec4(position, 1.0); float s = dot(w.xz, uDir);
       float behind = 1.0 - smoothstep(uFront - 1.0, uFront + 2.5, s);
-      float crest = uCrest * exp(-pow((s - (uFront - 4.0)) / 6.0, 2.0));
+      float cz = (s - (uFront - 4.0)) / 6.0; float crest = uCrest * exp(-cz * cz);
       float rip = sin(w.x * 0.33 + uTime * 1.8) * 0.18 + sin(w.z * 0.27 - uTime * 1.4) * 0.18 + sin((w.x + w.z) * 0.9 + uTime * 3.0) * 0.06;
       float h = behind * (uDepth + rip * min(1.0, uDepth)) + crest;
       w.y = h - (1.0 - behind) * 4.0; vFoam = clamp(crest / max(0.5, uCrest), 0.0, 1.0) + (0.5 + 0.5 * sin(w.x * 1.7 + w.z * 1.3 + uTime * 4.0)) * 0.12;
       vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-  fragmentShader: `uniform vec3 uSun; uniform float uDark; varying float vFoam; varying vec3 vW;
+  fragmentShader: `uniform vec3 uSun; uniform float uDark; uniform float uHD; varying float vFoam; varying vec3 vW;
     void main(){ vec3 n = normalize(cross(dFdx(vW), dFdy(vW))); if (n.y < 0.0) n = -n;
       float l = clamp(dot(n, uSun), 0.0, 1.0); vec3 deep = vec3(0.10, 0.27, 0.30); vec3 shallow = vec3(0.30, 0.47, 0.44);
       vec3 c = mix(deep, shallow, l); c = mix(c, vec3(0.92, 0.95, 0.96), smoothstep(0.35, 0.95, vFoam));
       vec3 v = normalize(cameraPosition - vW); vec3 hlf = normalize(uSun + v); c += pow(max(dot(n, hlf), 0.0), 60.0) * 0.6;
-      c *= 1.0 - uDark * 0.55; gl_FragColor = vec4(c, 0.86); }`,
+      c *= 1.0 - uDark * 0.55; c *= mix(1.0, 0.62, uHD); gl_FragColor = vec4(c, mix(0.86, 0.93, uHD)); }`,
 });
 const water = new THREE.Mesh(new THREE.PlaneGeometry(240, 240, 140, 140), waterMat);
 water.rotation.x = -Math.PI / 2; water.visible = false; water.renderOrder = 3; scene.add(water);
@@ -51,7 +51,7 @@ function tsunamiUpdate(dt) {
     if (tsunami.depth < 0.05) { tsunami.phase = 'idle'; water.visible = false; tsunami.front = -200; refreshRunning(); }
   }
   waterMat.uniforms.uFront.value = tsunami.front; waterMat.uniforms.uDepth.value = tsunami.depth;
-  waterMat.uniforms.uCrest.value = tsunami.crest; waterMat.uniforms.uTime.value += dt;
+  waterMat.uniforms.uCrest.value = tsunami.crest; waterMat.uniforms.uHD.value = gfx.enhanced ? 1 : 0; waterMat.uniforms.uTime.value += dt;
   water.position.set(controls.target.x * 0.5, 0, controls.target.z * 0.5);
   // spray along the breaking crest
   if (tsunami.phase === 'advance') {
@@ -61,7 +61,7 @@ function tsunamiUpdate(dt) {
       const u = rnd(-70, 70), s = tsunami.front - rnd(1, 5);
       const x = tsunami.dir.x * s + px * u, z = tsunami.dir.y * s + pz * u;
       const y = waterLevelAt(x, z);
-      dust.emit(x, y + rnd(0, 0.8), z, tsunami.dir.x * rnd(4, 9) + rnd(-1, 1), rnd(2, 6 + H * 0.4), tsunami.dir.y * rnd(4, 9) + rnd(-1, 1), rnd(0.8, 1.6), rnd(1, 2.6), 0.9, 0.94, 0.96, 0.75, 1.5, 0.6, 9.8);
+      dust.emit(x, y + rnd(0, 0.8), z, tsunami.dir.x * rnd(4, 9) + rnd(-1, 1), rnd(2, 6 + H * 0.4), tsunami.dir.y * rnd(4, 9) + rnd(-1, 1), rnd(0.8, 1.6), rnd(1, 2.6) * (gfx.enhanced ? 0.7 : 1), 0.86, 0.9, 0.92, gfx.enhanced ? 0.45 : 0.75, 1.5, 0.6, 9.8);
     }
   }
   const lvl = tsunami.phase === 'advance' ? 1 : Math.min(1, tsunami.depth);

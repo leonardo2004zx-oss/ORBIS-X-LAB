@@ -6,15 +6,15 @@ const volcanoLight = new THREE.PointLight(0xff5a1a, 0, 120, 1.3);
 scene.add(volcanoLight);
 const lavaMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5,
-  uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 } },
+  uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uBoost: { value: 1 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader: `uniform float uTime; uniform float uOpacity; varying vec2 vUv;
+  fragmentShader: `uniform float uTime; uniform float uOpacity; uniform float uBoost; varying vec2 vUv;
     float n(vec2 p){ return sin(p.x * 3.1 + sin(p.y * 2.3 + uTime * 0.6)) * sin(p.y * 2.7 + sin(p.x * 1.9 - uTime * 0.5)); }
     void main(){ vec2 c = vUv - 0.5; float d = length(c) * 2.0; if (d > 1.0) discard;
       vec2 p = c * 14.0; float v = n(p) * 0.5 + n(p * 2.1 + 3.0) * 0.35 + 0.5;
       float crust = smoothstep(0.35, 0.75, v);
       vec3 hot = mix(vec3(1.0, 0.85, 0.35), vec3(1.0, 0.3, 0.02), crust);
-      vec3 col = mix(hot, vec3(0.09, 0.05, 0.04), smoothstep(0.62, 0.9, v));
+      vec3 col = mix(hot * uBoost, vec3(0.09, 0.05, 0.04), smoothstep(0.62, 0.9, v));
       float edge = 1.0 - smoothstep(0.8, 1.0, d);
       gl_FragColor = vec4(col, edge * uOpacity); }`,
 });
@@ -94,7 +94,7 @@ function volcanoUpdate(dt) {
     env.ashTarget = 0.35 + s * 0.05;
     volcanoMat.emissiveIntensity = 0.08 + 0.04 * Math.sin(v.t * 3);
     volcanoLight.position.set(crater.x, crater.y + 4, crater.z);
-    volcanoLight.intensity = (350 + s * 60) * (0.8 + 0.3 * Math.sin(v.t * 13) * Math.sin(v.t * 7));
+    volcanoLight.intensity = (gfx.enhanced ? 0.6 : 1) * (350 + s * 60) * (0.8 + 0.3 * Math.sin(v.t * 13) * Math.sin(v.t * 7));
     v.lavaR = Math.min(v.R * 0.9 + 4 + s * 1.6, Math.max(v.lavaR, v.R * 0.7) + dt * (0.5 + s * 0.1));
     v.lava.scale.setScalar(Math.max(0.01, v.lavaR * 2));
     // ash column drifting with the wind
@@ -128,6 +128,7 @@ function volcanoUpdate(dt) {
     Sfx.loop('lava', Math.max(0, 0.3 - v.t * 0.02));
   }
   lavaMat.uniforms.uTime.value += dt;
+  lavaMat.uniforms.uBoost.value = gfx.enhanced ? 1.5 + 0.25 * Math.sin(v.t * 2.1) : 1;
   // lava bombs explode when they land
   for (let i = v.bombs.length - 1; i >= 0; i--) {
     const it = v.bombs[i];

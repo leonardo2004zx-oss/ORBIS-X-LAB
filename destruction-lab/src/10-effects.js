@@ -15,7 +15,7 @@ const shockwaves = [];
 function addShockwave(P, power, inner, maxR) {
   const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xfff2dc, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide, fog: false }));
   ring.position.set(P.x, Math.max(0.2, Math.min(P.y, 1) * 0.3), P.z); scene.add(ring);
-  const shell = new THREE.Mesh(fireballGeo, new THREE.MeshBasicMaterial({ color: 0xcfe0ff, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide, fog: false }));
+  const shell = gfx.enhanced ? new THREE.Mesh(fireballGeo, shellMatHD()) : new THREE.Mesh(fireballGeo, new THREE.MeshBasicMaterial({ color: 0xcfe0ff, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide, fog: false }));
   shell.position.copy(P); scene.add(shell);
   shockwaves.push({ P: P.clone(), r: inner * 0.3, rPrev: 0, speed: 38 + power * 5, inner, maxR, v0: 1.6 + power * 0.9, ring, shell });
 }
@@ -40,7 +40,9 @@ function shockVisual(dt) {
   for (const w of shockwaves) {
     const k = w.r / w.maxR;
     w.ring.scale.setScalar(w.r); w.ring.material.opacity = 0.8 * (1 - k) * (1 - k);
-    w.shell.scale.setScalar(Math.min(w.r, w.inner * 2.2)); w.shell.material.opacity = 0.22 * Math.max(0, 1 - w.r / (w.inner * 2.2));
+    const so = Math.max(0, 1 - w.r / (w.inner * (gfx.enhanced ? 3.2 : 2.2)));
+    w.shell.scale.setScalar(Math.min(w.r, w.inner * (gfx.enhanced ? 3.2 : 2.2)));
+    if (w.shell.material.uniforms) w.shell.material.uniforms.uOpacity.value = 0.9 * so; else w.shell.material.opacity = 0.22 * so;
     const n = Math.round(10 * (1 - k));
     for (let j = 0; j < n; j++) {
       const a = rnd(0, Math.PI * 2), x = w.P.x + Math.cos(a) * w.r, z = w.P.z + Math.sin(a) * w.r, g = rnd(0.45, 0.58);
@@ -54,15 +56,26 @@ function blast(P, power, radius, opts = {}) {
   if (!opts.silent) Sfx.boom(Math.min(1, power / 10), soundDelay(P));
   addShake(0.3 + power * 0.1, P);
   flashLight.position.set(P.x, P.y + 3, P.z);
-  flashLight.intensity = 1200 + power * 700;
-  if (power >= 6) skyFlash = Math.max(skyFlash, Math.min(1, (power - 5) * 0.15));
+  flashLight.intensity = (gfx.enhanced ? 2600 : 1200) + power * (gfx.enhanced ? 1100 : 700);
+  if (power >= 7) skyFlash = Math.max(skyFlash, Math.min(1, (power - 6) * (gfx.enhanced ? 0.08 : 0.15)));
   if (!opts.noFire && !opts.silent && power >= 4) addFire(P, 6 + power * 0.9, 0.6 + power * 0.08);
   // blinding flash
   const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xfff1d6, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false }));
   fl.position.copy(P); fl.position.y += 1; scene.add(fl);
-  effects.push({ t: 0, dur: 0.35, update(e, k) { fl.scale.setScalar(radius * (2.5 + 3 * k)); fl.material.opacity = (1 - k) * (1 - k); }, end() { scene.remove(fl); fl.material.dispose(); } });
-  // fireball: bright core + darker turbulent shell
-  if (!opts.noFireball) {
+  const flS = gfx.enhanced ? 1.2 : 2.5, flO = gfx.enhanced ? 0.75 : 1;
+  effects.push({ t: 0, dur: 0.3, update(e, k) { fl.scale.setScalar(radius * (flS + 2 * k)); fl.material.opacity = flO * (1 - k) * (1 - k); }, end() { scene.remove(fl); fl.material.dispose(); } });
+  // fireball: animated noise sphere (enhanced) or the old pair of spheres (classic)
+  if (!opts.noFireball && gfx.enhanced) hdFireball(P, radius, power);
+  if (gfx.enhanced) {
+    for (let i = 0; i < 25 + power * 9; i++) { tmpV.set(rnd(-1, 1), rnd(-0.1, 1.2), rnd(-1, 1)).normalize().multiplyScalar(rnd(8, 18 + power * 2.5)); sparks.emit(P.x, P.y + 0.6, P.z, tmpV.x, tmpV.y, tmpV.z, rnd(0.6, 1.8)); }
+    // heavy dark smoke that rolls outward and up, lit from above
+    for (let i = 0; i < 10 + power * 3; i++) {
+      tmpV.set(rnd(-1, 1), rnd(0.1, 0.8), rnd(-1, 1)).normalize().multiplyScalar(rnd(1, 3 + power * 0.5));
+      const g = rnd(0.08, 0.16);
+      dust.emit(P.x + tmpV.x, P.y + rnd(0.5, 2.5), P.z + tmpV.z, tmpV.x, tmpV.y + rnd(1, 3), tmpV.z, rnd(6, 11), rnd(4, 6.5) + power * 0.45, g + 0.02, g + 0.015, g, 0.85, 1.1 + power * 0.1, 0.35, -0.05);
+    }
+  }
+  if (!opts.noFireball && !gfx.enhanced) {
     const core = new THREE.Mesh(fireballGeo, new THREE.MeshBasicMaterial({ color: 0xffd28a, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     const shellM = new THREE.Mesh(fireballGeo, new THREE.MeshBasicMaterial({ color: 0xff6a1a, transparent: true, opacity: 0.8, depthWrite: false, fog: false }));
     core.position.copy(P); shellM.position.copy(P); scene.add(core, shellM);
@@ -218,6 +231,7 @@ function updateMeteors(dt) {
       dust.emit(p.x, p.y, p.z, rnd(-0.5, 0.5), rnd(-0.2, 0.5), rnd(-0.5, 0.5), rnd(3, 6), m.r * rnd(1.8, 2.8), g, g - 0.01, g - 0.02, 0.6, 1.4 + m.size * 0.15, 0.5, -0.15);
     }
     if (Math.random() < 0.6) fire.emit(p.x, p.y, p.z, rnd(-6, 6), rnd(-3, 6), rnd(-6, 6), rnd(0.4, 0.9), rnd(0.2, 0.4), 1, 0.85, 0.5, 1, 0, 0.3, 4);
+    for (let q = 0; q < 2; q++) sparks.emit(p.x, p.y, p.z, -m.dir.x * 15 + rnd(-6, 6), -m.dir.y * 15 + rnd(-3, 6), -m.dir.z * 15 + rnd(-6, 6), rnd(0.3, 0.8));
     flashLight.position.copy(p); flashLight.intensity = Math.max(flashLight.intensity, 400 + m.size * 120);
     if (k >= 1) {
       scene.remove(m.mesh); m.mesh.geometry.dispose(); m.mesh.children[0].material.dispose();
@@ -233,6 +247,7 @@ function updateEffects(dt) {
     if (k >= 1) { e.end(); effects.splice(i, 1); }
   }
   shockVisual(dt);
-  flashLight.intensity *= Math.exp(-dt * 5.5);
+  flashLight.intensity *= Math.exp(-dt * (gfx.enhanced ? 3.8 : 5.5));
+  sparks.update(dt);
   if (flashLight.intensity < 1) flashLight.intensity = 0;
 }
