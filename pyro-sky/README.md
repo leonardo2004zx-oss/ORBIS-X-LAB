@@ -26,6 +26,11 @@ Proyecto independiente: no depende de ninguna otra parte del repositorio.
 | Enjambre Zumbador | Chispas que vuelan erráticas como abejas | Coro de zumbidos que se mueven por el estéreo |
 | Agujero Negro | Nube que implosiona y estalla en una onda | Theremin, crescendo al revés e implosión muy grave |
 | Cruz de Diamantes | Estrellas doradas que se parten en 4 cometas plateados | Silbido descendente y tableteo de crujidos |
+| Escalera al Cielo (inspirada en *Sky Ladder*) | Escalera de fuego que se enciende peldaño a peldaño hasta 250 m | Rugido chispeante que trepa, cada peldaño estalla más agudo |
+| Dragón de Fuego | Ristra de petardos en el suelo y un dragón rojo y dorado que serpentea hacia arriba | Petardos, gong chino, rugido y estallido final |
+| Lluvia de Hierro (homenaje al *da tie hua*) | Nueve golpes de metal fundido que salpican en abanicos e iluminan el suelo | Golpes metálicos con chisporroteo |
+| Cascada del Puente | Cortina de chispas doradas y plateadas de 140 m de ancho | Siseo continuo como de agua |
+| Torta de 100 Tiros | Batería que dispara 28 tubos en abanico zigzagueante | Ráfaga de morteros y crujidos |
 
 ## Audio
 Todo el sonido se sintetiza con la Web Audio API (no hay muestras externas, así que no hay licencias de terceros).

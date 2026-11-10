@@ -97,6 +97,7 @@
         strobe: [0, 1].map(() => this._renderStrobe(2.6)),
         sizzle: [0, 1].map(() => this._renderGlitter(1.8, true)),
         zap: [0, 1].map(() => this._renderZap(2.6)),
+        petardos: [0, 1].map(() => this._renderFirecrackers(3.2)),
       };
 
       this.ready = true;
@@ -241,6 +242,25 @@
           L[t + i] += sm * (1 - pan * 0.7); R[t + i] += sm * (0.3 + pan * 0.7);
         }
         t += len + Math.floor(sr * rnd(0.01, 0.12));
+      }
+      return buf;
+    }
+
+    // Ristra de petardos: estallidos secos casi regulares (~22/s) con golpe grave, como en Año Nuevo chino
+    _renderFirecrackers(sec) {
+      const ctx = this.ctx, sr = ctx.sampleRate, n = Math.floor(sec * sr);
+      const buf = ctx.createBuffer(2, n, sr), L = buf.getChannelData(0), R = buf.getChannelData(1);
+      let t = 0;
+      while (t < n - sr * 0.05) {
+        const amp = rnd(0.45, 1), pan = rnd(0.25, 0.75), len = Math.floor(sr * 0.035), f = rnd(110, 190);
+        for (let i = 0; i < len; i++) {
+          const x = i / sr;
+          const crack = (Math.random() * 2 - 1) * Math.exp(-x / 0.0022);
+          const body = Math.sin(x * f * 6.283) * Math.exp(-x / 0.012) * 0.7;
+          const s = (crack + body) * amp;
+          L[t + i] += s * (1 - pan) * 1.6; R[t + i] += s * pan * 1.6;
+        }
+        t += Math.floor(sr * (Math.random() < 0.15 ? rnd(0.002, 0.012) : rnd(0.025, 0.065)));
       }
       return buf;
     }
@@ -518,7 +538,7 @@
       } else {
         const f = (A.f0 + (A.f1 - A.f0) * prog) * sl;
         h.bp.frequency.setTargetAtTime(f, t, 0.04);
-        g = A.gain * fadeIn * (A.kind === 'tourbillon' ? 1 : Math.pow(1 - prog * 0.75, 1.3));
+        g = A.gain * fadeIn * (A.kind === 'tourbillon' || A.steady ? 1 : Math.pow(1 - prog * 0.75, 1.3));
       }
       h.out.gain.setTargetAtTime(g, t, 0.04);
     }
@@ -597,6 +617,37 @@
         s.start(t0 + (T.delay || 0) / ts);
         this._count('tail:' + T.kind);
       }
+    }
+
+    // Gong chino: parciales inarmónicos con caída lenta y leve bajada de tono
+    gong(pos, gain) {
+      if (!this.ready) return;
+      this._count('gong');
+      const ctx = this.ctx, sl = this.timeScale < 1 ? 0.6 : 1, t0 = ctx.currentTime + this._spatial(pos).delay;
+      const v = this._voice(pos, t0, 7 / sl, { reverb: 0.9, echo: 0.5 });
+      const f = rnd(92, 118) * sl;
+      [[1, 1], [1.47, 0.6], [2.09, 0.45], [2.76, 0.32], [3.62, 0.22], [4.95, 0.12]].forEach(([r, a]) => {
+        const o = ctx.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(f * r * 1.015, t0); o.frequency.exponentialRampToValueAtTime(f * r, t0 + 1.5);
+        const g = ctx.createGain(); this._env(g, t0, 0.008, (gain || 0.5) * a, (5 - r * 0.5) / sl, 3);
+        o.connect(g); g.connect(v.inp); o.start(t0); o.stop(t0 + 7 / sl);
+      });
+      const n = this._noise(this.pink, t0, 0.2); const nf = ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 900;
+      const ng = ctx.createGain(); this._env(ng, t0, 0.002, 0.35 * (gain || 0.5), 0.12, 3); n.connect(nf); nf.connect(ng); ng.connect(v.inp);
+    }
+
+    // reproduce una textura pre-renderizada del banco (petardos, purpurina…)
+    texture(pos, kind, gain, dur, rate) {
+      if (!this.ready) return;
+      this._count('tex:' + kind);
+      const ctx = this.ctx, t0 = ctx.currentTime + this._spatial(pos).delay;
+      const bufs = this.bank[kind], s = ctx.createBufferSource();
+      s.buffer = bufs[(Math.random() * bufs.length) | 0]; s.loop = dur > s.buffer.duration;
+      s.playbackRate.value = (rate || 1) * (this.timeScale < 1 ? 0.55 : 1);
+      const D = dur / Math.max(0.25, this.timeScale);
+      const v = this._voice(pos, t0, D + 2, { reverb: 0.55, echo: 0.25, panAmt: 0.7 });
+      const g = ctx.createGain(); g.gain.setValueAtTime(gain, t0); g.gain.setValueAtTime(gain, t0 + D - 0.15); g.gain.linearRampToValueAtTime(0, t0 + D);
+      s.connect(g); g.connect(v.inp); s.start(t0); s.stop(t0 + D + 0.05);
     }
 
     // Campanas FM: un arpegio que "canta" junto con la figura dibujada en el cielo

@@ -99,7 +99,7 @@
       const cv = document.createElement('canvas'); drawIcon(cv, t);
       b.appendChild(cv);
       if (t.tag) b.insertAdjacentHTML('beforeend', `<em class="badge">${t.tag}</em>`);
-      b.insertAdjacentHTML('beforeend', `<b>${t.short}</b><span class="spec">${t.caliber} mm · ${t.height} m</span><span class="snd">${t.sound}</span>`);
+      b.insertAdjacentHTML('beforeend', `<b>${t.short}</b><span class="spec">${t.caliber ? t.caliber + ' mm' : 'Dispositivo'} · ${t.height} m</span><span class="snd">${t.sound}</span>`);
       b.addEventListener('click', () => select(t.id, true));
       rack.appendChild(b);
     });

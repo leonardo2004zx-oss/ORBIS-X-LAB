@@ -443,6 +443,199 @@
         g.smokeCloud(pos, 55 * sc, 10);
       },
     },
+    /* ============ INSPIRADOS EN CHINA Y EN LOS VIDEOS VIRALES ============ */
+    {
+      id: 'escalera', name: 'Escalera al Cielo', short: 'Escalera', tag: 'CHINA', centered: true,
+      caliber: 0, height: 240, sound: 'Rugido chispeante que trepa · peldaños que estallan',
+      desc: 'Una escalera de fuego que se enciende desde el suelo hasta el cielo, peldaño por peldaño.',
+      swatch: ['#ffc24a', '#ff7a1f', '#fff1c7'],
+      look: { body: 0x3a2a18, stripe: 0xffc24a, nose: 0xffc24a, len: 1.4, r: 0.3, fins: 0, stick: false },
+      fuse: 1.6, ascentTime: 4.5,
+      tail: { col: [1, 0.7, 0.3] },
+      audio: { fusePitch: 0.9, fuseGain: 1.2, climb: { kind: 'crackle', f0: 900, f1: 3800, gain: 0.55, steady: true } },
+      start(g, r) {
+        r.voice = g.audio.ascent(r.pad, { ascent: this.audio.climb });
+        r.nextRung = 0; r.emit = 0;
+      },
+      flight(g, r, dt, t) {
+        const T = this.ascentTime, u = Math.min(1, t / T), y0 = r.pad.y + 12, H = this.height, W = 5.5, step = 11;
+        const fy = y0 + H * u;
+        r.pos.set(r.pad.x, fy, r.pad.z);
+        g.audio.updateAscent(r.voice, u, r.pos);
+        if (u < 1) {
+          // los dos largueros arden en el frente de llama
+          r.emit += dt * 160 * g.quality.trail;
+          while (r.emit >= 1) {
+            r.emit -= 1;
+            for (const sx of [-W, W]) {
+              const yy = fy - rnd(0, 3);
+              g.fx.spawn(r.pad.x + sx, yy, r.pad.z, rnd(-0.3, 0.3), rnd(-0.3, 0.3), 0, [1.0, 0.62, 0.2], rnd(2.2, 3.0), 1.5, 2, 0, F.LATEFADE | F.FLICKER, { c2: [0.9, 0.25, 0.05] });
+              if (Math.random() < 0.5) g.fx.spawn(r.pad.x + sx, yy, r.pad.z, rnd(-6, 6), rnd(-2, 5), rnd(-6, 6), [1.0, 0.75, 0.35], rnd(0.8, 1.6), 0.9, 0.6, 1, F.FLICKER);
+            }
+          }
+          // peldaños: se encienden al pasar el frente
+          while (y0 + r.nextRung * step <= fy) {
+            const ry = y0 + r.nextRung * step, k = r.nextRung++;
+            for (let i = 0; i <= 12; i++) {
+              const x = r.pad.x - W + 2 * W * i / 12;
+              g.fx.spawn(x, ry, r.pad.z, 0, 0, 0, [1.0, 0.55, 0.15], rnd(1.8, 2.4), 1.7, 2, 0, F.LATEFADE | F.FLICKER, { c2: [0.9, 0.2, 0.05] });
+              g.fx.spawn(x, ry, r.pad.z, rnd(-3, 3), rnd(0, 4), rnd(-3, 3), [1.0, 0.85, 0.45], rnd(0.9, 1.5), 1.1, 0.5, 1, F.FLICKER);
+            }
+            g.audio.pop({ x: r.pad.x, y: ry, z: r.pad.z }, 0.35 + 0.25 * Math.random(), 1200 + k * 120);
+            if (k % 5 === 0) g.world.flash(new THREE.Vector3(r.pad.x, ry, r.pad.z), [1, 0.55, 0.2], 2.2, 3);
+          }
+          g.world.padGlow(r.pad, 1.5 * (1 - u), [1, 0.6, 0.2]);
+          return false;
+        }
+        // remate: corona dorada en la punta
+        const top = new THREE.Vector3(r.pad.x, fy, r.pad.z);
+        g.audio.burst(top, { burst: { crack: 0.9, crackHz: 1500, bodyHz: 2800, body: 0.8, bodyGain: 0.95, sub: 45, bass: 1.0, subLen: 0.7, rumble: 2.4, rumbleGain: 0.45, reverb: 0.9, echo: 0.6, tail: { kind: 'glitter', gain: 0.5, delay: 0.3 } } }, 1);
+        emitDirs(g, top, sphereDirs(N(g, 160)), 40, [1.0, 0.68, 0.22], { ttl: 3.2, size: 2.0, drag: 1.4, grav: 0.55, flags: F.TRAIL | F.LATEFADE | F.GLITTER, trail: 20, tc: [0.9, 0.45, 0.1], param: -1.8 });
+        g.world.flash(top, [1, 0.6, 0.2], 5, 1.8);
+        return true;
+      },
+    },
+    /* ------------------------------------------------------------ */
+    {
+      id: 'dragon', name: 'Dragón de Fuego', short: 'Dragón', tag: 'CHINA', centered: true,
+      caliber: 0, height: 190, sound: 'Ristra de petardos · gong · rugido',
+      desc: 'Tras la ristra de petardos, un dragón rojo y dorado serpentea cruzando el cielo.',
+      swatch: ['#ff2a1a', '#ffc23a', '#ff6a2a'],
+      look: { body: 0xc4161c, stripe: 0xffc23a, nose: 0xffc23a, len: 2.2, r: 0.24, fins: 4, stick: false },
+      fuse: 2.6, ascentTime: 6.5,
+      tail: { col: [1, 0.3, 0.1] },
+      audio: { fusePitch: 0.8, fuseGain: 0.6, body: { kind: 'roar', f0: 420, f1: 900, gain: 0.5, steady: true } },
+      start(g, r) {
+        r.dirx = Math.random() < 0.5 ? -1 : 1;
+        r.x0 = 0; r.voice = g.audio.ascent(r.pad, { ascent: this.audio.body });
+        g.audio.gong(r.pad, 0.55);
+        r.prevHead = r.pad.clone();
+      },
+      flight(g, r, dt, t) {
+        const T = this.ascentTime, s = Math.min(1, t / T);
+        const rise = Math.min(1, t / 1.1);
+        // serpentea subiendo en grandes eses, siempre dentro del encuadre vertical
+        const x = r.x0 + r.dirx * 58 * Math.sin(s * TAU * 1.25), y = r.pad.y + 10 + 175 * (s * 0.8 + 0.2 * rise) + 10 * Math.sin(s * 19), z = r.pad.z + 25 * Math.sin(s * TAU * 0.8);
+        r.prevHead.copy(r.pos); r.pos.set(x, y, z);
+        g.audio.updateAscent(r.voice, s, r.pos);
+        if (s < 1) {
+          // cuerpo: escamas que quedan suspendidas y se apagan → el dragón se "dibuja"
+          const n = Math.ceil(dt * 260 * Math.max(0.6, g.quality.trail));
+          for (let i = 0; i < n; i++) {
+            const f = Math.random();
+            const px = r.prevHead.x + (x - r.prevHead.x) * f, py = r.prevHead.y + (y - r.prevHead.y) * f, pz = r.prevHead.z + (z - r.prevHead.z) * f;
+            const red = Math.random() < 0.7;
+            g.fx.spawn(px + rnd(-1.8, 1.8), py + rnd(-1.8, 1.8), pz + rnd(-1.8, 1.8), rnd(-0.5, 0.5), rnd(-0.5, 0.5), rnd(-0.5, 0.5),
+              red ? [1.0, 0.13, 0.06] : [1.0, 0.72, 0.18], rnd(1.5, 2.0), red ? 2.9 : 1.9, 1.5, 0.05, F.FLICKER, { c2: red ? [0.7, 0.05, 0.02] : [1, 0.4, 0.05] });
+          }
+          // cabeza brillante y bigotes
+          g.fx.spawn(x, y, z, 0, 0, 0, [1.0, 0.85, 0.4], 0.12, 5, 0, 0, 0);
+          for (const sd of [-1, 1]) g.fx.spawn(x, y + 1.5, z, rnd(-2, 2), 4 + sd * 2, sd * 6, [1, 0.8, 0.3], 0.5, 0.9, 1, 0.3, F.FLICKER);
+          if (Math.random() < dt * 2) g.world.flash(r.pos, [1, 0.25, 0.08], 1.2, 4);
+          return false;
+        }
+        const end = r.pos.clone();
+        g.audio.gong(end, 0.6);
+        g.audio.burst(end, { burst: { crack: 1.0, crackHz: 1700, bodyHz: 3200, body: 0.8, bodyGain: 1.0, sub: 42, bass: 1.2, subLen: 0.8, rumble: 2.8, rumbleGain: 0.5, reverb: 0.9, echo: 0.6, tail: { kind: 'crackle', gain: 0.6, delay: 1.1 } } }, 1);
+        emitDirs(g, end, sphereDirs(N(g, 200)), 60, (d) => (Math.random() < 0.6 ? [1.0, 0.12, 0.06] : [1.0, 0.7, 0.18]), { ttl: 1.15, size: 2.3, drag: 1.3, grav: 0.3, flags: F.TRAIL | F.CRACKLE, trail: 16, tc: [0.9, 0.3, 0.06] });
+        g.world.flash(end, [1, 0.3, 0.1], 6, 2);
+        g.smokeCloud(end, 70, 12);
+        return true;
+      },
+    },
+    // la ristra de petardos suena durante la mecha del dragón
+    /* ------------------------------------------------------------ */
+    {
+      id: 'hierro', name: 'Lluvia de Hierro', short: 'Hierro', tag: 'CHINA',
+      caliber: 0, height: 80, sound: 'Golpes metálicos · chisporroteo de metal fundido',
+      desc: 'Homenaje al da tie hua: golpes de metal fundido que estallan en abanicos de chispas.',
+      swatch: ['#ffb347', '#ff6a1a', '#fff0b8'],
+      look: { body: 0x2a2724, stripe: 0x8a5a2a, nose: 0x8a5a2a, len: 1.6, r: 0.35, fins: 0, stick: false },
+      fuse: 0.8, ascentTime: 5.6,
+      tail: { col: [1, 0.6, 0.2] },
+      audio: { fusePitch: 0.7, fuseGain: 0.5 },
+      start(g, r) { r.hits = 0; },
+      flight(g, r, dt, t) {
+        const gap = 0.62;
+        while (r.hits * gap <= t && r.hits < 9) {
+          const k = r.hits++, base = new THREE.Vector3(r.pad.x + rnd(-6, 6), r.pad.y + 4, r.pad.z);
+          const lean = rnd(-0.35, 0.35), n = Math.round(rnd(150, 210) * Math.max(0.6, g.quality.density));
+          for (let i = 0; i < n; i++) {
+            // abanico: el metal choca contra la pared invisible y salpica hacia arriba
+            const a = lean + rnd(-0.75, 0.75), el = rnd(0.45, 1.4), sp = rnd(30, 66) * (k === 8 ? 1.25 : 1);
+            g.fx.spawn(base.x, base.y, base.z, Math.sin(a) * Math.cos(el) * sp, Math.sin(el) * sp, Math.cos(a) * Math.cos(el) * sp * 0.6,
+              [1.0, rnd(0.6, 0.8), 0.28], rnd(1.8, 3.0), rnd(1.0, 1.6), 0.45, 1.0, F.FLICKER | (Math.random() < 0.15 ? F.SPLIT : 0), { c2: [1.0, 0.32, 0.05] });
+          }
+          g.audio.burst(base, { burst: { crack: 0.7, crackHz: 900, bodyHz: 2000, body: 0.25, bodyGain: 0.7, sub: 95, bass: 0.35, subLen: 0.18, rumble: 0, reverb: 0.5, echo: 0.55, tail: { kind: 'sizzle', gain: 0.55, delay: 0.05, rate: 0.8 } } }, 1);
+          g.world.flash(base.clone().setY(base.y + 12), [1, 0.55, 0.2], 4.5, 2.6);
+          g.smoke.spawn(base.x, base.y, base.z, 0, 1.5, 0, 5, 4, 12, 0.18);
+        }
+        r.pos.set(r.pad.x, r.pad.y + 25, r.pad.z);
+        return t > this.ascentTime;
+      },
+    },
+    /* ------------------------------------------------------------ */
+    {
+      id: 'cascada', name: 'Cascada del Puente', short: 'Cascada', tag: 'CHINA', centered: true,
+      caliber: 0, height: 75, sound: 'Siseo continuo como agua · crepitar plateado',
+      desc: 'Una cortina de chispas plateadas y doradas que cae desde un puente invisible.',
+      swatch: ['#ffe2a1', '#ffffff', '#ffb24a'],
+      look: { body: 0x55585e, stripe: 0xffe2a1, nose: 0xffe2a1, len: 1.2, r: 0.35, fins: 0, stick: false },
+      fuse: 1.2, ascentTime: 7,
+      tail: { col: [1, 0.8, 0.5] },
+      audio: { fusePitch: 1.0, falls: { kind: 'crackle', f0: 2600, f1: 2200, gain: 0.6, steady: true } },
+      start(g, r) { r.voice = g.audio.ascent(r.pad, { ascent: this.audio.falls }); r.emit = 0; r.fl = 0; },
+      flight(g, r, dt, t) {
+        const T = this.ascentTime, u = t / T, span = 70, y = r.pad.y + this.height;
+        const on = Math.min(1, t / 0.5) * Math.min(1, (T - t) / 0.6);
+        r.pos.set(r.pad.x, y - 20, r.pad.z);
+        g.audio.updateAscent(r.voice, Math.min(1, u), r.pos);
+        r.emit += dt * 420 * g.quality.density * Math.max(0, on);
+        while (r.emit >= 1) {
+          r.emit -= 1;
+          const x = r.pad.x + rnd(-span, span), silver = Math.random() < 0.45;
+          g.fx.spawn(x, y + rnd(-0.5, 0.5), r.pad.z + rnd(-1, 1), rnd(-0.4, 0.4), rnd(-3, 0), rnd(-0.4, 0.4),
+            silver ? [0.85, 0.85, 0.95] : [1.0, 0.72, 0.3], rnd(2.4, 3.2), rnd(1.0, 1.5), 0.55, 0.9, F.GLITTER, { c2: silver ? [0.6, 0.6, 0.75] : [1.0, 0.4, 0.08] });
+        }
+        if ((r.fl += dt) > 0.4 && on > 0.2) { r.fl = 0; g.world.flash(new THREE.Vector3(r.pad.x + rnd(-40, 40), y - 30, r.pad.z), [1, 0.82, 0.55], 2.2 * on, 5); }
+        return t > T;
+      },
+    },
+    /* ------------------------------------------------------------ */
+    {
+      id: 'torta', name: 'Torta de 100 Tiros', short: 'Torta', tag: 'CHINA',
+      caliber: 30, height: 110, sound: 'Ráfaga de morteros · pum-pum-pum + crujidos',
+      desc: 'Batería de tubos que dispara en abanico zigzagueante, como en el Año Nuevo chino.',
+      swatch: ['#ff3a2a', '#ffd23a', '#56ff7a'],
+      look: { body: 0xb5121b, stripe: 0xffd23a, nose: 0xb5121b, len: 1.0, r: 0.6, fins: 0, stick: false },
+      fuse: 1.0, ascentTime: 5.2,
+      tail: { col: [1, 0.6, 0.2] },
+      audio: { fusePitch: 1.1, shot: { launch: { thump: 120, bass: 0.55, noise: 0.45, f0: 900, f1: 2600, len: 0.18, echo: 0.2 } } },
+      start(g, r) { r.shots = 0; },
+      flight(g, r, dt, t) {
+        const total = 28, gap = 0.17, A = this.audio;
+        const cols = [[1.0, 0.15, 0.1], [1.0, 0.75, 0.2], [0.35, 1.0, 0.45], [1.0, 0.4, 0.75]];
+        while (r.shots * gap <= t && r.shots < total) {
+          const k = r.shots++;
+          // zigzag: barre de izquierda a derecha y vuelve
+          const ph = (k % 14) / 13, ang = (Math.floor(k / 14) % 2 ? 1 - ph : ph) * 1.1 - 0.55;
+          const sp = rnd(84, 92), vx = Math.sin(ang) * sp, vy = Math.cos(ang) * sp, vz = rnd(-4, 4), tb = 1.15;
+          const p0 = new THREE.Vector3(r.pad.x, r.pad.y + 1, r.pad.z);
+          const col = cols[k % cols.length];
+          g.fx.spawn(p0.x, p0.y, p0.z, vx, vy, vz, [1, 0.8, 0.45], tb, 1.6, 0, 1, F.TRAIL, { trail: 90 * g.quality.trail, tc: [1, 0.55, 0.2] });
+          g.audio.launch(p0, A.shot);
+          g.world.padGlow(r.pad, 3, [1, 0.6, 0.25]);
+          const bp = new THREE.Vector3(p0.x + vx * tb, p0.y + vy * tb - 4.9 * tb * tb, p0.z + vz * tb);
+          g.after(tb, () => {
+            emitDirs(g, bp, sphereDirs(N(g, 45)), 26, col, { ttl: 0.9, size: 1.8, drag: 1.6, grav: 0.3, flags: F.FLICKER | (k % 3 === 2 ? F.CRACKLE : 0) });
+            g.audio.burst(bp, { burst: { crack: 0.75, crackHz: 2300, bodyHz: 3800, body: 0.25, bodyGain: 0.45, sub: 90, bass: 0.3, subLen: 0.18, rumble: 0, reverb: 0.55, echo: 0.35, tail: k % 3 === 2 ? { kind: 'crackleFine', gain: 0.3, delay: 0.85, rate: 1.4 } : null } }, 0.8);
+            g.world.flash(bp, col, 1.6, 3.5);
+          });
+        }
+        r.pos.set(r.pad.x, r.pad.y + 60, r.pad.z);
+        return t > total * gap + 1.4;
+      },
+    },
   ];
   function mobileVoices(g) { return g.quality.density < 0.7 ? 5 : g.quality.density < 1 ? 7 : 9; }
 
@@ -489,6 +682,7 @@
       this.dir = new THREE.Vector3(0, 1, 0);
       this.emitAcc = 0; this.smokeAcc = 0;
       g.audio.fuse(this.pos, type.audio, this.fuseT / g.timeScaleNow());
+      if (type.id === 'dragon') { g.audio.texture(this.pad, 'petardos', 0.75, this.fuseT * 0.95, 1); this.firecrackers = true; }
     }
 
     update(dt) {
@@ -501,7 +695,23 @@
         for (let i = 0; i < n; i++) g.fx.spawn(base.x + rnd(-0.2, 0.2), base.y + 0.6, base.z + rnd(-0.2, 0.2),
           rnd(-3, 3), rnd(1, 6), rnd(-3, 3), [1, rnd(0.45, 0.7), 0.15], rnd(0.15, 0.45), rnd(0.35, 0.6), 2, 0.6, F.FLICKER);
         g.world.padGlow(base, 1.2, [1, 0.55, 0.2]);
+        if (this.firecrackers) {
+          // ristra de petardos: fogonazos al ras del suelo y papel rojo volando
+          for (let i = 0; i < dt * 30; i++) {
+            const x = base.x + rnd(-10, 10), z = base.z + rnd(4, 12);
+            g.fx.spawn(x, base.y + 0.6, z, 0, 0, 0, [1, 0.85, 0.55], 0.06, 3.2, 0, 0, 0);
+            g.fx.spawn(x, base.y + 0.6, z, rnd(-4, 4), rnd(2, 7), rnd(-4, 4), [0.75, 0.05, 0.04], rnd(0.8, 1.6), 0.8, 1.5, 0.4, F.FLICKER);
+          }
+          g.world.padGlow(base, 2.5, [1, 0.5, 0.25]);
+          if (Math.random() < dt * 8) g.smoke.spawn(base.x + rnd(-8, 8), base.y + 1, base.z + 8, rnd(-1, 1), 1, rnd(-1, 1), 4, 2, 7, 0.25);
+        }
         if (this.t >= this.fuseT) this._liftoff();
+        return;
+      }
+      if (this.state === 'custom') {
+        // dispositivos especiales (escalera, dragón, cascada…): el tipo controla todo el vuelo
+        this.ct += dt;
+        if (ty.flight(g, this, dt, this.ct)) { this.state = 'done'; g.audio.stopAscent(this.voice, false); g.emit('burst', this); }
         return;
       }
       if (this.state !== 'up') return;
@@ -546,6 +756,14 @@
 
     _liftoff() {
       const g = this.g;
+      if (this.type.flight) {
+        this.state = 'custom'; this.ct = 0; this.t = this.fuseT;
+        g.world.scene.remove(this.mesh);
+        this.pos.copy(this.pad);
+        if (this.type.start) this.type.start(g, this);
+        g.emit('liftoff', this);
+        return;
+      }
       this.state = 'up'; this.t = this.fuseT;
       g.audio.launch(this.pos, this.type.audio);
       this.voice = g.audio.ascent(this.pos, this.type.audio);
