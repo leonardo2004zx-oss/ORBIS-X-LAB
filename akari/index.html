@@ -400,11 +400,11 @@ kbd{font-family:var(--f-hud);background:var(--ink);border:1px solid var(--line);
           </div>
           <div class="voice-box">
             <div class="seg" role="group" aria-label="Tipo de voz">
-              <button type="button" data-vm="auto">Auto</button><button type="button" data-vm="device">Del celular</button><button type="button" data-vm="builtin">Integrada</button>
+              <button type="button" data-vm="natural">Natural</button><button type="button" data-vm="device">Del celular</button>
             </div>
             <button type="button" class="chip-toggle" id="testVoice"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Probar voz</button>
           </div>
-          <p class="note"><b id="voiceStatus">Voz: cargando…</b> ¿No escuchás nada? Subí el volumen, sacá el modo silencio y elegí «Integrada».</p>
+          <p class="note"><b id="voiceStatus">Voz: cargando…</b> ¿No escuchás nada? Subí el volumen y sacá el modo silencio.</p>
           <p class="note" id="capNote"></p>
         </div>
         <div class="panel menu">
@@ -479,7 +479,7 @@ kbd{font-family:var(--f-hud);background:var(--ink);border:1px solid var(--line);
   </section>
 </div>
 
-<!--MESPEAK--><script id="msScript" src="mespeak-es.js" async></script><!--/MESPEAK-->
+<!--VOICEPACK--><script src="voice-pack.js"></script><!--/VOICEPACK-->
 <script>
 (() => {
 'use strict';
@@ -489,6 +489,7 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rnd = a => a[Math.floor(Math.random() * a.length)];
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
+/*SPEECH-START*/
 /* ===================== PREGUNTAS ===================== */
 const CATS = {
   cg: 'Cultura general', an: 'Anime', vg: 'Videojuegos', te: 'Terror', lo: 'Lógica', tr: 'Tramposa'
@@ -543,9 +544,10 @@ const Q = [
 /* ===================== FRASES DE AKARI ===================== */
 const L = {
   hello: ['¡Hola! Soy Akari. ¿Jugamos?', '¡Ey! Escribí tu nombre y tocá Jugar. Prometo no burlarme… mucho.'],
-  intro: n => `¡Hola, ${n}! Soy Akari y este es mi show. Quince preguntas, tres vidas y yo juzgándote con cariño. ¡Arrancamos!`,
+  introSay: '¡Hola! Soy Akari y este es mi show. Quince preguntas, tres vidas y yo juzgándote con cariño. ¡Arrancamos!',
+  resume: '¡Volviste! Seguimos donde quedamos.',
   correct: ['¡Siii! ¡Esa es!', '¡Correctísimo! Me caés bien.', '¡Bien ahí! Ni yo lo decía mejor.', '¡Wooo! Seguí así y me robás el puesto.', '¡Exacto! Chocá esos cinco.'],
-  streak: k => rnd([`¡Racha de ${k}! Estás que ardés.`, `¡${k} seguidas! ¿Estás haciendo trampa? Es broma… creo.`, `¡${k} al hilo! Ok, ahora te tengo un poquito de miedo.`]),
+  streakTail: ['Estás que ardés.', '¿Estás haciendo trampa? Es broma… creo.', 'Ok, ahora te tengo un poquito de miedo.'],
   laugh: ['¡Jajaja, no! Perdón, perdón… bueno, no tanto.', '¡Jaja! Esa la guardo para el resumen del programa.', 'Ay, no… me reí. No lo voy a negar.'],
   surprised: ['¡¿Quéee?! ¿De dónde sacaste eso?', 'Esa no me la esperaba… para mal.', '¿En serio? Me dejaste sin palabras. Casi.'],
   sad: ['Uy, casi… bueno, no, ni casi. ¡Ánimo!', 'Nooo, ¡y venías tan bien!'],
@@ -554,19 +556,36 @@ const L = {
   timeout: ['¡Tiempo! Me quedé esperando como en una cita.', 'Se acabó el tiempo… ¿te dormiste?'],
   hurry: ['¡Dale que se acaba el tiempo!', 'Tic, tac… te estoy mirando.', 'Si no sabés, elegí con estilo.'],
   fifty: '¿Comodín cincuenta y cincuenta? Dale, saco dos… pero te estoy mirando.',
-  lastLife: ' ¡Te queda una sola vida!',
+  lastLife: '¡Te queda una sola vida!',
   lv2: '¡Nivel 2! Se terminó el calentamiento. Ahora voy en serio.',
   lv3: 'Nivel 3: el jefe final. O sea, yo. ¡A ver cómo te va!',
   poke: ['¡Ey! Cuidado con el pelo, me llevó dos horas.', '¿Una pista? No hay pistas. Jeje.', 'Si me tocás otra vez, la próxima es más difícil.', '¡Estoy en vivo! Portate bien.'],
   noHear: 'No te entendí… decí A, B, C o D.',
   lose: '¡Game over! Te quedaste sin vidas, pero la revancha está a un toque.',
-  record: ' ¡Y es nuevo récord! Lo voy a anunciar en todos lados.',
+  record: '¡Y es nuevo récord! Lo voy a anunciar en todos lados.',
+  finish: '¡Llegaste al final!',
+  test: ['¡Hola! Soy Akari. ¿Me escuchás bien?', 'Probando, probando… ¡uno, dos, tres! ¿Llega mi voz?'],
+  back: '¡Volví a hablar!',
 };
 const RANKS = [[5000, 'Leyenda del Show', 'Sos una leyenda. Ok, oficialmente me ganaste. Por hoy.'], [3000, 'Estrella Gamer', '¡Qué partidón! Casi me hacés llorar de orgullo.'], [1500, 'Promesa del Plató', 'Nada mal. Con un poco de práctica me vas a dar pelea.'], [0, 'Aprendiz del Plató', 'Bueno… lo importante es participar. ¡Jeje!']];
+const streakLine = k => `¡Racha de ${k}!`;
+const qLine = n => `Pregunta ${n}.`;
+const eraLine = q => `Era: ${q.o[q.a]}.`;
+// Todas las frases que Akari puede decir en voz alta (scripts/build_akari_voice.py las graba)
+function allSpoken() {
+  const out = new Set(); const add = x => (Array.isArray(x) ? x : [x]).forEach(t => out.add(t));
+  ['introSay', 'resume', 'correct', 'streakTail', 'laugh', 'surprised', 'sad', 'trickWrong', 'trickRight', 'timeout', 'hurry', 'fifty', 'lastLife', 'lv2', 'lv3', 'poke', 'noHear', 'lose', 'record', 'finish', 'test', 'back'].forEach(k => add(L[k]));
+  for (let k = 3; k <= 15; k++) add(streakLine(k));
+  for (let n = 1; n <= 15; n++) add(qLine(n));
+  Q.forEach(q => { add(q.q); add(q.x); add(eraLine(q)); });
+  RANKS.forEach(r => add(r[2]));
+  return [...out];
+}
+/*SPEECH-END*/
 
 /* ===================== MEMORIA LOCAL ===================== */
 const KEY = 'akari-gameshow-v1';
-const DEF = {best: 0, games: 0, correct: 0, answered: 0, bestStreak: 0, history: [], seen: [], name: '', voice: true, voiceMode: 'auto', sfx: true, run: null};
+const DEF = {best: 0, games: 0, correct: 0, answered: 0, bestStreak: 0, history: [], seen: [], name: '', voice: true, voiceMode: 'natural', sfx: true, run: null};
 let S = Object.assign({}, DEF);
 try { S = Object.assign({}, DEF, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) {}
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
@@ -619,7 +638,7 @@ function talkStart() {
   const set = TALK[mood] || ['talkS', 'talkB', REST[mood], 'talkS'];
   talkIv = setInterval(() => setMouth(rnd(set)), 105);
 }
-function talkStop() { talking = false; clearInterval(talkIv); setMouth(REST[mood]); }
+function talkStop() { talking = false; clearInterval(talkIv); cancelAnimationFrame(lipRAF); setMouth(REST[mood]); }
 // parpadeo
 (function blinkLoop() {
   setTimeout(() => { ak.classList.add('blink'); setTimeout(() => ak.classList.remove('blink'), 120);
@@ -639,38 +658,41 @@ addEventListener('pointermove', e => {
 function moveAkari(slot) { $(slot).appendChild(akStage); }
 
 /* ===================== VOZ ===================== */
-// Dos motores: la voz del dispositivo (speechSynthesis) y una voz integrada (meSpeak/eSpeak, en español)
-// que suena por WebAudio. En modo «auto» se usa la del dispositivo si tiene voz en español y responde;
-// si no existe, no tiene voces en español o no arranca en 1,6 s, se pasa a la integrada.
+// Voz natural: cada frase está grabada con una voz neuronal en español rioplatense (Piper, «daniela»)
+// y viaja dentro del juego (voice-pack.js), así suena igual en cualquier celular.
+// Lo que no esté grabado lo lee la voz del celular, si hay; si no, Akari solo lo escribe.
+const PACK = window.AKARI_VOICE || {};
+const hasPack = Object.keys(PACK).length > 0;
 const synth = ('speechSynthesis' in window && window.SpeechSynthesisUtterance) ? window.speechSynthesis : null;
-let voice = null, esVoices = 0, nativeOk = null, lastEngine = 'none', keepUtt = null, curSrc = null;
+let voice = null, lastEngine = 'none', keepUtt = null, curSrcs = [], analyser = null, lipRAF = 0;
+const bufCache = new Map();
 function pickVoice() {
   if (!synth) return; let vs = []; try { vs = synth.getVoices() || []; } catch (e) {}
-  const es = vs.filter(v => /^es/i.test(v.lang)); esVoices = es.length;
-  const fem = /(paulina|m[oó]nica|helena|laura|sabina|elvira|dalia|marisol|esperanza|lupe|penélope|paloma|francisca|female|mujer)/i;
-  voice = es.find(v => /es-(AR|419|MX|US)/i.test(v.lang) && fem.test(v.name)) || es.find(v => fem.test(v.name)) || es.find(v => /google/i.test(v.name)) || es.find(v => /es-(AR|419|MX|US)/i.test(v.lang)) || es[0] || null;
+  const es = vs.filter(v => /^es/i.test(v.lang));
+  const nat = /(natural|neural|premium|enhanced|mejorad|online)/i;
+  const fem = /(paulina|m[oó]nica|helena|laura|sabina|elvira|dalia|marisol|esperanza|lupe|penélope|paloma|francisca|elena|female|mujer)/i;
+  const latam = v => /es-(AR|419|MX|US|CO|CL|UY)/i.test(v.lang);
+  voice = es.find(v => nat.test(v.name) && fem.test(v.name)) || es.find(v => nat.test(v.name)) || es.find(v => latam(v) && fem.test(v.name)) || es.find(v => fem.test(v.name)) || es.find(v => /google/i.test(v.name)) || es.find(latam) || es[0] || null;
   voiceStatus();
 }
 if (synth) { pickVoice(); try { synth.addEventListener('voiceschanged', pickVoice); } catch (e) { synth.onvoiceschanged = pickVoice; } }
-function hasBuiltin() { return !!(window.meSpeak && window.meSpeak.isConfigLoaded && window.meSpeak.isConfigLoaded()); }
-function engineFor() {
-  const mode = S.voiceMode || 'auto';
-  if (mode === 'builtin') return hasBuiltin() ? 'builtin' : (synth ? 'device' : 'none');
-  if (mode === 'device') return synth ? 'device' : (hasBuiltin() ? 'builtin' : 'none');
-  if (synth && nativeOk !== false && (esVoices > 0 || nativeOk === true || (synth.getVoices() || []).length === 0)) return 'device';
-  return hasBuiltin() ? 'builtin' : (synth ? 'device' : 'none');
+const inPack = parts => hasPack && parts.every(t => PACK[t]);
+function engineFor(parts) {
+  if ((S.voiceMode === 'device' || !inPack(parts)) && synth) return 'device';
+  return inPack(parts) ? 'natural' : 'none';
 }
 function voiceStatus() {
   const el = $('#voiceStatus'); if (!el) return;
-  const e = engineFor();
-  el.textContent = !S.voice ? 'Voz apagada.' : e === 'device' ? `Voz del dispositivo${voice ? ' (' + voice.name.replace(/\s*\(.*\)/, '') + ')' : ''}.` : e === 'builtin' ? 'Voz integrada de Akari (no depende del celular).' : 'No hay voz disponible: Akari habla con texto.';
+  if (!S.voice) { el.textContent = 'Voz apagada.'; return; }
+  if (S.voiceMode === 'device' && synth) el.textContent = `Voz del celular${voice ? ' (' + voice.name.replace(/\s*\(.*\)/, '') + ')' : ''}.`;
+  else el.textContent = hasPack ? 'Voz natural de Akari.' : (synth ? 'Voz del celular.' : 'No hay voz disponible: Akari habla con texto.');
 }
 // Desbloqueo de audio en el primer toque (iOS/Android lo exigen)
 let unlocked = false;
 function unlockAudio() {
   if (unlocked) return; unlocked = true;
   const a = ac(); if (a) { try { const b = a.createBuffer(1, 1, 22050), src = a.createBufferSource(); src.buffer = b; src.connect(a.destination); src.start(0); } catch (e) {} }
-  if (synth) { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } catch (e) {} }
+  if (synth && S.voiceMode === 'device') { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } catch (e) {} }
 }
 addEventListener('pointerdown', unlockAudio, {capture: true});
 addEventListener('keydown', unlockAudio, {capture: true});
@@ -685,63 +707,85 @@ function bubble(text) {
 }
 function stopAudio() {
   if (synth && (synth.speaking || synth.pending)) { try { synth.cancel(); } catch (e) {} }
-  if (curSrc) { try { curSrc.onended = null; curSrc.stop(); } catch (e) {} curSrc = null; }
+  curSrcs.forEach(src => { try { src.stop(); } catch (e) {} }); curSrcs = [];
 }
-function speakBuiltin(spoken, id, done) {
-  const a = ac(); if (!a || !hasBuiltin()) return false;
-  let data;
-  try { data = window.meSpeak.speak(spoken, {rawdata: 'array', variant: 'f5', pitch: 72, speed: 168, amplitude: 140, wordgap: 1}); } catch (e) { return false; }
-  if (!data || !data.length) return false;
-  const buf = new Uint8Array(data).buffer;
-  const play = audio => {
-    if (id !== sayId) return;
-    const src = a.createBufferSource(), g = a.createGain(); g.gain.value = 1.15;
-    src.buffer = audio; src.connect(g); g.connect(a.destination);
-    src.onended = () => { if (curSrc === src) curSrc = null; done(); };
-    curSrc = src; src.start(0); lastEngine = 'builtin'; talkStart();
-    clearTimeout(sayFallback); sayFallback = setTimeout(done, audio.duration * 1000 + 1500);
+function getBuf(key) {
+  if (bufCache.has(key)) return bufCache.get(key);
+  const a = ac();
+  const pr = new Promise((res, rej) => {
+    if (!a) return rej(new Error('sin audio'));
+    const bin = atob(PACK[key]); const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    try { const r = a.decodeAudioData(u8.buffer, res, rej); if (r && r.catch) r.catch(rej); } catch (e) { rej(e); }
+  });
+  pr.catch(() => bufCache.delete(key));
+  bufCache.set(key, pr); return pr;
+}
+// Boca sincronizada con el volumen real de la voz
+function lipStart() {
+  talking = true; clearInterval(talkIv); cancelAnimationFrame(lipRAF);
+  if (!analyser) { talkStart(); return; }
+  const data = new Float32Array(analyser.fftSize); let last = 0, cur = '';
+  const loop = now => {
+    if (!talking) return;
+    if (now - last > 55) {
+      last = now; analyser.getFloatTimeDomainData(data);
+      let sum = 0; for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+      const rms = Math.sqrt(sum / data.length);
+      const big = (mood === 'happy' || mood === 'laugh') ? 'grin' : 'talkB';
+      const m = rms < .012 ? REST[mood] : rms < .05 ? 'talkS' : big;
+      if (m !== cur) { cur = m; setMouth(m); }
+    }
+    lipRAF = requestAnimationFrame(loop);
   };
-  try { const pr = a.decodeAudioData(buf, play, () => done()); if (pr && pr.catch) pr.catch(() => {}); } catch (e) { return false; }
-  return true;
+  lipRAF = requestAnimationFrame(loop);
 }
-function speakDevice(spoken, id, done, fallback) {
-  if (!synth) return false;
+function playNatural(parts, id, done, fail) {
+  const a = ac(); if (!a) return fail();
+  Promise.all(parts.map(getBuf)).then(bufs => {
+    if (id !== sayId) return;
+    if (!analyser) { try { analyser = a.createAnalyser(); analyser.fftSize = 512; analyser.connect(a.destination); } catch (e) { analyser = null; } }
+    const out = analyser || a.destination;
+    let t = a.currentTime + .04; curSrcs = [];
+    bufs.forEach(b => { const src = a.createBufferSource(); src.buffer = b; src.connect(out); src.start(t); t += b.duration + .14; curSrcs.push(src); });
+    lastEngine = 'natural'; lipStart();
+    clearTimeout(sayFallback); sayFallback = setTimeout(done, (t - a.currentTime) * 1000 + 150);
+  }, fail);
+}
+function speakDevice(spoken, id, done, fail) {
   let started = false;
   const go = () => {
     if (id !== sayId) return;
     const u = new SpeechSynthesisUtterance(spoken); keepUtt = u;
     if (voice) { u.voice = voice; u.lang = voice.lang; } else u.lang = 'es-AR';
-    u.pitch = 1.4; u.rate = 1.05; u.volume = 1;
-    u.onstart = () => { started = true; nativeOk = true; lastEngine = 'device'; voiceStatus(); };
+    u.pitch = 1.08; u.rate = 1; u.volume = 1;
+    u.onstart = () => { started = true; };
     u.onend = done;
-    u.onerror = ev => { if (id !== sayId) return; const er = ev && ev.error;
-      if (er === 'interrupted' || er === 'canceled') return done();
-      if (!started) { nativeOk = false; voiceStatus(); fallback(); } else done(); };
-    try { synth.speak(u); if (synth.paused) synth.resume(); } catch (e) { nativeOk = false; fallback(); return; }
-    // Si la voz del sistema no arranca, pasar a la integrada
-    if (nativeOk !== true) setTimeout(() => { if (id === sayId && !started) { nativeOk = false; try { synth.cancel(); } catch (e) {} voiceStatus(); fallback(); } }, 1600);
+    u.onerror = ev => { if (id !== sayId) return; const er = ev && ev.error; if (er === 'interrupted' || er === 'canceled' || started) return done(); fail(); };
+    try { synth.speak(u); if (synth.paused) synth.resume(); } catch (e) { fail(); return; }
+    setTimeout(() => { if (id === sayId && !started) { try { synth.cancel(); } catch (e) {} fail(); } }, 1800);
   };
-  const wasBusy = synth.speaking || synth.pending;
-  stopAudio();
-  if (wasBusy) setTimeout(go, 70); else go(); // Chrome descarta un speak() pegado a un cancel()
-  talkStart(); lastEngine = 'device';
+  const busy = synth.speaking || synth.pending; stopAudio();
+  if (busy) setTimeout(go, 70); else go(); // Chrome descarta un speak() pegado a un cancel()
+  lastEngine = 'device'; talkStart();
   clearTimeout(sayFallback); sayFallback = setTimeout(done, spoken.length * 95 + 4000);
-  return true;
 }
+// say(texto en el globo, {parts: frases a decir en voz alta, mood})
 function say(text, opt = {}) {
   const id = ++sayId;
   if (opt.mood) setMood(opt.mood);
   bubble(text);
   clearTimeout(sayFallback);
-  const spoken = text.replace(/[«»]/g, '').replace(/…/g, '.').replace(/¿|¡/g, '');
+  const parts = opt.parts || [text];
+  const spoken = parts.join(' ').replace(/[«»]/g, '');
   const done = () => { if (id !== sayId) return; clearTimeout(sayFallback); talkStop(); };
-  const silent = () => { talkStart(); clearTimeout(sayFallback); sayFallback = setTimeout(done, Math.min(5000, spoken.length * 42 + 300)); lastEngine = 'none'; };
-  if (opt.voice === false || !S.voice || micOn) { stopAudio(); return silent(); }
-  const builtin = () => { if (id !== sayId) return; stopAudio(); if (!speakBuiltin(spoken, id, done)) silent(); };
-  const e = engineFor();
-  if (e === 'device') { if (!speakDevice(spoken, id, done, builtin)) builtin(); }
-  else if (e === 'builtin') builtin();
-  else { stopAudio(); silent(); }
+  const silent = () => { if (id !== sayId) return; lastEngine = 'none'; talkStart(); clearTimeout(sayFallback); sayFallback = setTimeout(done, Math.min(5000, spoken.length * 42 + 300)); };
+  stopAudio();
+  if (!S.voice || micOn) return silent();
+  const e = engineFor(parts);
+  if (e === 'natural') playNatural(parts, id, done, () => (synth ? speakDevice(spoken, id, done, silent) : silent()));
+  else if (e === 'device') speakDevice(spoken, id, done, () => (inPack(parts) ? playNatural(parts, id, done, silent) : silent()));
+  else silent();
 }
 function hush() { sayId++; stopAudio(); clearTimeout(sayFallback); talkStop(); }
 
@@ -908,10 +952,10 @@ function startGame(resume) {
   show('game'); moveAkari('#gameSlot'); state = 'intro';
   renderHud();
   if (!resume) {
-    say(L.intro(run.name), {mood: 'happy'}); react('jump'); SFX.fanfare(); confetti(60);
+    say(L.introSay.replace('¡Hola!', `¡Hola, ${run.name}!`), {mood: 'happy', parts: [L.introSay]}); react('jump'); SFX.fanfare(); confetti(60);
     setTimeout(() => showQuestion(), 2600);
   } else {
-    say(`¡Volviste, ${run.name}! Seguimos donde quedamos.`, {mood: 'smug'});
+    say(L.resume.replace('¡Volviste!', `¡Volviste, ${run.name}!`), {mood: 'smug', parts: [L.resume]});
     setTimeout(() => showQuestion(), 1500);
   }
 }
@@ -958,7 +1002,7 @@ function presentQuestion(lv) {
   $('#explain').hidden = true; $('#nextBtn').hidden = true; heardEl.textContent = '';
   renderHud(); micUI();
   setMood(q.c === 'tr' ? 'smug' : 'think'); react('lean');
-  say(`Pregunta ${run.i + 1}. ${q.q}`, {mood: q.c === 'tr' ? 'smug' : 'neutral'});
+  say(`${qLine(run.i + 1)} ${q.q}`, {mood: q.c === 'tr' ? 'smug' : 'neutral', parts: [qLine(run.i + 1), q.q]});
   SFX.whoosh();
   startTimer(TIME);
 }
@@ -969,7 +1013,7 @@ function startTimer(sec) {
   const loop = () => {
     const left = Math.max(0, tDur - (performance.now() - tStart)); const s = Math.ceil(left / 1000);
     fill.style.transform = `scaleX(${left / tDur})`; num.textContent = s; tm.classList.toggle('danger', s <= 5);
-    if (s < lastSec) { lastSec = s; if (s <= 5 && s > 0) SFX.tick(); if (s === 7 && !hurried && !micOn) { hurried = true; bubble(rnd(L.hurry)); setMood('smug'); } }
+    if (s < lastSec) { lastSec = s; if (s <= 5 && s > 0) SFX.tick(); if (s === 7 && !hurried && !micOn) { hurried = true; say(rnd(L.hurry), {mood: 'smug'}); } }
     if (left <= 0) { timeUp(); return; }
     tRAF = requestAnimationFrame(loop);
   };
@@ -994,10 +1038,11 @@ function answer(pos) {
     run.score += pts;
     const sc = $('#hudScore'); sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump'); scorePop('+' + pts, sc);
     SFX.correct(); const r = btns[correctPos].getBoundingClientRect(); confetti(run.streak >= 3 ? 160 : 90, r.left + r.width / 2, r.top);
-    line = q.c === 'tr' ? rnd(L.trickRight) : run.streak >= 3 ? L.streak(run.streak) : rnd(L.correct);
+    const lp = q.c === 'tr' ? [rnd(L.trickRight)] : run.streak >= 3 ? [streakLine(Math.min(run.streak, 15)), rnd(L.streakTail)] : [rnd(L.correct)];
+    line = lp.join(' ');
     setMood('happy'); react('jump');
     ex.className = 'explain'; ex.innerHTML = '<b>¡Correcto! +' + pts + '</b> '; ex.append(q.x);
-    say(line + ' ' + q.x, {mood: 'happy'});
+    say(line + ' ' + q.x, {mood: 'happy', parts: [...lp, q.x]});
   } else {
     run.streak = 0; run.lives--;
     const hearts = $$('#hudLives i'); const lost = hearts[run.lives]; if (lost) { lost.classList.add('lost', 'pop'); }
@@ -1007,11 +1052,11 @@ function answer(pos) {
     if (pos < 0) { line = rnd(L.timeout); m = 'surprised'; kind = 'gasp'; }
     else if (q.c === 'tr') { line = rnd(L.trickWrong); m = 'laugh'; kind = 'shake'; }
     else { const p = Math.random(); if (p < .45) { line = rnd(L.laugh); m = 'laugh'; kind = 'shake'; } else if (p < .8) { line = rnd(L.surprised); m = 'surprised'; kind = 'gasp'; } else { line = rnd(L.sad); m = 'sad'; kind = 'lean'; } }
-    if (run.lives === 1) line += L.lastLife;
+    const lp = [line]; if (run.lives === 1) lp.push(L.lastLife); line = lp.join(' ');
     react(kind);
     const right = q.o[q.a];
     ex.className = 'explain bad'; ex.innerHTML = '<b>' + (pos < 0 ? '¡Tiempo!' : 'Incorrecto.') + '</b> '; ex.append(`Era «${right}». ${q.x}`);
-    say(`${line} Era: ${right}. ${q.x}`, {mood: m});
+    say(`${line} ${eraLine(q)} ${q.x}`, {mood: m, parts: [...lp, eraLine(q), q.x]});
   }
   S.bestStreak = Math.max(S.bestStreak, run.maxStreak);
   run.i++; save();
@@ -1048,10 +1093,11 @@ function endGame() {
   const el = $('#endScore'); const t0 = performance.now(), D = reduceMotion ? 1 : 1200;
   (function up() { const now = performance.now(); const k = Math.min(1, (now - t0) / D); el.textContent = Math.round(r.score * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(up); })();
   const lost = r.lives <= 0;
-  let line = lost ? L.lose : `¡Llegaste al final! ${rank[2]}`;
-  if (newRecord && r.score > 0) line += L.record;
-  if (lost && !newRecord) { SFX.lose(); say(line, {mood: 'sad'}); react('lean'); }
-  else { SFX.fanfare(); confetti(200); say(line, {mood: newRecord || r.score >= 3000 ? 'happy' : 'smug'}); react('jump'); }
+  const lp = lost ? [L.lose] : [L.finish, rank[2]];
+  if (newRecord && r.score > 0) lp.push(L.record);
+  const line = lp.join(' ');
+  if (lost && !newRecord) { SFX.lose(); say(line, {mood: 'sad', parts: lp}); react('lean'); }
+  else { SFX.fanfare(); confetti(200); say(line, {mood: newRecord || r.score >= 3000 ? 'happy' : 'smug', parts: lp}); react('jump'); }
   $('#againBtn').focus({preventScroll: true});
 }
 function toTitle() {
@@ -1082,16 +1128,15 @@ restartBtn.addEventListener('click', () => {
 });
 
 /* toggles */
-function syncVoiceMode() { $$('.seg [data-vm]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vm === (S.voiceMode || 'auto'))); voiceStatus(); }
+function syncVoiceMode() { $$('.seg [data-vm]').forEach(b => b.setAttribute('aria-pressed', b.dataset.vm === (S.voiceMode === 'device' ? 'device' : 'natural'))); voiceStatus(); }
 function voiceOn() { if (!S.voice) { S.voice = true; save(); syncToggles(); } }
 $$('.seg [data-vm]').forEach(b => b.addEventListener('click', () => {
-  S.voiceMode = b.dataset.vm; if (b.dataset.vm === 'device') nativeOk = null; save(); voiceOn(); syncVoiceMode();
-  say('¡Hola! Soy Akari. ¿Me escuchás bien?', {mood: 'happy'}); react('jump');
+  S.voiceMode = b.dataset.vm; save(); voiceOn(); syncVoiceMode();
+  say(L.test[0], {mood: 'happy'}); react('jump');
 }));
-$('#testVoice').addEventListener('click', () => { voiceOn(); say(rnd(['¡Hola! Soy Akari. ¿Me escuchás bien?', 'Probando, probando… ¡uno, dos, tres! ¿Llega mi voz?']), {mood: 'happy'}); react('jump'); });
-const msScript = $('#msScript'); if (msScript && !hasBuiltin()) msScript.addEventListener('load', voiceStatus);
+$('#testVoice').addEventListener('click', () => { voiceOn(); say(rnd(L.test), {mood: 'happy'}); react('jump'); });
 function syncToggles() { ['tVoice', 'hVoice'].forEach(id => $('#' + id).setAttribute('aria-pressed', S.voice)); ['tSfx', 'hSfx'].forEach(id => $('#' + id).setAttribute('aria-pressed', S.sfx)); }
-function toggleVoice() { S.voice = !S.voice; if (!S.voice) hush(); save(); syncToggles(); voiceStatus(); if (S.voice) say('¡Volví a hablar!', {mood: 'happy'}); }
+function toggleVoice() { S.voice = !S.voice; if (!S.voice) hush(); save(); syncToggles(); voiceStatus(); if (S.voice) say(L.back, {mood: 'happy'}); }
 function toggleSfx() { S.sfx = !S.sfx; save(); syncToggles(); if (S.sfx) SFX.click(); }
 $('#tVoice').addEventListener('click', toggleVoice); $('#hVoice').addEventListener('click', toggleVoice);
 $('#tSfx').addEventListener('click', toggleSfx); $('#hSfx').addEventListener('click', toggleSfx);
@@ -1107,7 +1152,7 @@ $('#menuBtn').addEventListener('click', () => { SFX.click(); toTitle(); });
 akWrap.addEventListener('click', () => {
   if (state === 'revealed' || state === 'intro' || state === 'banner') return;
   const prev = mood; ac(); SFX.click();
-  bubble(rnd(L.poke)); setMood(rnd(['surprised', 'smug', 'fired'])); react('gasp');
+  say(rnd(L.poke), {mood: rnd(['surprised', 'smug', 'fired'])}); react('gasp');
   setTimeout(() => { if (state === 'asking' || state === 'title' || state === 'end') setMood(prev); }, 1600);
 });
 
@@ -1126,7 +1171,7 @@ addEventListener('keydown', e => {
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (synth) synth.cancel(); if (micOn) micStop(); } });
 
 // Exponer un pequeño gancho para pruebas automatizadas
-window.__akari = {get engine() { return lastEngine; }, get nativeOk() { return nativeOk; }, engineFor, get state() { return state; }, get run() { return run; }, get cur() { return cur; }, matchAnswer, Q};
+window.__akari = {get engine() { return lastEngine; }, engineFor, allSpoken, PACK, get state() { return state; }, get run() { return run; }, get cur() { return cur; }, matchAnswer, Q};
 
 toTitle();
 })();
