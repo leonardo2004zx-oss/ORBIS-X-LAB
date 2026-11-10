@@ -39,3 +39,20 @@ python3 scripts/make_demo_gifs.py
 | `js/caption.js` | Animaciones de texto compartidas |
 | `js/export.js` | Exportación a vídeo con `MediaRecorder` |
 | `js/store.js` | Guardado en IndexedDB |
+
+## Documental: «La rama humana»
+
+En [`documental/`](documental/) hay un documental animado original (4 min 37 s, 1920×1080, 24 fps, narración en español latino) sobre la evolución humana: desde el impacto de Chicxulub hace 66 millones de años hasta hoy.
+
+- **Ver**: abre [`documental/index.html`](documental/index.html) (reproductor con capítulos y subtítulos) o directamente [`documental/la-rama-humana.mp4`](documental/la-rama-humana.mp4).
+- **Recompilar**: `documental/build.sh` regenera narración, fotogramas, música y el MP4 final.
+- Todo se genera con herramientas libres y locales: animación por código (Canvas 2D en Chromium sin interfaz vía Playwright), voz neuronal Piper (`es_MX`), música y sonido sintetizados con numpy, codificación con ffmpeg.
+
+| Archivo | Función |
+| --- | --- |
+| `documental/narracion.json` | Guion: escenas, rótulos de época y frases narradas |
+| `documental/tools/tts.py` | Narración con Piper, línea de tiempo y subtítulos |
+| `documental/render/engine.js` | Primitivas de dibujo: relieve, vegetación, criaturas, homininos, fuego |
+| `documental/render/scenes.js` | Las escenas del documental |
+| `documental/render/capture.mjs` | Captura de fotogramas y envío a ffmpeg |
+| `documental/tools/audio.py` | Música, ambientes, efectos y mezcla |
