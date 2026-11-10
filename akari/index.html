@@ -572,15 +572,20 @@ const streakLine = k => `¡Racha de ${k}!`;
 const qLine = n => `Pregunta ${n}.`;
 const eraLine = q => `Era: ${q.o[q.a]}.`;
 // Todas las frases que Akari puede decir en voz alta (scripts/build_akari_voice.py las graba)
-function allSpoken() {
-  const out = new Set(); const add = x => (Array.isArray(x) ? x : [x]).forEach(t => out.add(t));
-  ['introSay', 'resume', 'correct', 'streakTail', 'laugh', 'surprised', 'sad', 'trickWrong', 'trickRight', 'timeout', 'hurry', 'fifty', 'lastLife', 'lv2', 'lv3', 'poke', 'noHear', 'lose', 'record', 'finish', 'test', 'back'].forEach(k => add(L[k]));
-  for (let k = 3; k <= 15; k++) add(streakLine(k));
-  for (let n = 1; n <= 15; n++) add(qLine(n));
-  Q.forEach(q => { add(q.q); add(q.x); add(eraLine(q)); });
-  RANKS.forEach(r => add(r[2]));
+// Cada frase lleva un estilo de grabación: hype (festejo/burla), play (normal, con energía) o sad.
+function spokenStyles() {
+  const out = new Map(); const add = (x, st) => (Array.isArray(x) ? x : [x]).forEach(t => { if (!out.has(t)) out.set(t, st); });
+  ['introSay', 'resume', 'correct', 'streakTail', 'laugh', 'surprised', 'trickWrong', 'trickRight', 'timeout', 'hurry', 'fifty', 'lastLife', 'lv2', 'lv3', 'poke', 'record', 'finish', 'test', 'back'].forEach(k => add(L[k], 'hype'));
+  ['sad', 'lose'].forEach(k => add(L[k], 'sad'));
+  add(L.noHear, 'play');
+  for (let k = 3; k <= 15; k++) add(streakLine(k), 'hype');
+  for (let n = 1; n <= 15; n++) add(qLine(n), 'play');
+  Q.forEach(q => { add(q.q, 'play'); add(q.x, 'play'); add(eraLine(q), 'play'); });
+  RANKS.forEach((r, i) => add(r[2], i === 3 ? 'play' : 'hype'));
   return [...out];
 }
+// Todas las frases que Akari puede decir en voz alta (scripts/build_akari_voice.py las graba)
+function allSpoken() { return spokenStyles().map(x => x[0]); }
 /*SPEECH-END*/
 
 /* ===================== MEMORIA LOCAL ===================== */
