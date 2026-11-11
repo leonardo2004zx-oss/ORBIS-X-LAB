@@ -1,0 +1,191 @@
+<title>Tormenta Salvaje</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+/* Layout: el bosque a pantalla completa; la interfaz flota en los bordes, como en un juego de consola. */
+:root {
+  --ink: #e4e1d8;         /* texto principal, hueso */
+  --dim: #8f97a3;         /* texto secundario, gris lluvia */
+  --blood: #b3261e;       /* acento: rojo del subtítulo */
+  --lamp: #f2c27a;        /* luz cálida de linterna */
+  --glass: rgba(8, 11, 16, 0.62);
+  --line: rgba(228, 225, 216, 0.14);
+  --f-title: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --f-ui: 'Source Sans 3', 'Segoe UI', Roboto, system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { margin: 0; background: #040507; color: var(--ink); font-family: var(--f-ui); overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--lamp); outline-offset: 3px; }
+.vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 55%, transparent 45%, rgba(0,0,0,0.55) 100%); z-index: 1; }
+
+/* ---------- portada ---------- */
+.title { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: center; gap: 22px;
+  padding-left: max(28px, env(safe-area-inset-left, 0px), 6vw); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: linear-gradient(90deg, rgba(3,4,6,0.85) 0%, rgba(3,4,6,0.45) 45%, rgba(3,4,6,0) 75%); }
+.title h1 { font-family: var(--f-title); font-weight: 800; font-size: clamp(32px, min(7.2vw, 13vh), 92px); line-height: 0.92; letter-spacing: 0.04em; margin: 0; text-shadow: 0 2px 30px rgba(0,0,0,0.8); }
+.title h1 span { display: block; }
+.title .sub { font-family: var(--f-title); font-weight: 600; color: var(--blood); letter-spacing: 0.22em; text-transform: uppercase; font-size: clamp(11px, 1.5vw, 15px); margin-top: 10px; }
+.menu { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.menu button { background: none; border: 0; padding: 7px 0; font-size: clamp(17px, 2.2vw, 22px); font-weight: 600; letter-spacing: 0.06em; color: var(--ink); opacity: 0.86; text-align: left; transition: opacity .2s, transform .2s, color .2s; }
+.menu button:hover, .menu button:focus-visible { opacity: 1; color: var(--lamp); transform: translateX(6px); }
+.menu button:disabled { opacity: 0.3; transform: none; cursor: default; color: var(--ink); }
+.menu small { display: block; font-size: 12px; font-weight: 400; color: var(--dim); letter-spacing: 0.02em; }
+.foot { font-size: 12px; color: var(--dim); max-width: 46ch; line-height: 1.45; }
+
+/* ---------- paneles ---------- */
+.panel { position: fixed; z-index: 12; inset: 0; display: grid; place-items: center; background: rgba(2,3,5,0.72); backdrop-filter: blur(6px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.card { width: min(560px, 100%); max-height: 88vh; overflow-y: auto; background: rgba(10,13,18,0.94); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; }
+.card h2 { font-family: var(--f-title); font-weight: 800; letter-spacing: 0.06em; margin: 0 0 14px; font-size: 22px; }
+.row { display: grid; grid-template-columns: 130px 1fr 46px; gap: 12px; align-items: center; margin-bottom: 12px; font-size: 15px; }
+.row output { font-variant-numeric: tabular-nums; color: var(--dim); text-align: right; font-size: 13px; }
+input[type=range] { width: 100%; accent-color: var(--lamp); height: 28px; }
+.seg { display: flex; gap: 6px; } .seg button { flex: 1; height: 38px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); font-size: 14px; }
+.seg button[aria-pressed="true"] { border-color: var(--lamp); color: var(--lamp); background: rgba(242,194,122,0.08); }
+.check { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; font-size: 15px; } .check input { width: 20px; height: 20px; accent-color: var(--lamp); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.btn { height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.05); font-weight: 600; }
+.btn.primary { background: var(--lamp); color: #1b130a; border-color: var(--lamp); }
+.card p, .card li { color: var(--dim); font-size: 14px; line-height: 1.5; }
+.card kbd { font-family: ui-monospace, Menlo, monospace; font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--ink); }
+.note { font-size: 12px; color: var(--dim); margin-top: 6px; }
+
+/* ---------- HUD ---------- */
+.hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+.bars { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); left: max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 6px; }
+.bar { width: 150px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; background: var(--ink); transform-origin: left; transition: background .3s; }
+.bar.batt i { background: var(--lamp); }
+.bar.low i { background: var(--blood); }
+.bars label { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.14em; color: var(--dim); text-transform: uppercase; }
+.objective { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 54px); left: max(16px, env(safe-area-inset-left, 0px)); max-width: 46ch; font-size: 14px; line-height: 1.35; color: var(--ink); text-shadow: 0 1px 6px #000; transition: opacity 1s; }
+.objective b { display: block; font-size: 10px; letter-spacing: 0.18em; color: var(--lamp); text-transform: uppercase; margin-bottom: 2px; }
+.compass { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 50%; transform: translateX(-50%); width: min(300px, 40vw); height: 26px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent); mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent); }
+.compass .tape { position: absolute; top: 0; left: 50%; height: 100%; white-space: nowrap; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--dim); }
+.compass .tape span { position: absolute; top: 5px; transform: translateX(-50%); }
+.compass .tape span.n { color: var(--blood); }
+.compass::after { content: ''; position: absolute; left: 50%; bottom: 0; width: 1px; height: 7px; background: var(--ink); }
+.prompt { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 34%); transform: translateX(-50%); background: var(--glass); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-size: 14px; white-space: nowrap; }
+.prompt kbd { font-weight: 700; color: var(--lamp); margin-right: 6px; }
+.message { position: absolute; left: 50%; top: 36%; transform: translate(-50%, -50%); max-width: min(520px, 86vw); text-align: center; font-family: var(--f-title); font-size: clamp(16px, 2.4vw, 22px); line-height: 1.4; text-shadow: 0 2px 14px #000; transition: opacity .8s; }
+.fps { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 14px); right: max(70px, calc(env(safe-area-inset-right, 0px) + 70px)); font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.pausebtn { pointer-events: auto; position: absolute; top: calc(env(safe-area-inset-top, 0px) + 10px); right: max(14px, env(safe-area-inset-right, 0px)); width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass); display: grid; place-items: center; }
+.pausebtn svg { width: 16px; height: 16px; }
+
+/* controles táctiles */
+.touch { position: absolute; inset: 0; }
+.look { position: absolute; top: 0; right: 0; width: 60%; height: 100%; pointer-events: auto; }
+.stick { pointer-events: auto; position: absolute; left: max(26px, calc(env(safe-area-inset-left, 0px) + 18px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 26px); width: 132px; height: 132px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.18); background: rgba(10,12,16,0.25); }
+.stick .knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; border-radius: 50%; background: rgba(228,225,216,0.32); border: 1px solid rgba(255,255,255,0.4); transform: translate(-50%,-50%); }
+.tbtns { position: absolute; right: max(18px, calc(env(safe-area-inset-right, 0px) + 12px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); display: grid; grid-template-columns: 64px 64px; gap: 14px; pointer-events: none; }
+.tb { pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.22); background: rgba(10,12,16,0.35); display: grid; place-items: center; }
+.tb svg { width: 26px; height: 26px; }
+.tb.on { background: rgba(242,194,122,0.3); border-color: var(--lamp); }
+.tb.run { grid-column: 2; }
+.rotate { position: fixed; inset: 0; z-index: 30; display: none; place-items: center; text-align: center; background: #040507; padding: 24px; }
+.rotate p { color: var(--dim); max-width: 30ch; }
+@media (orientation: portrait) and (pointer: coarse) { body.playing .rotate { display: grid; } }
+.loading { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: #040507; font-family: var(--f-title); letter-spacing: 0.2em; color: var(--dim); font-size: 13px; text-transform: uppercase; }
+.fade { position: fixed; inset: 0; z-index: 9; background: #000; pointer-events: none; opacity: 0; transition: opacity 1.2s; }
+@media (max-height: 460px) { .stick { width: 112px; height: 112px; } .tb { width: 56px; height: 56px; } .tbtns { grid-template-columns: 56px 56px; gap: 10px; } .objective { font-size: 13px; } }
+@media (prefers-reduced-motion: reduce) { .menu button { transition: none; } }
+</style>
+
+<canvas id="view" aria-label="Bosque bajo la tormenta"></canvas>
+<div class="vignette"></div>
+<div class="fade" id="fade"></div>
+
+<section class="title" id="title" aria-label="Menú principal">
+  <div>
+    <h1><span>Tormenta</span><span>Salvaje</span></h1>
+    <div class="sub">Hay algo entre los árboles.</div>
+  </div>
+  <nav class="menu">
+    <button id="mNew">Nueva partida</button>
+    <button id="mCont">Continuar<small id="contInfo">No hay partida guardada</small></button>
+    <button id="mSet">Configuración</button>
+    <button id="mCred">Créditos</button>
+  </nav>
+  <div class="foot">Usá auriculares. En el celular, girá la pantalla a horizontal.</div>
+</section>
+
+<section class="hud" id="hud" hidden>
+  <div class="bars">
+    <label><div class="bar" id="stam"><i></i></div>Aliento</label>
+    <label><div class="bar batt" id="batt"><i></i></div>Linterna</label>
+  </div>
+  <div class="objective" id="objective"><b>Objetivo</b><span id="objText"></span></div>
+  <div class="compass"><div class="tape" id="tape"></div></div>
+  <div class="prompt" id="prompt" hidden></div>
+  <div class="message" id="message"></div>
+  <div class="fps" id="fps" hidden></div>
+  <div class="touch" id="touch" hidden>
+    <div class="look" id="look"></div>
+    <div class="stick" id="stick"><div class="knob" id="knob"></div></div>
+    <div class="tbtns">
+      <button class="tb" id="bLight" aria-label="Linterna"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2h6v5l-2 3v12h-2V10L9 7z"/><path d="M4 5l2 1M20 5l-2 1M12 1V0"/></svg></button>
+      <button class="tb" id="bUse" aria-label="Interactuar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 13V5a2 2 0 014 0v6M12 11V4a2 2 0 014 0v8M16 12V7a2 2 0 014 0v7c0 4-3 8-7 8s-6-2-8-5l-2-4a2 2 0 013-2l2 2"/></svg></button>
+      <button class="tb run" id="bRun" aria-label="Correr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="14" cy="4" r="2"/><path d="M8 21l3-6 3 2v5M6 12l3-4 4 1 3 4 3 1M11 15l-2-4"/></svg></button>
+    </div>
+  </div>
+  <button class="pausebtn" id="bPause" aria-label="Pausa"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button>
+</section>
+
+<section class="panel" id="pPause" hidden aria-label="Pausa">
+  <div class="card">
+    <h2>Pausa</h2>
+    <div class="actions" style="flex-direction:column; align-items:stretch">
+      <button class="btn primary" id="pResume">Continuar</button>
+      <button class="btn" id="pSet">Configuración</button>
+      <button class="btn" id="pQuit">Guardar y volver al menú</button>
+    </div>
+  </div>
+</section>
+
+<section class="panel" id="pSettings" hidden aria-label="Configuración">
+  <div class="card">
+    <h2>Configuración</h2>
+    <div class="row"><span>Gráficos</span><div class="seg" id="qSeg"><button data-q="0">Baja</button><button data-q="1">Media</button><button data-q="2">Alta</button></div><span></span></div>
+    <div class="row"><label for="sMaster">Volumen general</label><input type="range" id="sMaster" min="0" max="1.2" step="0.01"><output id="oMaster"></output></div>
+    <div class="row"><label for="sRain">Lluvia</label><input type="range" id="sRain" min="0" max="1.5" step="0.01"><output id="oRain"></output></div>
+    <div class="row"><label for="sThunder">Truenos</label><input type="range" id="sThunder" min="0" max="1.5" step="0.01"><output id="oThunder"></output></div>
+    <div class="row"><label for="sSens">Sensibilidad</label><input type="range" id="sSens" min="0.3" max="2.5" step="0.05"><output id="oSens"></output></div>
+    <label class="check"><input type="checkbox" id="sFps"> Mostrar FPS</label>
+    <label class="check"><input type="checkbox" id="sInvert"> Invertir mirada vertical</label>
+    <p class="note" id="qNote">Cambiar la calidad recarga el bosque (tu progreso se guarda).</p>
+    <p><b>Controles.</b> PC: <kbd>W A S D</kbd> caminar · ratón mirar · <kbd>Shift</kbd> correr · <kbd>E</kbd> interactuar · <kbd>F</kbd> linterna · <kbd>Esc</kbd> pausa. Celular: joystick izquierdo para caminar, deslizá a la derecha para mirar, botones para correr, interactuar y linterna.</p>
+    <div class="actions"><button class="btn primary" id="sClose">Listo</button></div>
+  </div>
+</section>
+
+<section class="panel" id="pCredits" hidden aria-label="Créditos">
+  <div class="card">
+    <h2>Créditos</h2>
+    <p>Diseño, programación, gráficos y sonido generados por código para este proyecto.</p>
+    <ul>
+      <li>Árboles, terreno, texturas, lluvia y relámpagos: generación procedural en tiempo real.</li>
+      <li>Audio: síntesis procedural con Web Audio API (lluvia gota a gota, truenos, viento, pasos). Sin grabaciones de terceros.</li>
+      <li>Motor 3D: Three.js r149 (licencia MIT).</li>
+      <li>Tipografías: Cinzel y Source Sans 3 (Google Fonts, licencia OFL).</li>
+    </ul>
+    <div class="actions"><button class="btn primary" data-close>Cerrar</button></div>
+  </div>
+</section>
+
+<div class="rotate"><div><h2 style="font-family:var(--f-title)">Girá el teléfono</h2><p>Tormenta Salvaje se juega en horizontal.</p><button class="btn" id="rotOk">Jugar igual</button></div></div>
+<div class="loading" id="loading">Cargando el bosque…</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/util.js"></script>
+<script src="js/world.js"></script>
+<script src="js/weather.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/player.js"></script>
+<script src="js/main.js"></script>
