@@ -14,7 +14,7 @@ const Sfx = {
       for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.04 * w) / 1.04; d[i] = w * 0.5 + last * 3; }
       this.noise = buf;
       this.loops = {};
-      this.makeLoop('wind', 'bandpass', 420, 0.7); this.makeLoop('water', 'lowpass', 520, 0.6); this.makeLoop('rain', 'highpass', 2600, 0.4); this.makeLoop('hum', 'lowpass', 70, 2); this.makeLoop('lava', 'lowpass', 220, 0.8);
+      this.makeLoop('wind', 'bandpass', 420, 0.7); this.makeLoop('water', 'lowpass', 520, 0.6); this.makeLoop('rain', 'highpass', 2600, 0.4); this.makeLoop('hum', 'lowpass', 70, 2); this.makeLoop('city', 'bandpass', 320, 0.5); this.makeLoop('engine', 'lowpass', 120, 1.5); this.makeLoop('crowd', 'bandpass', 1100, 2.5); this.makeLoop('lava', 'lowpass', 220, 0.8);
       // continuous rumble for earthquakes
       const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
       const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 75;
@@ -72,6 +72,18 @@ const Sfx = {
     const n2 = this.noiseSrc(t + 0.05, 3.2); const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 160;
     const g2 = c.createGain(); g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(1.0, t + 0.15); g2.gain.exponentialRampToValueAtTime(0.001, t + 3.1);
     n2.connect(lp); lp.connect(g2); g2.connect(this.master);
+  },
+  // civil-defence siren: rising and falling wail
+  siren(level) {
+    if (!this.ctx) return;
+    if (!this.sirenOsc) {
+      const c = this.ctx, o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), f = c.createBiquadFilter(), g = c.createGain();
+      o.type = 'sawtooth'; o.frequency.value = 780; lfo.frequency.value = 0.22; lg.gain.value = 240;
+      lfo.connect(lg); lg.connect(o.frequency); f.type = 'lowpass'; f.frequency.value = 1600; g.gain.value = 0;
+      o.connect(f); f.connect(g); g.connect(this.master); o.start(); lfo.start();
+      this.sirenOsc = o; this.sirenGain = g;
+    }
+    this.sirenGain.gain.setTargetAtTime(settings.sound ? level * 0.07 : 0, this.ctx.currentTime, 0.8);
   },
   rumble(level) { if (this.rumbleGain) this.rumbleGain.gain.setTargetAtTime(settings.sound ? level : 0, this.ctx.currentTime, 0.25); },
 };

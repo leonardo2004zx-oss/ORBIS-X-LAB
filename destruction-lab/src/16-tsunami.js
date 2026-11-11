@@ -33,6 +33,7 @@ function launchTsunami(at) {
   else tmpV.set(camera.position.x - controls.target.x, 0, camera.position.z - controls.target.z).normalize();
   tsunami.dir.set(tmpV.x, tmpV.z);
   tsunami.phase = 'advance'; tsunami.front = tsunami.start; tsunami.t = 0;
+  addThreat('tsunami', 0, 0, 40 + tsunami.height * 4, 30, { dx: tsunami.dir.x, dz: tsunami.dir.y, front: () => tsunami.front });
   tsunami.speed = 9 + tsunami.height * 0.7;
   water.visible = true; toast('¡Tsunami en camino!');
   refreshRunning();

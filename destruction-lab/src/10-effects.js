@@ -143,6 +143,24 @@ function blast(P, power, radius, opts = {}) {
     else { const t = it.body.translation(); pushBody(it.body, t.x - P.x, t.y - P.y, t.z - P.z, d, vmax * f); }
   }
   if (!opts.noCrater) addCrater(P, radius * 0.45, power >= 6);
+  damageAround(P, radius * 1.9, Math.min(1, 0.45 + power * 0.07));
+  impactAt(P.x, P.z, radius * 0.45, radius * 2.1);
+  addThreat('blast', P.x, P.z, radius * 2.1, 6, { siren: power >= 6 });
+  if (power >= 7 && !opts.silent) setTimeout(() => dispatchEmergency(P.x, P.z), 2500);
+}
+// marks left on nearby facades (broken windows, soot) and a little smoke from the worst hit
+function damageAround(P, r, amount) {
+  const touched = new Set();
+  let smokes = 0;
+  for (const it of allBlocks()) {
+    const t = it.body.translation(), d = Math.hypot(t.x - P.x, t.y - P.y, t.z - P.z);
+    if (d > r) continue;
+    const v = Math.min(1, Math.max(it.dmg || 0, amount * (1 - d / r) * rnd(0.75, 1.15)));
+    if (v <= (it.dmg || 0)) continue;
+    it.dmg = v; it.pool.dmg.setX(it.idx, v); touched.add(it.pool);
+    if (v > 0.7 && smokes < 2 && Math.random() < 0.15 && gfx.enhanced) { smokes++; addFire(new THREE.Vector3(t.x, t.y, t.z), rnd(10, 18), 0.5); }
+  }
+  for (const p of touched) p.dmg.needsUpdate = true;
 }
 function pushBody(body, dx, dy, dz, d, v) {
   if (d < 0.01) { dx = 0; dy = 1; dz = 0; d = 1; }
@@ -188,7 +206,12 @@ function launchMeteor(P, size) {
   glow.scale.setScalar(r * 11); mesh.add(glow);
   mesh.position.copy(start); scene.add(mesh);
   const dur = 1.5;
-  meteors.push({ P: P.clone(), start, dir, t: 0, dur, mesh, size, r });
+  // warning marker on the ground where it will hit
+  const mark = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xff5a2a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
+  mark.position.set(P.x, Math.max(0.25, P.y + 0.15), P.z); scene.add(mark);
+  meteors.push({ P: P.clone(), start, dir, t: 0, dur, mesh, size, r, mark });
+  // anticipation: people near the target see it coming and start running
+  addThreat('meteor', P.x, P.z, 14 + size * 3.5, dur + 6, { siren: size >= 5 });
   Sfx.whoosh(dur);
 }
 function impactMeteor(m) {
@@ -233,7 +256,9 @@ function updateMeteors(dt) {
     if (Math.random() < 0.6) fire.emit(p.x, p.y, p.z, rnd(-6, 6), rnd(-3, 6), rnd(-6, 6), rnd(0.4, 0.9), rnd(0.2, 0.4), 1, 0.85, 0.5, 1, 0, 0.3, 4);
     for (let q = 0; q < 2; q++) sparks.emit(p.x, p.y, p.z, -m.dir.x * 15 + rnd(-6, 6), -m.dir.y * 15 + rnd(-3, 6), -m.dir.z * 15 + rnd(-6, 6), rnd(0.3, 0.8));
     flashLight.position.copy(p); flashLight.intensity = Math.max(flashLight.intensity, 400 + m.size * 120);
+    if (m.mark) { const pr = 4 + m.size * 1.3; m.mark.scale.setScalar(pr * (1.4 - 0.6 * k) + Math.sin(m.t * 12) * 0.3); m.mark.material.opacity = 0.25 + 0.55 * k; }
     if (k >= 1) {
+      if (m.mark) { scene.remove(m.mark); m.mark.material.dispose(); }
       scene.remove(m.mesh); m.mesh.geometry.dispose(); m.mesh.children[0].material.dispose();
       meteors.splice(i, 1);
       impactMeteor(m);

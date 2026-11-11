@@ -8,15 +8,16 @@ function facadeShader(mat, share, blindsOn = true) {
   mat.emissiveIntensity = 0.75;
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uNight = nightU;
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCenter; varying float vWY;')
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCenter; varying float vWY; attribute float iDmg; varying float vDmg;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
 #ifdef USE_INSTANCING
 vCenter = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-vWY = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).y;
+vWY = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).y; vDmg = iDmg;
 #else
+vDmg = 0.0;
 vCenter = vec3(0.0); vWY = (modelMatrix * vec4(transformed, 1.0)).y;
 #endif`);
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vCenter; varying float vWY; uniform float uNight;')
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vCenter; varying float vWY; varying float vDmg; uniform float uNight;')
       .replace('#include <map_fragment>', `#include <map_fragment>
         float hsh = fract(sin(dot(floor(vCenter * 1.37), vec3(12.9898, 78.233, 37.719))) * 43758.5453);
         float hsh2 = fract(hsh * 17.31 + 0.13), hsh3 = fract(hsh * 7.71 + 0.31);
@@ -26,11 +27,17 @@ vCenter = vec3(0.0); vWY = (modelMatrix * vec4(transformed, 1.0)).y;
         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * tint, glassM);
         float blinds = ${blindsOn ? '1.0' : '0.0'} * glassM * step(0.7, hsh) * step(1.0 - (0.15 + 0.4 * hsh2), vMapUv.y);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.58, 0.52), blinds * 0.85);
-        diffuseColor.rgb *= mix(0.5, 1.0, smoothstep(0.0, 5.0, vWY));`)
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.75, blinds);')
-      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\n metalnessFactor = mix(metalnessFactor, 0.0, blinds);')
+        diffuseColor.rgb *= mix(0.5, 1.0, smoothstep(0.0, 5.0, vWY));
+        // damage: broken glass (dark holes, no reflection) and soot, growing with how close the blast was
+        float cellH = fract(sin(dot(floor(vMapUv * vec2(2.0, 3.0)) + hsh * 7.0, vec2(12.9898, 78.233))) * 43758.5453);
+        float broken = glassM * step(cellH * 0.85 + 0.1, vDmg);
+        float soot = vDmg * (0.55 + 0.45 * cellH);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.025, 0.022, 0.02), broken * 0.92);
+        diffuseColor.rgb *= 1.0 - 0.7 * soot;`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.75, blinds); roughnessFactor = mix(roughnessFactor, 0.95, max(broken, soot * 0.8));')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\n metalnessFactor = mix(metalnessFactor, 0.0, max(blinds, max(broken, soot)));')
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-        totalEmissiveRadiance *= uNight * step(${(1 - share).toFixed(2)}, hsh3) * (0.55 + 0.9 * hsh2) * (1.0 - blinds * 0.55);`);
+        totalEmissiveRadiance *= uNight * step(${(1 - share).toFixed(2)}, hsh3) * (0.55 + 0.9 * hsh2) * (1.0 - blinds * 0.55) * (1.0 - broken) * (1.0 - soot);`);
   };
   mat.customProgramCacheKey = () => 'facade' + share + blindsOn;
   return mat;

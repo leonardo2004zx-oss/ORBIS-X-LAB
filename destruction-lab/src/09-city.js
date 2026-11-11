@@ -83,6 +83,38 @@ function addProp(body, collider, obj, extra = {}) {
   props.push(item); colliderMap.set(collider.handle, item);
   return item;
 }
+/* instanced props: every tree / car type / lamp part is ONE draw call for all copies */
+let propPoolId = 0;
+class PropPool {
+  constructor(geo, mat, cap, shadow = true) {
+    this.id = 'pp' + (propPoolId++); this.cap = cap; this.items = [];
+    this.mesh = new THREE.InstancedMesh(geo, mat, cap);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.setColorAt(0, new THREE.Color(1, 1, 1)); this.mesh.count = 0;
+    this.mesh.castShadow = shadow; this.mesh.receiveShadow = true; this.mesh.frustumCulled = false;
+    scene.add(this.mesh);
+  }
+  add(item, color) {
+    if (this.items.length >= this.cap) return false;
+    const i = this.items.length; item[this.id] = i; this.items.push(item);
+    this.mesh.setColorAt(i, color || WHITE); this.mesh.instanceColor.needsUpdate = true; this.mesh.count = this.items.length;
+    return true;
+  }
+  remove(item) {
+    const i = item[this.id], last = this.items.pop();
+    if (last !== item) { this.items[i] = last; last[this.id] = i; last.synced = false; this.mesh.setColorAt(i, last.pcolor || WHITE); this.mesh.instanceColor.needsUpdate = true; }
+    this.mesh.count = this.items.length;
+  }
+  clear() { this.items.length = 0; this.mesh.count = 0; }
+}
+const WHITE = new THREE.Color(1, 1, 1);
+const PROP_POOLS = [];
+function addPropInst(body, collider, pools, color, extra = {}) {
+  const item = Object.assign({ kind: 'prop', body, collider, slots: pools, pcolor: color }, extra);
+  for (const p of pools) if (!p.add(item, color)) { world.removeRigidBody(body); for (const q of pools) if (q.items[item[q.id]] === item) q.remove(item); return null; }
+  props.push(item); colliderMap.set(collider.handle, item);
+  return item;
+}
 
 const treeGeos = [];
 function treeGeo(kind) {
@@ -98,10 +130,11 @@ function addTree(x, z, kind = Math.floor(srand() * 3)) {
   const h = 1.7;
   const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, h, z).setSleeping(true).setAngularDamping(0.4));
   const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(0.55, h, 0.55).setDensity(0.35).setFriction(0.8), body);
-  const mesh = new THREE.Mesh(treeGeo(kind), propMatFlat); mesh.castShadow = true;
-  mesh.rotation.y = srand() * 6; const obj = new THREE.Group(); obj.add(mesh);
-  addProp(body, collider, obj);
+  if (!TREE_POOLS[kind]) PROP_POOLS.push(TREE_POOLS[kind] = new PropPool(treeGeo(kind), propMatFlat, 220));
+  const tint = new THREE.Color(1, 1, 1).multiplyScalar(0.85 + srand() * 0.3);
+  addPropInst(body, collider, [TREE_POOLS[kind]], tint, { rotOff: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), srand() * 6), tree: true, sway: srand() * 6 });
 }
+const TREE_POOLS = [];
 
 const lampMat = new THREE.MeshStandardMaterial({ color: 0xfff1d0, emissive: 0xffd28a, emissiveIntensity: 0 });
 let lampGeo, lampHeadGeo;
@@ -110,11 +143,11 @@ function addLamp(x, z, facing) {
   lampHeadGeo = lampHeadGeo || box(0.35, 0.18, 0.6, 0, 2.82, 1.25);
   const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, 3.01, z).setRotation({ x: 0, y: Math.sin(facing / 2), z: 0, w: Math.cos(facing / 2) }).setSleeping(true));
   const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(0.15, 3, 0.15).setDensity(3).setFriction(0.8), body);
-  const obj = new THREE.Group();
-  const pole = new THREE.Mesh(lampGeo, propMat); pole.castShadow = true; obj.add(pole);
-  obj.add(new THREE.Mesh(lampHeadGeo, lampMat));
-  addLampFX(addProp(body, collider, obj));
+  if (!LAMP_POOLS.length) { LAMP_POOLS.push(new PropPool(lampGeo, propMat, 120), new PropPool(lampHeadGeo, lampMat, 120, false)); PROP_POOLS.push(...LAMP_POOLS); }
+  const it = addPropInst(body, collider, LAMP_POOLS, WHITE, { lamp: true });
+  if (it) addLampFX(it);
 }
+const LAMP_POOLS = [];
 
 const CAR_COLORS = [0xc8372d, 0x2f5fa8, 0xe3e3e0, 0x2a2d33, 0x3f8f6b, 0x8a99a8, 0x7a3b5c, 0xd9d4c4];
 const CAR_TYPES = {
@@ -157,10 +190,10 @@ function addCar(x, z, rotY, type = 'sedan', drive = null) {
   const q = { x: 0, y: Math.sin(rotY / 2), z: 0, w: Math.cos(rotY / 2) };
   const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, T.H / 2 + 0.02, z).setRotation(q).setSleeping(!drive).setAngularDamping(0.3));
   const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(T.L / 2, T.H / 2, T.W / 2).setDensity(T.mass).setFriction(0.9), body);
-  const mesh = new THREE.Mesh(carGeo(type, paint), propMat); mesh.castShadow = true;
-  const obj = new THREE.Group(); obj.add(mesh);
-  return addProp(body, collider, obj, { car: true, sy: T.H, drive });
+  if (!CAR_POOLS[type]) PROP_POOLS.push(CAR_POOLS[type] = new PropPool(carGeo(type, 0xffffff), propMat, 40));
+  return addPropInst(body, collider, [CAR_POOLS[type]], new THREE.Color(paint), { car: true, sy: T.H, drive, type });
 }
+const CAR_POOLS = {};
 
 /* the bridge over the river: deck slabs resting on pillars, all destructible */
 function addBridge() {
@@ -225,18 +258,46 @@ function populateCity() {
   }
 }
 
-/* moving traffic: a car keeps its lane until something knocks it, then it becomes a free wreck */
+/* moving traffic: lanes, traffic lights, following distance, braking or fleeing near danger.
+   A car keeps its lane until something knocks it, then it becomes a free wreck. */
 function trafficStep() {
-  for (const it of props) {
-    const d = it.drive; if (!d || it.dead) continue;
-    const b = it.body, v = b.linvel(), r = b.rotation(), t = b.translation();
+  const drivers = props.filter((it) => it.drive && !it.dead);
+  for (const it of drivers) {
+    const d = it.drive, b = it.body, v = b.linvel(), r = b.rotation(), t = b.translation();
     const upY = 1 - 2 * (r.x * r.x + r.z * r.z);
-    const dev = Math.hypot(v.x - d.dir * d.speed, v.z);
+    if (d.v === undefined) d.v = d.speed;
+    const dev = Math.hypot(v.x - d.dir * d.v, v.z);
     if (upY < 0.96 || (dev > 4 && it.driving) || t.y > 3 || t.y < -0.5) { it.drive = null; if (Math.random() < 0.4) addFire(new THREE.Vector3(t.x, t.y + 0.5, t.z), rnd(6, 12), 0.6); continue; }
     it.driving = true;
+    let want = d.speed;
+    // red light: stop before the crossing
+    if (!LIGHTS.carsGo || (LIGHTS.t > LIGHTS.cycle[0] - 2.5 && !it.emergency)) {
+      for (const L of lightXs()) {
+        const stop = L.x - d.dir * (L.w / 2 + 4.2), ahead = (stop - t.x) * d.dir;
+        if (ahead > -0.5 && ahead < 9 && !it.emergency) want = Math.min(want, Math.max(0, ahead - 1) * 1.2);
+      }
+    }
+    // keep distance from the car in front
+    for (const o of drivers) {
+      if (o === it) continue;
+      const ot = o.body.translation();
+      if (Math.abs(ot.z - t.z) > 1.5) continue;
+      const gap = (ot.x - t.x) * d.dir - ((CAR_TYPES[o.type] || CAR_TYPES.sedan).L + (CAR_TYPES[it.type] || CAR_TYPES.sedan).L) / 2;
+      if (gap > -1 && gap < 10) want = Math.min(want, Math.max(0, gap - 2) * 1.5);
+    }
+    // danger: brake if it is ahead, speed away if it is behind
+    for (const th of threats) {
+      threatAt(th);
+      const dx = th.x - t.x, dist = Math.hypot(dx, th.z - t.z);
+      if (th.kind === 'tsunami' || dist > th.r * 1.2) continue;
+      if (dx * d.dir > 0 && dist < th.r) want = Math.min(want, Math.max(0, dist - th.r * 0.6) * 0.4);
+      else want = Math.max(want, 17);
+    }
+    if (d.stopX !== undefined && (d.stopX - t.x) * d.dir < 0) want = 0;   // emergency vehicle arrived
+    d.v += Math.max(-9 * DT, Math.min(5 * DT, want - d.v));
     if (d.dir > 0 && t.x > 98) b.setTranslation({ x: -98, y: t.y, z: d.z }, true);
     if (d.dir < 0 && t.x < -98) b.setTranslation({ x: 98, y: t.y, z: d.z }, true);
-    b.setLinvel({ x: d.dir * d.speed, y: Math.min(v.y, 0), z: (d.z - t.z) * 2 }, true);
+    b.setLinvel({ x: d.dir * d.v, y: Math.min(v.y, 0), z: (d.z - t.z) * 2 }, true);
     b.setAngvel({ x: 0, y: 0, z: 0 }, true);
   }
 }

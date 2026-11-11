@@ -30,10 +30,12 @@ const funnel = new THREE.Group();
 function tornadoRadius() { return 6 + tornado.strength * 1.6; }
 function setTornado(on, at) {
   tornado.on = on;
+  if (!on && tornado.threat) { tornado.threat.until = simTime + 2; tornado.threat = null; }
   if (on) {
     if (at) tornado.pos.set(at.x, 0, at.z);
     else if (tornado.fade < 0.05) { const a = rnd(0, Math.PI * 2); tornado.pos.set(Math.cos(a) * 50, 0, Math.sin(a) * 34); }
-    tornado.target = null; tornado.life = 0; toast(tornado.strength >= 8 ? 'Tornado gigante en curso' : 'Tornado en curso');
+    tornado.target = null; tornado.life = 0;
+    tornado.threat = addThreat('tornado', tornado.pos.x, tornado.pos.z, tornadoRadius() * 3.2, tornado.dur + 2, { follow: () => funnel.position }); toast(tornado.strength >= 8 ? 'Tornado gigante en curso' : 'Tornado en curso');
   }
   refreshRunning();
 }

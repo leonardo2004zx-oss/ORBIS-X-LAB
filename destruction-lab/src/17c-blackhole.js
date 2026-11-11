@@ -34,6 +34,7 @@ function startBlackHole(P) {
   g.add(halo, disk, core); g.userData = { core, halo, disk };
   scene.add(g); blackhole.group = g;
   toast('Agujero negro abierto');
+  addThreat('blackhole', P.x, P.z, 32 + s * 5, blackhole.dur + 4);
   refreshRunning();
 }
 function clearBlackHole() {

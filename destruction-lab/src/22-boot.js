@@ -16,6 +16,7 @@ async function boot() {
   controls.radius = controls.goal.radius;
   createWorld();
   populateCity();
+  buildNav(); buildSignals(); buildPeople(); spawnPeople();
   syncAll(true);
   setTool('meteor');
   syncHourUI(); refreshRunning(); applyGfx(true);
@@ -57,6 +58,10 @@ window.__lab = {
   prof: () => { const gl = renderer.getContext(), px = new Uint8Array(4); const sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
     const T = (f) => { sync(); const t = performance.now(); f(); sync(); return +(performance.now() - t).toFixed(1); };
     return { particles: T(() => { dust.update(0.016); fire.update(0.016); }), sparks: T(() => sparks.update(0.016)), sync: T(() => syncAll(false)), light: T(() => updateLighting(0.016)), step: T(() => world.step(eventQueue)), renderDirect: T(() => renderer.render(scene, camera)), renderFrame: T(() => renderFrame()) }; },
+  perf: () => ({ phys: +perf.phys.toFixed(2), upd: +perf.upd.toFixed(2), rend: +perf.rend.toFixed(2), frame: +perf.frame.toFixed(1) }),
+  people: () => { const c = {}; for (const p of peds) c[p.state] = (c[p.state] || 0) + 1; return { n: peds.length, ...c, threats: threats.map((t) => t.kind).join('+'), siren: simTime < sirenUntil, emergency: emergency.length, evac: evacuation }; },
+  evac: (on) => setEvacuation(on),
+  dmg: () => allBlocks().filter((b) => b.dmg > 0.1).length,
   gfx: (on) => { if (on !== undefined) setGfx(on); return { enhanced: gfx.enhanced, post: gfx.ready && gfx.post, env: !!scene.environment, rubble: rubble.count }; },
 };
 boot();

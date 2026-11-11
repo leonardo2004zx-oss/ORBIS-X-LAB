@@ -4,7 +4,8 @@ function clearScene() {
   meteors.length = 0;
   for (const e of effects) e.end();
   effects.length = 0;
-  for (const p of props) scene.remove(p.obj);
+  for (const p of props) if (p.obj) scene.remove(p.obj);
+  for (const p of PROP_POOLS) p.clear();
   clearLampFX(); clearRubble(); sparks.clear();
   props.length = 0;
   for (const c of craters) { groundGroup.remove(c); c.material.dispose(); }
@@ -29,6 +30,7 @@ function resetCity() {
   if (world) world.free();
   createWorld();
   populateCity();
+  clearPeople(); spawnPeople();
   quake.t = 0; quake.amp = 0; setQuake(false); Sfx.rumble(0); refreshRunning();
   syncAll(true);
   toast('Ciudad reconstruida');

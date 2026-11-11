@@ -45,6 +45,7 @@ function startVolcano(P) {
   volcano.lava = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), lavaMat);
   volcano.lava.rotation.x = -Math.PI / 2; volcano.lava.position.set(P.x, 0.22, P.z); volcano.lava.scale.setScalar(0.01); scene.add(volcano.lava);
   toast('El suelo se abre: volcán en formación');
+  addThreat('volcano', P.x, P.z, volcano.R + 30, 4 + volcano.dur + 6);
   refreshRunning();
 }
 function clearVolcano() {

@@ -2,7 +2,10 @@
 const BOX = new THREE.BoxGeometry(1, 1, 1);
 class Pool {
   constructor(mats, cap) {
-    this.mesh = new THREE.InstancedMesh(BOX, mats, cap);
+    const geo = BOX.clone();
+    this.dmg = new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('iDmg', this.dmg);
+    this.mesh = new THREE.InstancedMesh(geo, mats, cap);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.castShadow = true; this.mesh.receiveShadow = true;
     this.mesh.frustumCulled = false;
@@ -15,7 +18,7 @@ class Pool {
   add(item, color) {
     if (this.items.length >= this.cap) return false;
     const i = this.items.length;
-    item.idx = i; item.pool = this; item.dirty = true;
+    item.idx = i; item.pool = this; item.dirty = true; item.dmg = 0; this.dmg.setX(i, 0); this.dmg.needsUpdate = true;
     this.items.push(item);
     this.mesh.setColorAt(i, color);
     this.mesh.instanceColor.needsUpdate = true;
@@ -26,7 +29,7 @@ class Pool {
     const i = item.idx;
     const last = this.items.pop();
     if (last !== item) {
-      this.items[i] = last; last.idx = i; last.dirty = true;
+      this.items[i] = last; last.idx = i; last.dirty = true; this.dmg.setX(i, last.dmg || 0); this.dmg.needsUpdate = true;
       this.mesh.setColorAt(i, last.color);
       this.mesh.instanceColor.needsUpdate = true;
     }

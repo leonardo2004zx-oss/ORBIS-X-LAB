@@ -92,9 +92,10 @@ function updateDecor(night, wet) {
   for (let i = lampFX.length - 1; i >= 0; i--) {
     const L = lampFX[i];
     if (L.item.dead) { scene.remove(L.pool, L.cone); lampFX.splice(i, 1); continue; }
-    const o = L.item.obj;
-    lampHead.set(0, 2.82, 1.25).applyQuaternion(o.quaternion).add(o.position);
-    const up = 1 - 2 * (o.quaternion.x * o.quaternion.x + o.quaternion.z * o.quaternion.z);
+    const bt = L.item.body.translation(), br = L.item.body.rotation();
+    tmpQ.set(br.x, br.y, br.z, br.w);
+    lampHead.set(0, 2.82, 1.25).applyQuaternion(tmpQ).add(tmpV.set(bt.x, bt.y, bt.z));
+    const up = 1 - 2 * (br.x * br.x + br.z * br.z);
     const on = gfx.enhanced && up > 0.9 && night > 0.05;
     L.pool.visible = L.cone.visible = on;
     if (on) { L.pool.position.set(lampHead.x, 0.13, lampHead.z); L.cone.position.copy(lampHead); }

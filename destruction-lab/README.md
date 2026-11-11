@@ -30,6 +30,14 @@ El botón **Gráficos** (arriba, o tecla G) alterna sobre la misma escena entre 
 
 Son aproximaciones visuales en WebGL: no hay humo volumétrico real, reflejos de otros edificios, iluminación global ni destrucción por vóxeles.
 
+## Ciudad viva (primera entrega)
+- **Peatones** (60 / 130 / 220 según la calidad): una sola malla por instancias; piernas y brazos se animan en el shader. Ropa, piel, tamaño y velocidad varían. Caminan por una red de veredas (no atraviesan edificios), cruzan por las sendas peatonales cuando el semáforo se lo permite y pasan por los parques.
+- **Tránsito**: semáforos en las intersecciones de la avenida, distancia con el auto de adelante, frenado y arranque suaves.
+- **Reacciones**: cada desastre registra una amenaza con radio propio. Las personas cercanas la notan primero (con demora según la distancia), miran, corren alejándose por las veredas y buscan los parques (zonas seguras). Las lejanas siguen con su rutina. Quien está en el centro de un impacto cae y se levanta corriendo (sin violencia gráfica). Los autos frenan si el peligro está adelante y aceleran si quedó atrás. Sirenas y vehículos de emergencia con balizas.
+- **Meteorito completo**: marca de advertencia en el suelo durante la caída, estela, destello, onda expansiva, polvo, cráter, fachadas cercanas con vidrios rotos y hollín, humo, huida de la gente, sirena y llegada de emergencias.
+- **Evacuación**: botón Evacuar en el panel; todos van a los parques.
+- **Panel plegable** y protección contra toques accidentales al mover la cámara.
+
 ## Rendimiento
 Calidad baja/media/alta, límites de escombros y de partículas, resolución dinámica y piezas que se duermen solas cuando quedan quietas.
 

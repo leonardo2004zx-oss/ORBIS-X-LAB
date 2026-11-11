@@ -15,6 +15,7 @@ const HINTS = {
 };
 function setTool(t) {
   tool = t;
+  const tb = document.querySelector(`.tool[data-tool="${t}"] .short`); if (tb) $('#pill-tool').textContent = tb.textContent;
   document.querySelectorAll('.tool[data-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === t)));
   document.querySelectorAll('.ctl').forEach((c) => (c.hidden = c.dataset.for !== t));
   $('#hint').innerHTML = HINTS[t];
@@ -48,7 +49,7 @@ bindSlider('bh-pow', (v) => (blackhole.power = v));
 bindSlider('bh-dur', (v) => (blackhole.dur = v));
 function setQuake(on) {
   quake.on = on;
-  if (on) { quake.wakeT = 0; quake.t = 0; quake.crackT = 0.5; toast(quake.intensity >= 8 ? 'Terremoto extremo' : 'Terremoto en curso'); }
+  if (on) { addThreat('quake', quake.epi.x, quake.epi.z, 25 + quake.intensity * 7, quake.dur, { siren: quake.intensity >= 6 }); quake.wakeT = 0; quake.t = 0; quake.crackT = 0.5; toast(quake.intensity >= 8 ? 'Terremoto extremo' : 'Terremoto en curso'); }
   refreshRunning();
 }
 $('#quake-btn').addEventListener('click', () => { Sfx.init(); if (!quake.on) setQuakeEpicenter(controls.target); setQuake(!quake.on); });
@@ -70,6 +71,7 @@ function refreshRunning() {
   set('#quake-btn', quake.on, 'Iniciar', 'Detener');
   set('#tornado-btn', tornado.on, 'Iniciar', 'Detener');
   set('#storm-btn', storm.on, 'Iniciar', 'Detener');
+  $('#btn-evac').setAttribute('aria-pressed', String(evacuation)); $('#btn-evac').textContent = evacuation ? 'Fin evacuación' : 'Evacuar';
 }
 
 let toastTimer;
@@ -185,3 +187,13 @@ function applyGfx(silent) {
 function setGfx(on) { gfx.enhanced = on; store.set('gfx', on); applyGfx(); }
 $('#btn-gfx').addEventListener('click', () => setGfx(!gfx.enhanced));
 $('#opt-post').addEventListener('change', (e) => { gfx.post = e.target.checked; store.set('post', gfx.post); });
+
+/* collapsible tools: more room for the scene and no accidental taps on the panel while moving the camera */
+function setCollapsed(c) {
+  $('#panel').hidden = c; document.querySelector('.toolbar').hidden = c; $('#btn-expand').hidden = !c;
+  store.set('collapsed', c);
+}
+$('#btn-collapse').addEventListener('click', () => setCollapsed(true));
+$('#btn-expand').addEventListener('click', () => setCollapsed(false));
+if (store.get('collapsed', false)) setCollapsed(true);
+$('#btn-evac').addEventListener('click', () => { Sfx.init(); setEvacuation(!evacuation); });

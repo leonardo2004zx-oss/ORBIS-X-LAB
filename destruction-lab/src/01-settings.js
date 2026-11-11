@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ settings */
 const QUALITY = {
   bajo:  { dpr: 1,                   shadowSize: 0,    bs: 3, frag: [2, 1, 2], maxDebris: 80,  particles: 600,  fragBudget: 10, substeps: 2, post: false, bloomScale: 0.5 },
-  medio: { dpr: Math.min(DPR, 1.5),  shadowSize: 1024, bs: 2, frag: [2, 2, 2], maxDebris: 180, particles: 1400, fragBudget: 22, substeps: 2, post: true, bloomScale: 0.5 },
+  medio: { dpr: Math.min(DPR, isCoarse ? 1.25 : 1.5),  shadowSize: 1024, bs: 2, frag: [2, 2, 2], maxDebris: 180, particles: 1400, fragBudget: 22, substeps: 2, post: true, bloomScale: 0.5 },
   alto:  { dpr: Math.min(DPR, 2),    shadowSize: 2048, bs: 2, frag: [2, 2, 2], maxDebris: 360, particles: 2600, fragBudget: 40, substeps: 3, post: true, bloomScale: 1 },
 };
 const store = {

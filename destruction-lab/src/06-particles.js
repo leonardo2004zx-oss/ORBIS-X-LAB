@@ -5,7 +5,7 @@ class Particles {
     this.pos = new Float32Array(max * 3); this.col = new Float32Array(max * 3);
     this.size = new Float32Array(max); this.alpha = new Float32Array(max);
     this.vel = new Float32Array(max * 3); this.life = new Float32Array(max); this.maxLife = new Float32Array(max);
-    this.orb = new Float32Array(max * 3); this.orbOn = new Uint8Array(max); this.bcol = new Float32Array(max * 3); this.ramp = additive;
+    this.orb = new Float32Array(max * 3); this.orbOn = new Uint8Array(max); this.bcol = new Float32Array(max * 3); this.ramp = additive; this.activeT = 0; this.idle = false;
     this.grow = new Float32Array(max); this.drag = new Float32Array(max); this.grav = new Float32Array(max); this.a0 = new Float32Array(max);
     const g = new THREE.BufferGeometry();
     this.aPos = new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage);
@@ -41,6 +41,7 @@ class Particles {
   emit(x, y, z, vx, vy, vz, life, size, r, g, b, alpha = 1, grow = 0, drag = 0.5, grav = 0) {
     const i = this.next; this.next = (i + 1) % this.limit;
     const j = i * 3;
+    this.idle = false; if (life > this.activeT) this.activeT = life;
     this.pos[j] = x; this.pos[j + 1] = y; this.pos[j + 2] = z;
     this.vel[j] = vx; this.vel[j + 1] = vy; this.vel[j + 2] = vz;
     this.col[j] = r; this.col[j + 1] = g; this.col[j + 2] = b;
@@ -56,8 +57,11 @@ class Particles {
     this.orbOn[i] = mode; this.orb[i * 3] = r; this.orb[i * 3 + 1] = a; this.orb[i * 3 + 2] = w;
   }
   setLimit(n) { this.limit = Math.max(50, Math.min(this.max, n)); if (this.next >= this.limit) this.next = 0; for (let i = this.limit; i < this.max; i++) { this.life[i] = 0; this.alpha[i] = 0; } }
-  clear() { this.life.fill(0); this.alpha.fill(0); }
+  clear() { this.life.fill(0); this.alpha.fill(0); this.aAlpha.needsUpdate = true; this.activeT = 0; }
   update(dt) {
+    if (this.idle) return;
+    this.activeT -= dt;
+    if (this.activeT < -0.5) { this.alpha.fill(0); this.aAlpha.needsUpdate = true; this.idle = true; return; }
     let any = 0;
     for (let i = 0; i < this.limit; i++) {
       if (this.life[i] <= 0) { if (this.alpha[i] !== 0) { this.alpha[i] = 0; any++; } continue; }

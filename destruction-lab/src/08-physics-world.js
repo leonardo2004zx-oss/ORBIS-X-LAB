@@ -47,7 +47,9 @@ function removeItem(item) {
   if (item.collider) colliderMap.delete(item.collider.handle);
   world.removeRigidBody(item.body);
   if (item.pool) item.pool.remove(item);
-  if (item.obj) { scene.remove(item.obj); const i = props.indexOf(item); if (i >= 0) props.splice(i, 1); }
+  if (item.slots) for (const p of item.slots) p.remove(item);
+  if (item.obj) scene.remove(item.obj);
+  if (item.kind === 'prop') { const i = props.indexOf(item); if (i >= 0) props.splice(i, 1); }
 }
 
 function enforceDebrisCap() {

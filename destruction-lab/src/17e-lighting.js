@@ -66,7 +66,7 @@ function updateLighting(dt) {
     hemi.intensity *= 0.42 + night * 0.3;
     sun.intensity *= 1.1;
     if (scene.fog !== fogExp) scene.fog = fogExp;
-    fogExp.color.copy(fogLin.color); fogExp.density = 0.0034 + d * 0.004 + ash * 0.006 + cur.night * 0.0006;
+    fogExp.color.copy(fogLin.color); fogExp.density = 0.0021 + d * 0.0035 + ash * 0.005 + cur.night * 0.0005;
     const dusk = Math.max(0, 1 - Math.abs(env.hour - 18.6) / 1.6) + Math.max(0, 1 - Math.abs(env.hour - 6.6) / 1.4);
     if (gfx.bloom) { gfx.bloom.strength = 0.32 + night * 0.28 + d * 0.15 + ash * 0.08; gfx.bloom.threshold = 0.9 - night * 0.12; gfx.bloom.radius = 0.45; }
     if (gfx.grade) {

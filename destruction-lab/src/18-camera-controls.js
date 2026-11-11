@@ -24,14 +24,15 @@ const controls = {
   },
 };
 const pointers = new Map();
+let lastCamMove = 0;
 let gesture = null;
 const el = renderer.domElement;
 el.addEventListener('contextmenu', (e) => e.preventDefault());
 el.addEventListener('pointerdown', (e) => {
   Sfx.init();
-  el.setPointerCapture(e.pointerId);
+  try { el.setPointerCapture(e.pointerId); } catch (err) { /* synthetic or already released pointer */ }
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (pointers.size === 1) gesture = { sx: e.clientX, sy: e.clientY, t: performance.now(), moved: 0, multi: false, button: e.button, shift: e.shiftKey };
+  if (pointers.size === 1) gesture = { sx: e.clientX, sy: e.clientY, t: e.timeStamp, moved: 0, multi: false, button: e.button, shift: e.shiftKey };
   else if (gesture) gesture.multi = true;
   if (pointers.size === 2) gesture.pinch = pinchState();
 });
@@ -60,7 +61,10 @@ function endPointer(e) {
   if (pointers.size === 1 && gesture) gesture.pinch = null;
   if (pointers.size === 0 && gesture) {
     const g = gesture; gesture = null;
-    if (e.type === 'pointerup' && !g.multi && g.moved < 10 && performance.now() - g.t < 450 && g.button === 0) onTap(e.clientX, e.clientY);
+    // a tap only counts if it was short, still, single-finger and not right after moving the camera
+    const now = e.timeStamp;
+    if (e.type === 'pointerup' && !g.multi && g.moved < 8 && now - g.t < 320 && g.button === 0 && now - lastCamMove > 280) onTap(e.clientX, e.clientY);
+    if (g.multi || g.moved >= 8) lastCamMove = now;
   }
 }
 el.addEventListener('pointerup', endPointer);

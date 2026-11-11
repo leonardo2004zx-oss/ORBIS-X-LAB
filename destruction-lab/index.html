@@ -55,6 +55,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 .panel { pointer-events: auto; width: 100%; max-width: 600px; box-sizing: border-box; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: grid; gap: 8px; }
+.panel-head { display: flex; align-items: flex-start; gap: 8px; }
+.panel-head .hint { flex: 1; min-width: 0; }
+.chip-btn { pointer-events: auto; flex: none; font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,0.06); color: var(--fg); }
+.chip-btn.icon { padding: 4px 6px; } .chip-btn.icon svg { width: 18px; height: 18px; display: block; }
+.chip-btn[aria-pressed="true"] { background: var(--hot); color: #2a0b00; border-color: transparent; }
+.tools-pill { pointer-events: auto; align-self: flex-end; display: flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-family: var(--display); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.tools-pill svg { width: 18px; height: 18px; }
 .hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
 .hint strong { color: var(--fg); font-weight: 600; }
 .ctl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -147,7 +154,11 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
 
 <div class="hud-bottom">
   <div class="panel" id="panel">
-    <p class="hint" id="hint"></p>
+    <div class="panel-head">
+      <p class="hint" id="hint"></p>
+      <button class="chip-btn" id="btn-evac" aria-pressed="false" title="Evacuar a todos hacia los parques">Evacuar</button>
+      <button class="chip-btn icon" id="btn-collapse" aria-label="Plegar herramientas" title="Plegar herramientas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    </div>
     <div class="ctl" data-for="meteor" hidden>
       <div class="seg mini" id="meteor-mode"><button data-m="one" aria-pressed="true">Uno</button><button data-m="shower" aria-pressed="false">Lluvia</button></div>
       <div class="slider"><label for="meteor-size">Tamaño</label><input id="meteor-size" type="range" min="1" max="10" value="6"><output id="meteor-size-out">6</output></div>
@@ -188,6 +199,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
       <div class="slider"><label for="build-floors">Pisos</label><input id="build-floors" type="range" min="2" max="16" value="8"><output id="build-floors-out">8</output></div>
     </div>
   </div>
+  <button class="tools-pill" id="btn-expand" hidden aria-label="Mostrar herramientas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg><span id="pill-tool">Meteoro</span></button>
   <nav class="toolbar" aria-label="Herramientas">
     <button class="tool" data-tool="camera" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3"/></svg><span class="long">Cámara</span><span class="short">Cámara</span></button>
     <button class="tool" data-tool="meteor" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="15" r="5"/><path d="M3 3l7.5 7.5M7 3l5 5M3 7l5 5"/></svg><span class="long">Meteorito</span><span class="short">Meteoro</span></button>
@@ -266,7 +278,7 @@ const DPR = window.devicePixelRatio || 1;
 /* ------------------------------------------------------------------ settings */
 const QUALITY = {
   bajo:  { dpr: 1,                   shadowSize: 0,    bs: 3, frag: [2, 1, 2], maxDebris: 80,  particles: 600,  fragBudget: 10, substeps: 2, post: false, bloomScale: 0.5 },
-  medio: { dpr: Math.min(DPR, 1.5),  shadowSize: 1024, bs: 2, frag: [2, 2, 2], maxDebris: 180, particles: 1400, fragBudget: 22, substeps: 2, post: true, bloomScale: 0.5 },
+  medio: { dpr: Math.min(DPR, isCoarse ? 1.25 : 1.5),  shadowSize: 1024, bs: 2, frag: [2, 2, 2], maxDebris: 180, particles: 1400, fragBudget: 22, substeps: 2, post: true, bloomScale: 0.5 },
   alto:  { dpr: Math.min(DPR, 2),    shadowSize: 2048, bs: 2, frag: [2, 2, 2], maxDebris: 360, particles: 2600, fragBudget: 40, substeps: 3, post: true, bloomScale: 1 },
 };
 const store = {
@@ -835,9 +847,10 @@ function updateDecor(night, wet) {
   for (let i = lampFX.length - 1; i >= 0; i--) {
     const L = lampFX[i];
     if (L.item.dead) { scene.remove(L.pool, L.cone); lampFX.splice(i, 1); continue; }
-    const o = L.item.obj;
-    lampHead.set(0, 2.82, 1.25).applyQuaternion(o.quaternion).add(o.position);
-    const up = 1 - 2 * (o.quaternion.x * o.quaternion.x + o.quaternion.z * o.quaternion.z);
+    const bt = L.item.body.translation(), br = L.item.body.rotation();
+    tmpQ.set(br.x, br.y, br.z, br.w);
+    lampHead.set(0, 2.82, 1.25).applyQuaternion(tmpQ).add(tmpV.set(bt.x, bt.y, bt.z));
+    const up = 1 - 2 * (br.x * br.x + br.z * br.z);
     const on = gfx.enhanced && up > 0.9 && night > 0.05;
     L.pool.visible = L.cone.visible = on;
     if (on) { L.pool.position.set(lampHead.x, 0.13, lampHead.z); L.cone.position.copy(lampHead); }
@@ -855,7 +868,10 @@ function clearLampFX() { for (const L of lampFX) scene.remove(L.pool, L.cone); l
 const BOX = new THREE.BoxGeometry(1, 1, 1);
 class Pool {
   constructor(mats, cap) {
-    this.mesh = new THREE.InstancedMesh(BOX, mats, cap);
+    const geo = BOX.clone();
+    this.dmg = new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('iDmg', this.dmg);
+    this.mesh = new THREE.InstancedMesh(geo, mats, cap);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.castShadow = true; this.mesh.receiveShadow = true;
     this.mesh.frustumCulled = false;
@@ -868,7 +884,7 @@ class Pool {
   add(item, color) {
     if (this.items.length >= this.cap) return false;
     const i = this.items.length;
-    item.idx = i; item.pool = this; item.dirty = true;
+    item.idx = i; item.pool = this; item.dirty = true; item.dmg = 0; this.dmg.setX(i, 0); this.dmg.needsUpdate = true;
     this.items.push(item);
     this.mesh.setColorAt(i, color);
     this.mesh.instanceColor.needsUpdate = true;
@@ -879,7 +895,7 @@ class Pool {
     const i = item.idx;
     const last = this.items.pop();
     if (last !== item) {
-      this.items[i] = last; last.idx = i; last.dirty = true;
+      this.items[i] = last; last.idx = i; last.dirty = true; this.dmg.setX(i, last.dmg || 0); this.dmg.needsUpdate = true;
       this.mesh.setColorAt(i, last.color);
       this.mesh.instanceColor.needsUpdate = true;
     }
@@ -927,15 +943,16 @@ function facadeShader(mat, share, blindsOn = true) {
   mat.emissiveIntensity = 0.75;
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uNight = nightU;
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCenter; varying float vWY;')
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vCenter; varying float vWY; attribute float iDmg; varying float vDmg;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
 #ifdef USE_INSTANCING
 vCenter = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-vWY = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).y;
+vWY = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).y; vDmg = iDmg;
 #else
+vDmg = 0.0;
 vCenter = vec3(0.0); vWY = (modelMatrix * vec4(transformed, 1.0)).y;
 #endif`);
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vCenter; varying float vWY; uniform float uNight;')
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vCenter; varying float vWY; varying float vDmg; uniform float uNight;')
       .replace('#include <map_fragment>', `#include <map_fragment>
         float hsh = fract(sin(dot(floor(vCenter * 1.37), vec3(12.9898, 78.233, 37.719))) * 43758.5453);
         float hsh2 = fract(hsh * 17.31 + 0.13), hsh3 = fract(hsh * 7.71 + 0.31);
@@ -945,11 +962,17 @@ vCenter = vec3(0.0); vWY = (modelMatrix * vec4(transformed, 1.0)).y;
         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * tint, glassM);
         float blinds = ${blindsOn ? '1.0' : '0.0'} * glassM * step(0.7, hsh) * step(1.0 - (0.15 + 0.4 * hsh2), vMapUv.y);
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.58, 0.52), blinds * 0.85);
-        diffuseColor.rgb *= mix(0.5, 1.0, smoothstep(0.0, 5.0, vWY));`)
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.75, blinds);')
-      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\n metalnessFactor = mix(metalnessFactor, 0.0, blinds);')
+        diffuseColor.rgb *= mix(0.5, 1.0, smoothstep(0.0, 5.0, vWY));
+        // damage: broken glass (dark holes, no reflection) and soot, growing with how close the blast was
+        float cellH = fract(sin(dot(floor(vMapUv * vec2(2.0, 3.0)) + hsh * 7.0, vec2(12.9898, 78.233))) * 43758.5453);
+        float broken = glassM * step(cellH * 0.85 + 0.1, vDmg);
+        float soot = vDmg * (0.55 + 0.45 * cellH);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.025, 0.022, 0.02), broken * 0.92);
+        diffuseColor.rgb *= 1.0 - 0.7 * soot;`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n roughnessFactor = mix(roughnessFactor, 0.75, blinds); roughnessFactor = mix(roughnessFactor, 0.95, max(broken, soot * 0.8));')
+      .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\n metalnessFactor = mix(metalnessFactor, 0.0, max(blinds, max(broken, soot)));')
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-        totalEmissiveRadiance *= uNight * step(${(1 - share).toFixed(2)}, hsh3) * (0.55 + 0.9 * hsh2) * (1.0 - blinds * 0.55);`);
+        totalEmissiveRadiance *= uNight * step(${(1 - share).toFixed(2)}, hsh3) * (0.55 + 0.9 * hsh2) * (1.0 - blinds * 0.55) * (1.0 - broken) * (1.0 - soot);`);
   };
   mat.customProgramCacheKey = () => 'facade' + share + blindsOn;
   return mat;
@@ -1018,7 +1041,7 @@ class Particles {
     this.pos = new Float32Array(max * 3); this.col = new Float32Array(max * 3);
     this.size = new Float32Array(max); this.alpha = new Float32Array(max);
     this.vel = new Float32Array(max * 3); this.life = new Float32Array(max); this.maxLife = new Float32Array(max);
-    this.orb = new Float32Array(max * 3); this.orbOn = new Uint8Array(max); this.bcol = new Float32Array(max * 3); this.ramp = additive;
+    this.orb = new Float32Array(max * 3); this.orbOn = new Uint8Array(max); this.bcol = new Float32Array(max * 3); this.ramp = additive; this.activeT = 0; this.idle = false;
     this.grow = new Float32Array(max); this.drag = new Float32Array(max); this.grav = new Float32Array(max); this.a0 = new Float32Array(max);
     const g = new THREE.BufferGeometry();
     this.aPos = new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage);
@@ -1054,6 +1077,7 @@ class Particles {
   emit(x, y, z, vx, vy, vz, life, size, r, g, b, alpha = 1, grow = 0, drag = 0.5, grav = 0) {
     const i = this.next; this.next = (i + 1) % this.limit;
     const j = i * 3;
+    this.idle = false; if (life > this.activeT) this.activeT = life;
     this.pos[j] = x; this.pos[j + 1] = y; this.pos[j + 2] = z;
     this.vel[j] = vx; this.vel[j + 1] = vy; this.vel[j + 2] = vz;
     this.col[j] = r; this.col[j + 1] = g; this.col[j + 2] = b;
@@ -1069,8 +1093,11 @@ class Particles {
     this.orbOn[i] = mode; this.orb[i * 3] = r; this.orb[i * 3 + 1] = a; this.orb[i * 3 + 2] = w;
   }
   setLimit(n) { this.limit = Math.max(50, Math.min(this.max, n)); if (this.next >= this.limit) this.next = 0; for (let i = this.limit; i < this.max; i++) { this.life[i] = 0; this.alpha[i] = 0; } }
-  clear() { this.life.fill(0); this.alpha.fill(0); }
+  clear() { this.life.fill(0); this.alpha.fill(0); this.aAlpha.needsUpdate = true; this.activeT = 0; }
   update(dt) {
+    if (this.idle) return;
+    this.activeT -= dt;
+    if (this.activeT < -0.5) { this.alpha.fill(0); this.aAlpha.needsUpdate = true; this.idle = true; return; }
     let any = 0;
     for (let i = 0; i < this.limit; i++) {
       if (this.life[i] <= 0) { if (this.alpha[i] !== 0) { this.alpha[i] = 0; any++; } continue; }
@@ -1182,7 +1209,7 @@ const Sfx = {
       for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.04 * w) / 1.04; d[i] = w * 0.5 + last * 3; }
       this.noise = buf;
       this.loops = {};
-      this.makeLoop('wind', 'bandpass', 420, 0.7); this.makeLoop('water', 'lowpass', 520, 0.6); this.makeLoop('rain', 'highpass', 2600, 0.4); this.makeLoop('hum', 'lowpass', 70, 2); this.makeLoop('lava', 'lowpass', 220, 0.8);
+      this.makeLoop('wind', 'bandpass', 420, 0.7); this.makeLoop('water', 'lowpass', 520, 0.6); this.makeLoop('rain', 'highpass', 2600, 0.4); this.makeLoop('hum', 'lowpass', 70, 2); this.makeLoop('city', 'bandpass', 320, 0.5); this.makeLoop('engine', 'lowpass', 120, 1.5); this.makeLoop('crowd', 'bandpass', 1100, 2.5); this.makeLoop('lava', 'lowpass', 220, 0.8);
       // continuous rumble for earthquakes
       const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
       const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 75;
@@ -1241,6 +1268,18 @@ const Sfx = {
     const g2 = c.createGain(); g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(1.0, t + 0.15); g2.gain.exponentialRampToValueAtTime(0.001, t + 3.1);
     n2.connect(lp); lp.connect(g2); g2.connect(this.master);
   },
+  // civil-defence siren: rising and falling wail
+  siren(level) {
+    if (!this.ctx) return;
+    if (!this.sirenOsc) {
+      const c = this.ctx, o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), f = c.createBiquadFilter(), g = c.createGain();
+      o.type = 'sawtooth'; o.frequency.value = 780; lfo.frequency.value = 0.22; lg.gain.value = 240;
+      lfo.connect(lg); lg.connect(o.frequency); f.type = 'lowpass'; f.frequency.value = 1600; g.gain.value = 0;
+      o.connect(f); f.connect(g); g.connect(this.master); o.start(); lfo.start();
+      this.sirenOsc = o; this.sirenGain = g;
+    }
+    this.sirenGain.gain.setTargetAtTime(settings.sound ? level * 0.07 : 0, this.ctx.currentTime, 0.8);
+  },
   rumble(level) { if (this.rumbleGain) this.rumbleGain.gain.setTargetAtTime(settings.sound ? level : 0, this.ctx.currentTime, 0.25); },
 };
 
@@ -1293,7 +1332,9 @@ function removeItem(item) {
   if (item.collider) colliderMap.delete(item.collider.handle);
   world.removeRigidBody(item.body);
   if (item.pool) item.pool.remove(item);
-  if (item.obj) { scene.remove(item.obj); const i = props.indexOf(item); if (i >= 0) props.splice(i, 1); }
+  if (item.slots) for (const p of item.slots) p.remove(item);
+  if (item.obj) scene.remove(item.obj);
+  if (item.kind === 'prop') { const i = props.indexOf(item); if (i >= 0) props.splice(i, 1); }
 }
 
 function enforceDebrisCap() {
@@ -1428,6 +1469,38 @@ function addProp(body, collider, obj, extra = {}) {
   props.push(item); colliderMap.set(collider.handle, item);
   return item;
 }
+/* instanced props: every tree / car type / lamp part is ONE draw call for all copies */
+let propPoolId = 0;
+class PropPool {
+  constructor(geo, mat, cap, shadow = true) {
+    this.id = 'pp' + (propPoolId++); this.cap = cap; this.items = [];
+    this.mesh = new THREE.InstancedMesh(geo, mat, cap);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.setColorAt(0, new THREE.Color(1, 1, 1)); this.mesh.count = 0;
+    this.mesh.castShadow = shadow; this.mesh.receiveShadow = true; this.mesh.frustumCulled = false;
+    scene.add(this.mesh);
+  }
+  add(item, color) {
+    if (this.items.length >= this.cap) return false;
+    const i = this.items.length; item[this.id] = i; this.items.push(item);
+    this.mesh.setColorAt(i, color || WHITE); this.mesh.instanceColor.needsUpdate = true; this.mesh.count = this.items.length;
+    return true;
+  }
+  remove(item) {
+    const i = item[this.id], last = this.items.pop();
+    if (last !== item) { this.items[i] = last; last[this.id] = i; last.synced = false; this.mesh.setColorAt(i, last.pcolor || WHITE); this.mesh.instanceColor.needsUpdate = true; }
+    this.mesh.count = this.items.length;
+  }
+  clear() { this.items.length = 0; this.mesh.count = 0; }
+}
+const WHITE = new THREE.Color(1, 1, 1);
+const PROP_POOLS = [];
+function addPropInst(body, collider, pools, color, extra = {}) {
+  const item = Object.assign({ kind: 'prop', body, collider, slots: pools, pcolor: color }, extra);
+  for (const p of pools) if (!p.add(item, color)) { world.removeRigidBody(body); for (const q of pools) if (q.items[item[q.id]] === item) q.remove(item); return null; }
+  props.push(item); colliderMap.set(collider.handle, item);
+  return item;
+}
 
 const treeGeos = [];
 function treeGeo(kind) {
@@ -1443,10 +1516,11 @@ function addTree(x, z, kind = Math.floor(srand() * 3)) {
   const h = 1.7;
   const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, h, z).setSleeping(true).setAngularDamping(0.4));
   const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(0.55, h, 0.55).setDensity(0.35).setFriction(0.8), body);
-  const mesh = new THREE.Mesh(treeGeo(kind), propMatFlat); mesh.castShadow = true;
-  mesh.rotation.y = srand() * 6; const obj = new THREE.Group(); obj.add(mesh);
-  addProp(body, collider, obj);
+  if (!TREE_POOLS[kind]) PROP_POOLS.push(TREE_POOLS[kind] = new PropPool(treeGeo(kind), propMatFlat, 220));
+  const tint = new THREE.Color(1, 1, 1).multiplyScalar(0.85 + srand() * 0.3);
+  addPropInst(body, collider, [TREE_POOLS[kind]], tint, { rotOff: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), srand() * 6), tree: true, sway: srand() * 6 });
 }
+const TREE_POOLS = [];
 
 const lampMat = new THREE.MeshStandardMaterial({ color: 0xfff1d0, emissive: 0xffd28a, emissiveIntensity: 0 });
 let lampGeo, lampHeadGeo;
@@ -1455,11 +1529,11 @@ function addLamp(x, z, facing) {
   lampHeadGeo = lampHeadGeo || box(0.35, 0.18, 0.6, 0, 2.82, 1.25);
   const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, 3.01, z).setRotation({ x: 0, y: Math.sin(facing / 2), z: 0, w: Math.cos(facing / 2) }).setSleeping(true));
   const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(0.15, 3, 0.15).setDensity(3).setFriction(0.8), body);
-  const obj = new THREE.Group();
-  const pole = new THREE.Mesh(lampGeo, propMat); pole.castShadow = true; obj.add(pole);
-  obj.add(new THREE.Mesh(lampHeadGeo, lampMat));
-  addLampFX(addProp(body, collider, obj));
+  if (!LAMP_POOLS.length) { LAMP_POOLS.push(new PropPool(lampGeo, propMat, 120), new PropPool(lampHeadGeo, lampMat, 120, false)); PROP_POOLS.push(...LAMP_POOLS); }
+  const it = addPropInst(body, collider, LAMP_POOLS, WHITE, { lamp: true });
+  if (it) addLampFX(it);
 }
+const LAMP_POOLS = [];
 
 const CAR_COLORS = [0xc8372d, 0x2f5fa8, 0xe3e3e0, 0x2a2d33, 0x3f8f6b, 0x8a99a8, 0x7a3b5c, 0xd9d4c4];
 const CAR_TYPES = {
@@ -1502,10 +1576,10 @@ function addCar(x, z, rotY, type = 'sedan', drive = null) {
   const q = { x: 0, y: Math.sin(rotY / 2), z: 0, w: Math.cos(rotY / 2) };
   const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, T.H / 2 + 0.02, z).setRotation(q).setSleeping(!drive).setAngularDamping(0.3));
   const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(T.L / 2, T.H / 2, T.W / 2).setDensity(T.mass).setFriction(0.9), body);
-  const mesh = new THREE.Mesh(carGeo(type, paint), propMat); mesh.castShadow = true;
-  const obj = new THREE.Group(); obj.add(mesh);
-  return addProp(body, collider, obj, { car: true, sy: T.H, drive });
+  if (!CAR_POOLS[type]) PROP_POOLS.push(CAR_POOLS[type] = new PropPool(carGeo(type, 0xffffff), propMat, 40));
+  return addPropInst(body, collider, [CAR_POOLS[type]], new THREE.Color(paint), { car: true, sy: T.H, drive, type });
 }
+const CAR_POOLS = {};
 
 /* the bridge over the river: deck slabs resting on pillars, all destructible */
 function addBridge() {
@@ -1570,21 +1644,357 @@ function populateCity() {
   }
 }
 
-/* moving traffic: a car keeps its lane until something knocks it, then it becomes a free wreck */
+/* moving traffic: lanes, traffic lights, following distance, braking or fleeing near danger.
+   A car keeps its lane until something knocks it, then it becomes a free wreck. */
 function trafficStep() {
-  for (const it of props) {
-    const d = it.drive; if (!d || it.dead) continue;
-    const b = it.body, v = b.linvel(), r = b.rotation(), t = b.translation();
+  const drivers = props.filter((it) => it.drive && !it.dead);
+  for (const it of drivers) {
+    const d = it.drive, b = it.body, v = b.linvel(), r = b.rotation(), t = b.translation();
     const upY = 1 - 2 * (r.x * r.x + r.z * r.z);
-    const dev = Math.hypot(v.x - d.dir * d.speed, v.z);
+    if (d.v === undefined) d.v = d.speed;
+    const dev = Math.hypot(v.x - d.dir * d.v, v.z);
     if (upY < 0.96 || (dev > 4 && it.driving) || t.y > 3 || t.y < -0.5) { it.drive = null; if (Math.random() < 0.4) addFire(new THREE.Vector3(t.x, t.y + 0.5, t.z), rnd(6, 12), 0.6); continue; }
     it.driving = true;
+    let want = d.speed;
+    // red light: stop before the crossing
+    if (!LIGHTS.carsGo || (LIGHTS.t > LIGHTS.cycle[0] - 2.5 && !it.emergency)) {
+      for (const L of lightXs()) {
+        const stop = L.x - d.dir * (L.w / 2 + 4.2), ahead = (stop - t.x) * d.dir;
+        if (ahead > -0.5 && ahead < 9 && !it.emergency) want = Math.min(want, Math.max(0, ahead - 1) * 1.2);
+      }
+    }
+    // keep distance from the car in front
+    for (const o of drivers) {
+      if (o === it) continue;
+      const ot = o.body.translation();
+      if (Math.abs(ot.z - t.z) > 1.5) continue;
+      const gap = (ot.x - t.x) * d.dir - ((CAR_TYPES[o.type] || CAR_TYPES.sedan).L + (CAR_TYPES[it.type] || CAR_TYPES.sedan).L) / 2;
+      if (gap > -1 && gap < 10) want = Math.min(want, Math.max(0, gap - 2) * 1.5);
+    }
+    // danger: brake if it is ahead, speed away if it is behind
+    for (const th of threats) {
+      threatAt(th);
+      const dx = th.x - t.x, dist = Math.hypot(dx, th.z - t.z);
+      if (th.kind === 'tsunami' || dist > th.r * 1.2) continue;
+      if (dx * d.dir > 0 && dist < th.r) want = Math.min(want, Math.max(0, dist - th.r * 0.6) * 0.4);
+      else want = Math.max(want, 17);
+    }
+    if (d.stopX !== undefined && (d.stopX - t.x) * d.dir < 0) want = 0;   // emergency vehicle arrived
+    d.v += Math.max(-9 * DT, Math.min(5 * DT, want - d.v));
     if (d.dir > 0 && t.x > 98) b.setTranslation({ x: -98, y: t.y, z: d.z }, true);
     if (d.dir < 0 && t.x < -98) b.setTranslation({ x: 98, y: t.y, z: d.z }, true);
-    b.setLinvel({ x: d.dir * d.speed, y: Math.min(v.y, 0), z: (d.z - t.z) * 2 }, true);
+    b.setLinvel({ x: d.dir * d.v, y: Math.min(v.y, 0), z: (d.z - t.z) * 2 }, true);
     b.setAngvel({ x: 0, y: 0, z: 0 }, true);
   }
 }
+/* ------------------------------------------------------------------ threats: what people and drivers react to */
+// kind: meteor | blast | tornado | quake | tsunami | volcano | blackhole | storm | evac
+// r = distance at which people notice it, core = distance at which they are knocked down (no injuries shown)
+const threats = [];
+let threatId = 0;
+function addThreat(kind, x, z, r, life, opts = {}) {
+  const t = Object.assign({ id: ++threatId, kind, x, z, r, core: 0, until: simTime + life, born: simTime }, opts);
+  threats.push(t);
+  if (t.siren !== false && r > 25) sirenUntil = Math.max(sirenUntil, simTime + Math.min(30, life + 12));
+  return t;
+}
+function threatAt(t) { if (t.follow) { const p = t.follow(); if (p) { t.x = p.x; t.z = p.z; } } return t; }
+function pruneThreats() { for (let i = threats.length - 1; i >= 0; i--) if (simTime > threats[i].until) threats.splice(i, 1); }
+// an impact: people inside the core fall down for a moment and get up running
+function impactAt(x, z, core, alert) {
+  for (const p of peds) {
+    const d = Math.hypot(p.x - x, p.z - z);
+    if (d < core) knockDown(p, x, z);
+    else if (d < alert) scare(p, { x, z, r: alert, kind: 'blast', until: simTime + 6 }, d * 0.012);
+  }
+}
+
+/* ------------------------------------------------------------------ walkable network: sidewalks, crossings, parks */
+const NAV = { nodes: [], safe: [] };
+function navNode(x, z, safe = false) { const n = { i: NAV.nodes.length, x, z, nb: [], safe }; NAV.nodes.push(n); if (safe) NAV.safe.push(n); return n; }
+function navLink(a, b, cross = null) { a.nb.push({ n: b, cross }); b.nb.push({ n: a, cross }); }
+function buildNav() {
+  NAV.nodes.length = 0; NAV.safe.length = 0;
+  const inset = 1.9, corners = [];
+  for (const [x0, x1, z0, z1] of LOTS) {
+    // corners plus mid points on long sides so walkers spread out
+    const c = [navNode(x0 + inset, z0 + inset), navNode(x1 - inset, z0 + inset), navNode(x1 - inset, z1 - inset), navNode(x0 + inset, z1 - inset)];
+    const mids = [];
+    for (let k = 0; k < 4; k++) {
+      const a = c[k], b = c[(k + 1) % 4], len = Math.hypot(b.x - a.x, b.z - a.z), n = Math.max(1, Math.round(len / 12));
+      let prev = a;
+      for (let j = 1; j < n; j++) { const m = navNode(a.x + (b.x - a.x) * j / n, a.z + (b.z - a.z) * j / n); navLink(prev, m); prev = m; mids.push(m); }
+      navLink(prev, b);
+    }
+    corners.push(...c);
+  }
+  // street crossings between aligned corners of neighbouring blocks
+  for (let i = 0; i < corners.length; i++) for (let j = i + 1; j < corners.length; j++) {
+    const a = corners[i], b = corners[j], dx = Math.abs(a.x - b.x), dz = Math.abs(a.z - b.z);
+    if (dx < 0.5 && dz > 6 && dz < 15) navLink(a, b, { axis: 'z', street: STREETS.find((s) => s.axis === 'x' && Math.abs(s.c - (a.z + b.z) / 2) < 3) || null });
+    else if (dz < 0.5 && dx > 6 && dx < 15) navLink(a, b, { axis: 'x', street: null });
+  }
+  // parks north and south are the safe zones
+  for (const c of corners) {
+    if (Math.abs(c.z - (30 - inset)) < 0.1) { const s = navNode(c.x, 40 + rnd(-2, 2), true); navLink(c, s); }
+    if (Math.abs(c.z - (-32 + inset)) < 0.1) { const s = navNode(c.x, -46 + rnd(-2, 2), true); navLink(c, s, { axis: 'z', street: null }); }
+  }
+  // next hop toward the nearest safe zone (multi-source BFS)
+  const dist = new Array(NAV.nodes.length).fill(Infinity), q = [];
+  for (const s of NAV.safe) { dist[s.i] = 0; s.toSafe = null; q.push(s); }
+  while (q.length) {
+    const n = q.shift();
+    for (const { n: m } of n.nb) if (dist[m.i] === Infinity) { dist[m.i] = dist[n.i] + 1; m.toSafe = n; q.push(m); }
+  }
+}
+
+/* ------------------------------------------------------------------ traffic lights on the main avenue */
+const LIGHTS = { t: 0, carsGo: true, cycle: [13, 7] };
+const signalCarMat = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0x30ff60, emissiveIntensity: 2 });
+const signalPedMat = new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0xff3020, emissiveIntensity: 2 });
+const lightXs = () => STREETS.filter((s) => s.axis === 'z').map((s) => ({ x: s.c, w: s.w }));
+function buildSignals() {
+  const poles = [], carHeads = [], pedHeads = [];
+  for (const { x, w } of lightXs()) for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const px = x + sx * (w / 2 + 0.6), pz = sz * 5.2;
+    poles.push(box(0.12, 3.2, 0.12, px, 1.6, pz)); poles.push(box(0.1, 0.1, 1.6, px, 3.1, pz - sz * 0.8));
+    carHeads.push(box(0.28, 0.7, 0.28, px, 2.75, pz - sz * 1.5));
+    pedHeads.push(box(0.22, 0.3, 0.22, px + sx * 0.2, 2.1, pz));
+  }
+  const g = (list, c) => mergeParts(list.map((x) => [x, c]));
+  const pole = new THREE.Mesh(g(poles, 0x34373c), propMat); pole.castShadow = true;
+  decor.add(pole, new THREE.Mesh(mergeGeos(carHeads), signalCarMat), new THREE.Mesh(mergeGeos(pedHeads), signalPedMat));
+  // benches and street signs
+  const benches = [], signs = [];
+  for (const [x0, x1, z0, z1] of LOTS) {
+    const zEdge = z0 > 0 ? z0 + 0.9 : z1 - 0.9;
+    for (let x = x0 + 9; x < x1 - 6; x += 15) benches.push(box(1.6, 0.1, 0.5, x, 0.5, zEdge), box(1.6, 0.5, 0.08, x, 0.75, zEdge + (z0 > 0 ? -0.25 : 0.25)), box(0.08, 0.45, 0.4, x - 0.7, 0.25, zEdge), box(0.08, 0.45, 0.4, x + 0.7, 0.25, zEdge));
+    signs.push(box(0.08, 2.6, 0.08, x0 + 0.7, 1.3, z0 > 0 ? z0 + 0.7 : z1 - 0.7), box(1.1, 0.28, 0.04, x0 + 0.7, 2.5, z0 > 0 ? z0 + 0.7 : z1 - 0.7));
+  }
+  const bm = new THREE.Mesh(g(benches, 0x6b4e33), propMat); bm.castShadow = true; groundDecor.add(bm);
+  groundDecor.add(new THREE.Mesh(g(signs, 0x2d6a46), propMat));
+}
+function updateLights(dt) {
+  LIGHTS.t += dt;
+  const span = LIGHTS.carsGo ? LIGHTS.cycle[0] : LIGHTS.cycle[1];
+  if (LIGHTS.t > span) { LIGHTS.t = 0; LIGHTS.carsGo = !LIGHTS.carsGo; }
+  const amber = LIGHTS.carsGo && LIGHTS.t > LIGHTS.cycle[0] - 2.5;
+  signalCarMat.emissive.setHex(LIGHTS.carsGo ? (amber ? 0xffa020 : 0x30ff60) : 0xff2a1a);
+  signalPedMat.emissive.setHex(LIGHTS.carsGo ? 0xff3020 : 0xf0f6ff);
+}
+const pedsMayCross = () => !LIGHTS.carsGo && LIGHTS.t < LIGHTS.cycle[1] - 2.5;
+
+/* ------------------------------------------------------------------ people: one instanced mesh, limbs animated in the shader */
+// parts: 0 torso, 1/2 legs, 3/4 arms, 5 head, 6 hair. Clothes, skin and hair vary per person.
+function personGeo() {
+  const parts = [], part = [];
+  const add = (g, id) => { const ng = g.toNonIndexed(); parts.push(ng); part.push(...new Array(ng.attributes.position.count).fill(id)); };
+  add(new THREE.BoxGeometry(0.42, 0.6, 0.24).translate(0, 1.18, 0), 0);
+  add(new THREE.BoxGeometry(0.17, 0.86, 0.19).translate(-0.11, 0.43, 0), 1);
+  add(new THREE.BoxGeometry(0.17, 0.86, 0.19).translate(0.11, 0.43, 0), 2);
+  add(new THREE.BoxGeometry(0.12, 0.62, 0.14).translate(-0.29, 1.17, 0), 3);
+  add(new THREE.BoxGeometry(0.12, 0.62, 0.14).translate(0.29, 1.17, 0), 4);
+  add(new THREE.BoxGeometry(0.22, 0.24, 0.22).translate(0, 1.62, 0), 5);
+  add(new THREE.BoxGeometry(0.24, 0.08, 0.24).translate(0, 1.77, -0.01), 6);
+  const g = mergeGeos(parts);
+  g.setAttribute('aPart', new THREE.Float32BufferAttribute(part, 1));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(part.length * 3).fill(1), 3));
+  return g;
+}
+const PED_MAX = 260;
+const pedTime = { value: 0 };
+let pedMesh = null, pedPhase, pedGait, pedPants, pedSkin;
+function buildPeople() {
+  const g = personGeo();
+  pedPhase = new THREE.InstancedBufferAttribute(new Float32Array(PED_MAX), 1);
+  pedGait = new THREE.InstancedBufferAttribute(new Float32Array(PED_MAX * 2), 2).setUsage(THREE.DynamicDrawUsage);
+  pedPants = new THREE.InstancedBufferAttribute(new Float32Array(PED_MAX * 3), 3);
+  pedSkin = new THREE.InstancedBufferAttribute(new Float32Array(PED_MAX * 3), 3);
+  g.setAttribute('aPhase', pedPhase); g.setAttribute('aGait', pedGait); g.setAttribute('aPants', pedPants); g.setAttribute('aSkin', pedSkin);
+  const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uT = pedTime;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', `#include <common>
+      attribute float aPart; attribute float aPhase; attribute vec2 aGait; attribute vec3 aPants; attribute vec3 aSkin; uniform float uT;
+      vec3 rotX(vec3 p, float a, float pivot){ p.y -= pivot; float c = cos(a), s = sin(a); p = vec3(p.x, c * p.y - s * p.z, s * p.y + c * p.z); p.y += pivot; return p; }`)
+      .replace('#include <begin_vertex>', `vec3 transformed = position;
+        float sw = sin(uT * aGait.y + aPhase) * aGait.x;
+        if (aPart > 0.5 && aPart < 1.5) transformed = rotX(transformed, sw, 0.86);
+        else if (aPart > 1.5 && aPart < 2.5) transformed = rotX(transformed, -sw, 0.86);
+        else if (aPart > 2.5 && aPart < 3.5) transformed = rotX(transformed, -sw * 0.9 - aGait.x * 0.25, 1.46);
+        else if (aPart > 3.5 && aPart < 4.5) transformed = rotX(transformed, sw * 0.9 - aGait.x * 0.25, 1.46);
+        if (aPart < 0.5 || aPart > 4.5) transformed = rotX(transformed, -aGait.x * 0.18, 0.86);
+        transformed.y += abs(sin(uT * aGait.y + aPhase)) * aGait.x * 0.06;`)
+      .replace('#include <color_vertex>', `
+        #ifdef USE_INSTANCING_COLOR
+        vec3 shirt = instanceColor;
+        #else
+        vec3 shirt = vec3(0.6);
+        #endif
+        vColor = aPart < 0.5 ? shirt : aPart < 2.5 ? aPants : aPart < 4.5 ? mix(shirt, aSkin, 0.15) : aPart < 5.5 ? aSkin : vec3(0.12, 0.08, 0.06) + aPants * 0.15;`);
+  };
+  pedMesh = new THREE.InstancedMesh(g, mat, PED_MAX);
+  pedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  pedMesh.setColorAt(0, WHITE); pedMesh.count = 0; pedMesh.frustumCulled = false; pedMesh.castShadow = false;
+  scene.add(pedMesh);
+}
+const SHIRTS = [0xc8372d, 0x2f5fa8, 0xe8e4da, 0x3f8f6b, 0xe0a526, 0x7a3b5c, 0x2a2d33, 0xd9786a, 0x6aa3c8, 0xb0b53a];
+const PANTS = [0x1f2a44, 0x2a2d33, 0x5a4a3a, 0x3d4f6b, 0x7d7468, 0x1d1d1d];
+const SKINS = [0xf1c8a8, 0xd9a47c, 0xa8724f, 0x7a4e32, 0xe8b996];
+const peds = [];
+function spawnPeople() {
+  peds.length = 0;
+  const n = { bajo: 60, medio: 130, alto: 220 }[settings.quality] || 120;
+  const walkable = NAV.nodes.filter((nd) => !nd.safe);
+  for (let i = 0; i < n; i++) {
+    const a = walkable[Math.floor(Math.random() * walkable.length)];
+    const b = a.nb[Math.floor(Math.random() * a.nb.length)].n;
+    const k = Math.random();
+    const p = { i, from: a, to: b, x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k, dir: 0, lat: rnd(-0.35, 0.35), base: rnd(1.0, 1.6), speed: 1.3,
+      state: 'walk', t: 0, react: 0, threat: null, scale: rnd(0.88, 1.08), wait: 0, down: 0, yaw: 0, cross: null };
+    peds.push(p);
+    pedPhase.setX(i, Math.random() * 6.28);
+    pedPants.setXYZ(i, ...new THREE.Color(pickOf(PANTS)).toArray());
+    pedSkin.setXYZ(i, ...new THREE.Color(pickOf(SKINS)).toArray());
+    pedMesh.setColorAt(i, new THREE.Color(pickOf(SHIRTS)).multiplyScalar(rnd(0.8, 1.05)));
+  }
+  pedPhase.needsUpdate = pedPants.needsUpdate = pedSkin.needsUpdate = true; pedMesh.instanceColor.needsUpdate = true;
+  pedMesh.count = n;
+}
+function scare(p, th, extraDelay = 0) {
+  if (p.state === 'down') return;
+  const d = Math.hypot(p.x - th.x, p.z - th.z);
+  // closer people notice first; far ones later, so the whole city never reacts at once
+  const delay = 0.2 + (d / th.r) * 1.6 + Math.random() * 0.9 + extraDelay;
+  if (p.threat === th && (p.state === 'alert' || p.state === 'flee' || p.state === 'safe')) return;   // already reacting to it
+  if (p.threat && p.threat !== th && (p.state === 'flee' || p.state === 'alert') && Math.hypot(p.x - p.threat.x, p.z - p.threat.z) < d) return;
+  p.threat = th;
+  if (p.state === 'flee') return;
+  if (p.state === 'alert') { p.react = Math.min(p.react, delay); return; }
+  p.state = 'alert'; p.react = delay;
+}
+function knockDown(p, x, z) { p.state = 'down'; p.down = rnd(1.4, 2.6); p.threat = { x, z, r: 40, kind: 'blast', until: simTime + 5 }; p.yaw = Math.atan2(p.x - x, p.z - z); }
+function pickNext(p) {
+  const cur = p.to, prev = p.from;
+  let opts = cur.nb.filter((e) => e.n !== prev);
+  if (!opts.length) opts = cur.nb;
+  if (p.state === 'flee' && p.threat) {
+    const th = threatAt(p.threat);
+    let best = null, bs = -Infinity;
+    for (const e of cur.nb) {
+      let sc;
+      if (th.kind === 'tsunami') sc = e.n.x * th.dx + e.n.z * th.dz;           // run ahead of the water, toward high ground
+      else sc = Math.hypot(e.n.x - th.x, e.n.z - th.z);
+      if (cur.toSafe === e.n) sc += 6; if (e.n.safe) sc += 10; if (e.n === prev) sc -= 4;
+      if (sc > bs) { bs = sc; best = e; }
+    }
+    return best;
+  }
+  if (p.state === 'evac') return cur.nb.find((e) => e.n === cur.toSafe) || opts[0];
+  if (cur.safe && !p.parkLeft) { opts = cur.nb; }
+  return opts[Math.floor(Math.random() * opts.length)];
+}
+const pedM = new THREE.Matrix4(), pedQ = new THREE.Quaternion(), pedP = new THREE.Vector3(), pedS = new THREE.Vector3(), pedE = new THREE.Euler();
+let pedCheck = 0, fleeingNear = 0;
+function updatePeople(dt) {
+  if (!pedMesh || !pedMesh.count) return;
+  pedTime.value += dt;
+  pruneThreats();
+  // staggered threat checks: a quarter of the crowd per frame
+  pedCheck = (pedCheck + 1) % 4;
+  fleeingNear = 0;
+  const cam = camera.position;
+  for (const p of peds) {
+    if (p.i % 4 === pedCheck && p.state !== 'down') {
+      for (const th of threats) {
+        threatAt(th);
+        let d;
+        if (th.kind === 'tsunami') { const ahead = (p.x * th.dx + p.z * th.dz) - th.front(); d = ahead < 0 ? 0 : ahead; }
+        else d = Math.hypot(p.x - th.x, p.z - th.z);
+        if (d < th.r) scare(p, th);
+      }
+      if (evacuation && p.state === 'walk') { p.state = 'evac'; p.react = Math.random() * 2; }
+    }
+    // state machine
+    if (p.state === 'alert') { p.react -= dt; if (p.react <= 0) { p.state = 'flee'; p.cross = null; } }
+    if (p.state === 'down') { p.down -= dt; if (p.down <= 0) { p.state = 'flee'; } }
+    if ((p.state === 'flee' || p.state === 'safe') && p.threat && simTime > (p.threat.until || 0) + 3) {
+      const d = Math.hypot(p.x - p.threat.x, p.z - p.threat.z);
+      if (d > (p.threat.r || 30) * 0.8 || p.threat.until) { p.state = evacuation ? 'evac' : 'calm'; p.t = rnd(3, 8); p.threat = null; }
+    }
+    if (p.state === 'calm') { p.t -= dt; if (p.t <= 0) p.state = 'walk'; }
+    const running = p.state === 'flee' || p.state === 'evac';
+    const target = p.state === 'down' ? 0 : p.state === 'alert' ? 0.2 : p.state === 'safe' || p.wait > 0 ? 0 : running ? p.base * 3.2 : p.state === 'calm' ? p.base * 0.8 : p.base;
+    p.speed += (target - p.speed) * Math.min(1, dt * 3);
+    // wait at the avenue for the pedestrian light (people running away ignore it)
+    if (p.wait > 0) { p.wait -= dt; if (pedsMayCross() || running) p.wait = 0; }
+    // move along the current edge
+    const dx = p.to.x - p.x, dz = p.to.z - p.z, dist = Math.hypot(dx, dz);
+    const step = p.speed * dt;
+    if (dist <= step || dist < 0.05) {
+      p.x = p.to.x; p.z = p.to.z;
+      if (p.to.safe && (p.state === 'flee' || p.state === 'evac')) {
+        if (!p.to.spot) { const a = Math.random() * 6.28, r = rnd(2, 9); p.from = p.to; p.to = { x: p.to.x + Math.cos(a) * r, z: p.to.z + Math.sin(a) * r, nb: p.to.nb, safe: true, spot: true, toSafe: null }; continue; }
+        p.state = 'safe'; p.t = rnd(6, 14);
+      }
+      if (p.state === 'safe') { p.t -= dt; if (p.t <= 0 && !p.threat && !evacuation) p.state = 'walk'; }
+      else {
+        const e = pickNext(p);
+        if (e) {
+          if (e.cross && e.cross.street && !running && !pedsMayCross()) { p.wait = 0.5; continue; }
+          p.from = p.to; p.to = e.n;
+        }
+      }
+    } else if (p.wait <= 0) { p.x += dx / dist * step; p.z += dz / dist * step; p.dir = Math.atan2(dx, dz); }
+    // render
+    const yaw = p.state === 'alert' && p.threat ? Math.atan2(p.threat.x - p.x, p.threat.z - p.z) : p.dir;
+    p.yaw += Math.atan2(Math.sin(yaw - p.yaw), Math.cos(yaw - p.yaw)) * Math.min(1, dt * 8);
+    const lx = Math.cos(p.dir) * p.lat, lz = -Math.sin(p.dir) * p.lat;
+    pedP.set(p.x + lx, 0.1, p.z + lz);
+    if (p.state === 'down') { pedE.set(-Math.PI / 2, p.yaw, 0, 'YXZ'); pedP.y = 0.25; } else pedE.set(0, p.yaw, 0);
+    pedQ.setFromEuler(pedE); pedS.setScalar(p.scale);
+    pedM.compose(pedP, pedQ, pedS);
+    pedMesh.setMatrixAt(p.i, pedM);
+    const amp = p.state === 'down' ? 0 : Math.min(1.0, p.speed * 0.32), freq = 3.2 + p.speed * 2.1;
+    pedGait.setXY(p.i, amp, freq);
+    if (running && Math.abs(p.x - cam.x) + Math.abs(p.z - cam.z) < 80) fleeingNear++;
+  }
+  pedMesh.instanceMatrix.needsUpdate = true; pedGait.needsUpdate = true;
+}
+
+/* ------------------------------------------------------------------ evacuation, sirens and emergency vehicles */
+let evacuation = false, sirenUntil = 0;
+function setEvacuation(on) {
+  evacuation = on;
+  if (on) { sirenUntil = simTime + 40; toast('Evacuación: todos hacia los parques'); }
+  else { for (const p of peds) if (p.state === 'evac' || p.state === 'safe') { p.state = 'calm'; p.t = rnd(1, 4); } toast('Evacuación terminada'); }
+  refreshRunning();
+}
+const emergency = [];
+const flashRed = new THREE.MeshStandardMaterial({ color: 0x330000, emissive: 0xff1010, emissiveIntensity: 3 });
+const flashBlue = new THREE.MeshStandardMaterial({ color: 0x000033, emissive: 0x2050ff, emissiveIntensity: 3 });
+function dispatchEmergency(x, z) {
+  if (emergency.length >= 3 || !world) return;
+  const dir = x > 0 ? -1 : 1, laneZ = dir > 0 ? -2.2 : 2.2;
+  const type = emergency.length % 2 ? 'van' : 'sedan';
+  const T = CAR_TYPES[type];
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(-dir * 98, T.H / 2 + 0.02, laneZ).setRotation({ x: 0, y: dir > 0 ? 0 : 1, z: 0, w: dir > 0 ? 1 : 0 }).setAngularDamping(0.3));
+  const collider = world.createCollider(RAPIER.ColliderDesc.cuboid(T.L / 2, T.H / 2, T.W / 2).setDensity(T.mass).setFriction(0.9), body);
+  const obj = new THREE.Group();
+  const m = new THREE.Mesh(carGeo(type, type === 'van' ? 0xf2f2ee : 0x1d2b4a), propMat); m.castShadow = true; obj.add(m);
+  const r = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.16, 0.5), flashRed), b = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.16, 0.5), flashBlue);
+  r.position.set(-0.2, T.H / 2 + 0.08, -0.3); b.position.set(-0.2, T.H / 2 + 0.08, 0.3); obj.add(r, b);
+  const it = addProp(body, collider, obj, { car: true, sy: T.H, emergency: true, drive: { dir, z: laneZ, speed: 15, v: 15, stopX: x - dir * 18 } });
+  emergency.push(it);
+}
+function updateEmergency(dt) {
+  const on = Math.sin(pedTime.value * 14) > 0;
+  flashRed.emissiveIntensity = on ? 3.5 : 0.2; flashBlue.emissiveIntensity = on ? 0.2 : 3.5;
+  for (let i = emergency.length - 1; i >= 0; i--) if (emergency[i].dead) emergency.splice(i, 1);
+  const s = simTime < sirenUntil || emergency.some((e) => e.drive) ? 1 : 0;
+  Sfx.siren(s);
+}
+function clearPeople() { threats.length = 0; evacuation = false; sirenUntil = 0; emergency.length = 0; for (const p of peds) { p.state = 'walk'; p.threat = null; } }
 /* ------------------------------------------------------------------ effects */
 const effects = [];
 const fireballGeo = new THREE.SphereGeometry(1, 20, 14);
@@ -1730,6 +2140,24 @@ function blast(P, power, radius, opts = {}) {
     else { const t = it.body.translation(); pushBody(it.body, t.x - P.x, t.y - P.y, t.z - P.z, d, vmax * f); }
   }
   if (!opts.noCrater) addCrater(P, radius * 0.45, power >= 6);
+  damageAround(P, radius * 1.9, Math.min(1, 0.45 + power * 0.07));
+  impactAt(P.x, P.z, radius * 0.45, radius * 2.1);
+  addThreat('blast', P.x, P.z, radius * 2.1, 6, { siren: power >= 6 });
+  if (power >= 7 && !opts.silent) setTimeout(() => dispatchEmergency(P.x, P.z), 2500);
+}
+// marks left on nearby facades (broken windows, soot) and a little smoke from the worst hit
+function damageAround(P, r, amount) {
+  const touched = new Set();
+  let smokes = 0;
+  for (const it of allBlocks()) {
+    const t = it.body.translation(), d = Math.hypot(t.x - P.x, t.y - P.y, t.z - P.z);
+    if (d > r) continue;
+    const v = Math.min(1, Math.max(it.dmg || 0, amount * (1 - d / r) * rnd(0.75, 1.15)));
+    if (v <= (it.dmg || 0)) continue;
+    it.dmg = v; it.pool.dmg.setX(it.idx, v); touched.add(it.pool);
+    if (v > 0.7 && smokes < 2 && Math.random() < 0.15 && gfx.enhanced) { smokes++; addFire(new THREE.Vector3(t.x, t.y, t.z), rnd(10, 18), 0.5); }
+  }
+  for (const p of touched) p.dmg.needsUpdate = true;
 }
 function pushBody(body, dx, dy, dz, d, v) {
   if (d < 0.01) { dx = 0; dy = 1; dz = 0; d = 1; }
@@ -1775,7 +2203,12 @@ function launchMeteor(P, size) {
   glow.scale.setScalar(r * 11); mesh.add(glow);
   mesh.position.copy(start); scene.add(mesh);
   const dur = 1.5;
-  meteors.push({ P: P.clone(), start, dir, t: 0, dur, mesh, size, r });
+  // warning marker on the ground where it will hit
+  const mark = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xff5a2a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }));
+  mark.position.set(P.x, Math.max(0.25, P.y + 0.15), P.z); scene.add(mark);
+  meteors.push({ P: P.clone(), start, dir, t: 0, dur, mesh, size, r, mark });
+  // anticipation: people near the target see it coming and start running
+  addThreat('meteor', P.x, P.z, 14 + size * 3.5, dur + 6, { siren: size >= 5 });
   Sfx.whoosh(dur);
 }
 function impactMeteor(m) {
@@ -1820,7 +2253,9 @@ function updateMeteors(dt) {
     if (Math.random() < 0.6) fire.emit(p.x, p.y, p.z, rnd(-6, 6), rnd(-3, 6), rnd(-6, 6), rnd(0.4, 0.9), rnd(0.2, 0.4), 1, 0.85, 0.5, 1, 0, 0.3, 4);
     for (let q = 0; q < 2; q++) sparks.emit(p.x, p.y, p.z, -m.dir.x * 15 + rnd(-6, 6), -m.dir.y * 15 + rnd(-3, 6), -m.dir.z * 15 + rnd(-6, 6), rnd(0.3, 0.8));
     flashLight.position.copy(p); flashLight.intensity = Math.max(flashLight.intensity, 400 + m.size * 120);
+    if (m.mark) { const pr = 4 + m.size * 1.3; m.mark.scale.setScalar(pr * (1.4 - 0.6 * k) + Math.sin(m.t * 12) * 0.3); m.mark.material.opacity = 0.25 + 0.55 * k; }
     if (k >= 1) {
+      if (m.mark) { scene.remove(m.mark); m.mark.material.dispose(); }
       scene.remove(m.mesh); m.mesh.geometry.dispose(); m.mesh.children[0].material.dispose();
       meteors.splice(i, 1);
       impactMeteor(m);
@@ -2100,10 +2535,12 @@ const funnel = new THREE.Group();
 function tornadoRadius() { return 6 + tornado.strength * 1.6; }
 function setTornado(on, at) {
   tornado.on = on;
+  if (!on && tornado.threat) { tornado.threat.until = simTime + 2; tornado.threat = null; }
   if (on) {
     if (at) tornado.pos.set(at.x, 0, at.z);
     else if (tornado.fade < 0.05) { const a = rnd(0, Math.PI * 2); tornado.pos.set(Math.cos(a) * 50, 0, Math.sin(a) * 34); }
-    tornado.target = null; tornado.life = 0; toast(tornado.strength >= 8 ? 'Tornado gigante en curso' : 'Tornado en curso');
+    tornado.target = null; tornado.life = 0;
+    tornado.threat = addThreat('tornado', tornado.pos.x, tornado.pos.z, tornadoRadius() * 3.2, tornado.dur + 2, { follow: () => funnel.position }); toast(tornado.strength >= 8 ? 'Tornado gigante en curso' : 'Tornado en curso');
   }
   refreshRunning();
 }
@@ -2195,6 +2632,7 @@ function launchTsunami(at) {
   else tmpV.set(camera.position.x - controls.target.x, 0, camera.position.z - controls.target.z).normalize();
   tsunami.dir.set(tmpV.x, tmpV.z);
   tsunami.phase = 'advance'; tsunami.front = tsunami.start; tsunami.t = 0;
+  addThreat('tsunami', 0, 0, 40 + tsunami.height * 4, 30, { dx: tsunami.dir.x, dz: tsunami.dir.y, front: () => tsunami.front });
   tsunami.speed = 9 + tsunami.height * 0.7;
   water.visible = true; toast('¡Tsunami en camino!');
   refreshRunning();
@@ -2383,6 +2821,7 @@ function startVolcano(P) {
   volcano.lava = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), lavaMat);
   volcano.lava.rotation.x = -Math.PI / 2; volcano.lava.position.set(P.x, 0.22, P.z); volcano.lava.scale.setScalar(0.01); scene.add(volcano.lava);
   toast('El suelo se abre: volcán en formación');
+  addThreat('volcano', P.x, P.z, volcano.R + 30, 4 + volcano.dur + 6);
   refreshRunning();
 }
 function clearVolcano() {
@@ -2517,6 +2956,7 @@ function startBlackHole(P) {
   g.add(halo, disk, core); g.userData = { core, halo, disk };
   scene.add(g); blackhole.group = g;
   toast('Agujero negro abierto');
+  addThreat('blackhole', P.x, P.z, 32 + s * 5, blackhole.dur + 4);
   refreshRunning();
 }
 function clearBlackHole() {
@@ -2656,7 +3096,7 @@ function updateLighting(dt) {
     hemi.intensity *= 0.42 + night * 0.3;
     sun.intensity *= 1.1;
     if (scene.fog !== fogExp) scene.fog = fogExp;
-    fogExp.color.copy(fogLin.color); fogExp.density = 0.0034 + d * 0.004 + ash * 0.006 + cur.night * 0.0006;
+    fogExp.color.copy(fogLin.color); fogExp.density = 0.0021 + d * 0.0035 + ash * 0.005 + cur.night * 0.0005;
     const dusk = Math.max(0, 1 - Math.abs(env.hour - 18.6) / 1.6) + Math.max(0, 1 - Math.abs(env.hour - 6.6) / 1.4);
     if (gfx.bloom) { gfx.bloom.strength = 0.32 + night * 0.28 + d * 0.15 + ash * 0.08; gfx.bloom.threshold = 0.9 - night * 0.12; gfx.bloom.radius = 0.45; }
     if (gfx.grade) {
@@ -2700,14 +3140,15 @@ const controls = {
   },
 };
 const pointers = new Map();
+let lastCamMove = 0;
 let gesture = null;
 const el = renderer.domElement;
 el.addEventListener('contextmenu', (e) => e.preventDefault());
 el.addEventListener('pointerdown', (e) => {
   Sfx.init();
-  el.setPointerCapture(e.pointerId);
+  try { el.setPointerCapture(e.pointerId); } catch (err) { /* synthetic or already released pointer */ }
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (pointers.size === 1) gesture = { sx: e.clientX, sy: e.clientY, t: performance.now(), moved: 0, multi: false, button: e.button, shift: e.shiftKey };
+  if (pointers.size === 1) gesture = { sx: e.clientX, sy: e.clientY, t: e.timeStamp, moved: 0, multi: false, button: e.button, shift: e.shiftKey };
   else if (gesture) gesture.multi = true;
   if (pointers.size === 2) gesture.pinch = pinchState();
 });
@@ -2736,7 +3177,10 @@ function endPointer(e) {
   if (pointers.size === 1 && gesture) gesture.pinch = null;
   if (pointers.size === 0 && gesture) {
     const g = gesture; gesture = null;
-    if (e.type === 'pointerup' && !g.multi && g.moved < 10 && performance.now() - g.t < 450 && g.button === 0) onTap(e.clientX, e.clientY);
+    // a tap only counts if it was short, still, single-finger and not right after moving the camera
+    const now = e.timeStamp;
+    if (e.type === 'pointerup' && !g.multi && g.moved < 8 && now - g.t < 320 && g.button === 0 && now - lastCamMove > 280) onTap(e.clientX, e.clientY);
+    if (g.multi || g.moved >= 8) lastCamMove = now;
   }
 }
 el.addEventListener('pointerup', endPointer);
@@ -2786,6 +3230,7 @@ const HINTS = {
 };
 function setTool(t) {
   tool = t;
+  const tb = document.querySelector(`.tool[data-tool="${t}"] .short`); if (tb) $('#pill-tool').textContent = tb.textContent;
   document.querySelectorAll('.tool[data-tool]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tool === t)));
   document.querySelectorAll('.ctl').forEach((c) => (c.hidden = c.dataset.for !== t));
   $('#hint').innerHTML = HINTS[t];
@@ -2819,7 +3264,7 @@ bindSlider('bh-pow', (v) => (blackhole.power = v));
 bindSlider('bh-dur', (v) => (blackhole.dur = v));
 function setQuake(on) {
   quake.on = on;
-  if (on) { quake.wakeT = 0; quake.t = 0; quake.crackT = 0.5; toast(quake.intensity >= 8 ? 'Terremoto extremo' : 'Terremoto en curso'); }
+  if (on) { addThreat('quake', quake.epi.x, quake.epi.z, 25 + quake.intensity * 7, quake.dur, { siren: quake.intensity >= 6 }); quake.wakeT = 0; quake.t = 0; quake.crackT = 0.5; toast(quake.intensity >= 8 ? 'Terremoto extremo' : 'Terremoto en curso'); }
   refreshRunning();
 }
 $('#quake-btn').addEventListener('click', () => { Sfx.init(); if (!quake.on) setQuakeEpicenter(controls.target); setQuake(!quake.on); });
@@ -2841,6 +3286,7 @@ function refreshRunning() {
   set('#quake-btn', quake.on, 'Iniciar', 'Detener');
   set('#tornado-btn', tornado.on, 'Iniciar', 'Detener');
   set('#storm-btn', storm.on, 'Iniciar', 'Detener');
+  $('#btn-evac').setAttribute('aria-pressed', String(evacuation)); $('#btn-evac').textContent = evacuation ? 'Fin evacuación' : 'Evacuar';
 }
 
 let toastTimer;
@@ -2956,13 +3402,24 @@ function applyGfx(silent) {
 function setGfx(on) { gfx.enhanced = on; store.set('gfx', on); applyGfx(); }
 $('#btn-gfx').addEventListener('click', () => setGfx(!gfx.enhanced));
 $('#opt-post').addEventListener('change', (e) => { gfx.post = e.target.checked; store.set('post', gfx.post); });
+
+/* collapsible tools: more room for the scene and no accidental taps on the panel while moving the camera */
+function setCollapsed(c) {
+  $('#panel').hidden = c; document.querySelector('.toolbar').hidden = c; $('#btn-expand').hidden = !c;
+  store.set('collapsed', c);
+}
+$('#btn-collapse').addEventListener('click', () => setCollapsed(true));
+$('#btn-expand').addEventListener('click', () => setCollapsed(false));
+if (store.get('collapsed', false)) setCollapsed(true);
+$('#btn-evac').addEventListener('click', () => { Sfx.init(); setEvacuation(!evacuation); });
 /* ------------------------------------------------------------------ reset */
 function clearScene() {
   for (const m of meteors) scene.remove(m.mesh);
   meteors.length = 0;
   for (const e of effects) e.end();
   effects.length = 0;
-  for (const p of props) scene.remove(p.obj);
+  for (const p of props) if (p.obj) scene.remove(p.obj);
+  for (const p of PROP_POOLS) p.clear();
   clearLampFX(); clearRubble(); sparks.clear();
   props.length = 0;
   for (const c of craters) { groundGroup.remove(c); c.material.dispose(); }
@@ -2987,6 +3444,7 @@ function resetCity() {
   if (world) world.free();
   createWorld();
   populateCity();
+  clearPeople(); spawnPeople();
   quake.t = 0; quake.amp = 0; setQuake(false); Sfx.rumble(0); refreshRunning();
   syncAll(true);
   toast('Ciudad reconstruida');
@@ -3066,7 +3524,8 @@ function syncAll(force) {
       if (!asleep) awakeCount++;
       const t = it.body.translation(), r = it.body.rotation();
       if (t.y < -25) { removeItem(it); continue; }
-      it.obj.position.set(t.x, t.y, t.z); it.obj.quaternion.set(r.x, r.y, r.z, r.w);
+      if (it.obj) { it.obj.position.set(t.x, t.y, t.z); it.obj.quaternion.set(r.x, r.y, r.z, r.w); }
+      else { tmpV.set(t.x, t.y, t.z); tmpQ.set(r.x, r.y, r.z, r.w); if (it.rotOff) tmpQ.multiply(it.rotOff); tmpS.set(1, 1, 1); tmpM.compose(tmpV, tmpQ, tmpS); for (const p of it.slots) { p.mesh.setMatrixAt(it[p.id], tmpM); p.mesh.instanceMatrix.needsUpdate = true; } }
       it.synced = true;
       if (it.trail && it.cool > 0.3 && !asleep && Math.random() < 0.7) {
         const g = rnd(0.18, 0.28);
@@ -3074,7 +3533,7 @@ function syncAll(force) {
         fire.emit(t.x, t.y, t.z, 0, 0, 0, 0.25, it.trail * 0.8, 1, 0.5, 0.1, 0.9, -1, 0, 0);
       }
     }
-    if (it.cool > 0) { it.cool = Math.max(0, it.cool - 0.003); if (it.obj.material) it.obj.material.emissiveIntensity = 1.8 * it.cool; }
+    if (it.cool > 0) { it.cool = Math.max(0, it.cool - 0.003); if (it.obj && it.obj.material) it.obj.material.emissiveIntensity = 1.8 * it.cool; }
   }
   const g = groundBody.translation();
   groundGroup.position.set(g.x, g.y - GROUND_Y, g.z);
@@ -3082,10 +3541,23 @@ function syncAll(force) {
 
 let lowFps = 0, lowFpsWarned = false, fpsFrames = 0, fpsTime = 0, fps = 60, paused = false, dynScale = 1, dynT = 0;
 const statsEl = $('#stats');
+// city ambience: traffic hum near the camera, crowd running, distant city noise
+function ambience() {
+  let cars = 0; const cam = camera.position;
+  for (const it of props) if (it.drive && !it.dead) { const t = it.body.translation(); if (Math.abs(t.x - cam.x) + Math.abs(t.z - cam.z) < 90) cars++; }
+  const zoom = THREE.MathUtils.clamp(1.4 - controls.radius / 120, 0.25, 1);
+  Sfx.loop('engine', Math.min(0.35, cars * 0.04) * zoom);
+  Sfx.loop('city', (0.08 + 0.05 * (1 - env.night)) * zoom);
+  Sfx.loop('crowd', Math.min(0.3, fleeingNear * 0.012) * zoom);
+}
+const perf = { phys: 0, upd: 0, rend: 0, frame: 0 };
+let frameNo = 0;
+const ema = (k, v) => { perf[k] = perf[k] * 0.92 + v * 0.08; };
 function frame(now) {
   requestAnimationFrame(frame);
-  const fdt = Math.min(0.1, (now - last) / 1000); last = now;
+  const fdt = Math.min(0.1, (now - last) / 1000); ema('frame', now - last); last = now;
   if (paused) return;
+  const tA = performance.now();
   const sdt = fdt * timeScale;
   acc += sdt;
   let n = 0;
@@ -3105,6 +3577,7 @@ function frame(now) {
     acc -= DT; n++;
   }
   if (n >= Q.substeps) acc = 0;
+  const tB = performance.now(); ema('phys', tB - tA);
   updateShower(sdt);
   updateMeteors(sdt);
   tornadoUpdate(sdt);
@@ -3114,6 +3587,10 @@ function frame(now) {
   blackholeUpdate(sdt);
   updateCracks(sdt);
   updateFires(sdt);
+  updateLights(sdt);
+  updatePeople(sdt);
+  updateEmergency(sdt);
+  ambience();
   updateEffects(sdt);
   updateLighting(sdt);
   dust.update(sdt); fire.update(sdt);
@@ -3130,7 +3607,11 @@ function frame(now) {
   // keep the shadow frustum centered on what you look at; light comes from the sun (or the moon)
   sun.position.set(controls.target.x + sunDir.x * 90, sunDir.y * 90, controls.target.z + sunDir.z * 90);
   sun.target.position.set(controls.target.x, 0, controls.target.z); sun.target.updateMatrixWorld();
+  const tC = performance.now(); ema('upd', tC - tB);
+  // shadows are refreshed every other frame: halves their cost, hardly visible
+  frameNo++; renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = (frameNo & 1) === 0;
   renderFrame();
+  ema('rend', performance.now() - tC);
   fpsFrames++; fpsTime += fdt;
   if (fpsTime >= 0.5) {
     fps = Math.round(fpsFrames / fpsTime); fpsFrames = 0; fpsTime = 0;
@@ -3160,7 +3641,7 @@ function onResize() {
   }
 }
 window.addEventListener('resize', onResize);
-document.addEventListener('visibilitychange', () => { paused = document.hidden; last = performance.now(); if (paused) { Sfx.rumble(0); for (const k of ['wind', 'water', 'rain', 'hum', 'lava']) Sfx.loop(k, 0); } });
+document.addEventListener('visibilitychange', () => { paused = document.hidden; last = performance.now(); if (paused) { Sfx.rumble(0); for (const k of ['wind', 'water', 'rain', 'hum', 'lava', 'city', 'engine', 'crowd']) Sfx.loop(k, 0); Sfx.siren(0); } });
 
 /* ------------------------------------------------------------------ boot */
 async function boot() {
@@ -3180,6 +3661,7 @@ async function boot() {
   controls.radius = controls.goal.radius;
   createWorld();
   populateCity();
+  buildNav(); buildSignals(); buildPeople(); spawnPeople();
   syncAll(true);
   setTool('meteor');
   syncHourUI(); refreshRunning(); applyGfx(true);
@@ -3221,6 +3703,10 @@ window.__lab = {
   prof: () => { const gl = renderer.getContext(), px = new Uint8Array(4); const sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
     const T = (f) => { sync(); const t = performance.now(); f(); sync(); return +(performance.now() - t).toFixed(1); };
     return { particles: T(() => { dust.update(0.016); fire.update(0.016); }), sparks: T(() => sparks.update(0.016)), sync: T(() => syncAll(false)), light: T(() => updateLighting(0.016)), step: T(() => world.step(eventQueue)), renderDirect: T(() => renderer.render(scene, camera)), renderFrame: T(() => renderFrame()) }; },
+  perf: () => ({ phys: +perf.phys.toFixed(2), upd: +perf.upd.toFixed(2), rend: +perf.rend.toFixed(2), frame: +perf.frame.toFixed(1) }),
+  people: () => { const c = {}; for (const p of peds) c[p.state] = (c[p.state] || 0) + 1; return { n: peds.length, ...c, threats: threats.map((t) => t.kind).join('+'), siren: simTime < sirenUntil, emergency: emergency.length, evac: evacuation }; },
+  evac: (on) => setEvacuation(on),
+  dmg: () => allBlocks().filter((b) => b.dmg > 0.1).length,
   gfx: (on) => { if (on !== undefined) setGfx(on); return { enhanced: gfx.enhanced, post: gfx.ready && gfx.post, env: !!scene.environment, rubble: rubble.count }; },
 };
 boot();
