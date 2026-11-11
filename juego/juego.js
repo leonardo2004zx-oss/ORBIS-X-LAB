@@ -1081,8 +1081,14 @@ function toggleMute() {
 $('muteBtn').textContent = 'Sonido: ' + (audio.muted ? 'no' : 'sí');
 $('muteBtn').addEventListener('click', toggleMute);
 $('resumeBtn').addEventListener('click', () => setPaused(false));
+let resetArmed = false;
 $('resetBtn').addEventListener('click', () => {
-  if (!confirm('¿Borrar todos los Cristales conseguidos?')) return;
+  if (!resetArmed) {
+    resetArmed = true;
+    $('resetBtn').textContent = '¿Seguro? Pulsa otra vez';
+    setTimeout(() => { resetArmed = false; $('resetBtn').textContent = 'Borrar progreso'; }, 3000);
+    return;
+  }
   try { localStorage.removeItem(SAVE_KEY); } catch { /* nada */ }
   location.reload();
 });
