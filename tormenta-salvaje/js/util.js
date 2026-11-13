@@ -310,6 +310,31 @@
     mat.customProgramCacheKey = () => 'wind' + amp + stiff;
   }
 
+  // Fusiona las mallas estáticas de un grupo en una malla por material (muchos menos dibujos por cuadro).
+  // keep(o) → true deja ese objeto (y sus hijos) sin tocar: puertas, objetos recogibles, etc.
+  function bake(group, keep) {
+    group.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(group.matrixWorld).invert();
+    const byMat = new Map(), victims = [];
+    group.traverse(o => {
+      if (o === group) return;
+      let p = o; while (p && p !== group) { if (keep && keep(p)) return; p = p.parent; }
+      if (!o.isMesh || Array.isArray(o.material) || o.isInstancedMesh) return;
+      const g = o.geometry.index ? o.geometry.clone() : o.geometry.clone();
+      if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+      g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+      if (!byMat.has(o.material)) byMat.set(o.material, { geos: [], shadow: o.castShadow });
+      byMat.get(o.material).geos.push(g); victims.push(o);
+    });
+    victims.forEach(o => o.parent.remove(o));
+    for (const [mat, v] of byMat) {
+      const m = new THREE.Mesh(merge(v.geos.map(geo => ({ geo, mat: 0 }))), mat);
+      m.castShadow = v.shadow; m.receiveShadow = true; group.add(m);
+    }
+    return group;
+  }
+
   window.TS = window.TS || {};
-  Object.assign(window.TS, { mulberry, R, rnd, hash, vnoise, fbm, canvas, tex, barkTexture, birchTexture, needleCard, leafCard, fernCard, grassCard, groundTextures, rockTexture, fabricTexture, woodTexture, merge, limb, card, addWind });
+  Object.assign(window.TS, { bake, mulberry, R, rnd, hash, vnoise, fbm, canvas, tex, barkTexture, birchTexture, needleCard, leafCard, fernCard, grassCard, groundTextures, rockTexture, fabricTexture, woodTexture, merge, limb, card, addWind });
 })();

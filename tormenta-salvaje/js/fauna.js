@@ -175,6 +175,7 @@
       const P = c.player;
       for (const o of this.owlsList) {
         const pos = o.g.position, dist = Math.hypot(P.pos.x - pos.x, P.pos.z - pos.z);
+        o.g.visible = dist < 80;
         const ew = new V3(); o.eyes.getWorldPosition(ew);
         o.eyes.userData.mat.opacity = 0.02 + this.lit(ew, c.fl, 40) * 1.5;
         if (o.state === 'perch') {
@@ -280,6 +281,7 @@
       const P = c.player;
       for (const f of this.frogList) {
         const pos = f.g.position, dist = Math.hypot(P.pos.x - pos.x, P.pos.z - pos.z);
+        if (f.state !== 'gone') f.g.visible = dist < 30;
         if (f.state === 'sit') {
           f.croakT -= dt;
           if (f.croakT <= 0) { f.croakT = rnd(3, 11) * (1.4 - c.storm.rain * 0.5); if (c.playing && dist < 28) this.audio.croak(pos.clone().add(new V3(0, 0.1, 0))); }
@@ -392,7 +394,7 @@
       for (let i = 0; i < 140; i++) { const a = Math.random() * 6.283, rr = Math.random() * N * 0.45; g.fillStyle = 'rgba(255,255,255,1)'; g.beginPath(); g.arc(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 1 + Math.random() * 1.6, 0, 7); g.fill(); }
       const mat = new THREE.MeshStandardMaterial({ map: T.tex(c), transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.15, metalness: 0.3, color: 0x9aa0a8, opacity: 0.85 });
       const cand = this.world.trees.filter(t => { const d = T.distToPath(t.x, t.z); return d > 2.4 && d < 5.5 && t.s.kind !== 'snag'; });
-      const n = Math.min(this.Q.webs || 26, cand.length), r = T.mulberry(55);
+      const n = Math.min(this.Q.webs || 26, cand.length), r = T.mulberry(55), webGeos = [];
       for (let i = 0; i < n; i++) {
         const t = cand[Math.floor(r() * cand.length)], s = 0.9 + r() * 0.9;
         const m = new THREE.Mesh(new THREE.PlaneGeometry(s, s), mat);
@@ -402,8 +404,9 @@
         const x = t.x + dx / l * (0.6 + s * 0.4), z = t.z + dz / l * (0.6 + s * 0.4);
         m.position.set(x, this.world.groundHeight(x, z) + 0.9 + r() * 1.3, z);
         m.rotation.y = Math.atan2(dx, dz) + Math.PI / 2 + (r() - 0.5) * 0.6; m.rotation.z = r() * 3;
-        m.renderOrder = 3; this.scene.add(m);
+        m.updateMatrix(); webGeos.push(m.geometry.applyMatrix4(m.matrix));
       }
+      const wm = new THREE.Mesh(T.merge(webGeos.map(geo => ({ geo, mat: 0 }))), mat); wm.renderOrder = 3; wm.frustumCulled = false; this.scene.add(wm);
     }
 
     update(dt, c) {

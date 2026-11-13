@@ -215,7 +215,7 @@
           float edge = 0.62 + 0.3 * nn(vWp.xz * 1.3) + 0.12 * nn(vWp.xz * 4.0);
           diffuseColor.a *= 1.0 - smoothstep(edge - 0.28, edge, rr);`);
       };
-      this.puddleMat = mat; this.wetMats.push(mat);
+      this.puddleMat = mat; this.wetMats.push(mat); this._pgeo = [];
       const add = this.addPuddle = (x, z, rad) => {
         const n = 14, g = new THREE.PlaneGeometry(rad * 2.6, rad * 2, n, n); g.rotateX(-Math.PI / 2);
         const rot = r() * 6.28, c = Math.cos(rot), s = Math.sin(rot), P = g.attributes.position;
@@ -225,8 +225,7 @@
         }
         g.computeVertexNormals();
         const nrm = g.attributes.normal; for (let i = 0; i < nrm.count; i++) nrm.setXYZ(i, 0, 1, 0); // agua: siempre horizontal
-        const m = new THREE.Mesh(g, mat); m.renderOrder = 1; m.receiveShadow = true;
-        this.scene.add(m);
+        this._pgeo.push(g);
         this.puddles.push({ x, z, r: rad * 0.85, y: this.groundHeight(x, z) + 0.02 });
       };
       // en el sendero (donde más se junta el agua) y algunos sueltos en zonas planas
@@ -239,6 +238,14 @@
         const sl = Math.abs(height(x + 1, z) - height(x - 1, z)) + Math.abs(height(x, z + 1) - height(x, z - 1));
         if (distToPath(x, z) > 6 && campDist(x, z) > CAMP.r && sl < 0.5) add(x, z, 0.5 + r() * 1.2);
       }
+      this.finalizePuddles();
+    }
+    // todos los charcos en una sola malla: un único dibujo por cuadro
+    finalizePuddles() {
+      if (this.puddleMesh) { this.scene.remove(this.puddleMesh); this.puddleMesh.geometry.dispose(); }
+      this.puddleMesh = new THREE.Mesh(T.merge(this._pgeo.map(geo => ({ geo, mat: 0 }))), this.puddleMat);
+      this.puddleMesh.material = this.puddleMat; this.puddleMesh.renderOrder = 1; this.puddleMesh.receiveShadow = true; this.puddleMesh.frustumCulled = false;
+      this.scene.add(this.puddleMesh);
     }
 
     // altura exacta de la malla visible (interpolación por triángulo, igual que la GPU)
@@ -484,7 +491,7 @@
       const rockMat = new THREE.MeshStandardMaterial({ map: T.rockTexture(), roughness: 0.38, metalness: 0.05, color: 0x55595d, envMapIntensity: 0.9 });
       this.wetMats.push(rockMat);
       const rocks = [0, 1, 2].map(s => {
-        const g = new THREE.IcosahedronGeometry(1, 2), P = g.attributes.position, rr = mulberry(100 + s);
+        const g = new THREE.IcosahedronGeometry(1, 1), P = g.attributes.position, rr = mulberry(100 + s); // 80 triángulos por roca
         const k1 = rr() * 10, k2 = rr() * 10;
         for (let i = 0; i < P.count; i++) {
           const v = new V3(P.getX(i), P.getY(i), P.getZ(i));

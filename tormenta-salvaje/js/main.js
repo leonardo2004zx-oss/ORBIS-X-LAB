@@ -10,9 +10,9 @@
 
   /* ---------- calidad ---------- */
   const QUALITY = [
-    { name: 'Baja', dpr: 1, aa: false, terrainSeg: 120, treeCount: 1500, nearR: 32, farR: 78, fog: 0.034, ferns: 2600, grass: 2400, bushes: 450, rocks: 300, logs: 40, mist: 10, rain: 3800, splash: 260, shadows: 0, leaves: 60, shrooms: 40, webs: 14 },
-    { name: 'Media', dpr: 1.35, aa: false, terrainSeg: 170, treeCount: 2000, nearR: 42, farR: 96, fog: 0.029, ferns: 4500, grass: 4000, bushes: 750, rocks: 450, logs: 60, mist: 14, rain: 7500, splash: 450, shadows: 512, leaves: 110, shrooms: 70, webs: 22 },
-    { name: 'Alta', dpr: 1.75, aa: true, terrainSeg: 230, treeCount: 2500, nearR: 56, farR: 120, fog: 0.025, ferns: 7000, grass: 6000, bushes: 1100, rocks: 600, logs: 80, mist: 18, rain: 13000, splash: 700, shadows: 1024, leaves: 160, shrooms: 100, webs: 30 },
+    { name: 'Baja', dpr: 1, aa: false, terrainSeg: 110, treeCount: 1500, nearR: 24, farR: 58, fog: 0.04, ferns: 1800, grass: 1500, bushes: 300, rocks: 250, logs: 35, mist: 5, rain: 3000, splash: 200, shadows: 0, leaves: 40, shrooms: 30, webs: 10, beam: 6 },
+    { name: 'Media', dpr: 1.15, aa: false, terrainSeg: 150, treeCount: 1900, nearR: 32, farR: 74, fog: 0.033, ferns: 3200, grass: 2600, bushes: 550, rocks: 380, logs: 50, mist: 7, rain: 5500, splash: 350, shadows: 0, leaves: 80, shrooms: 55, webs: 18, beam: 8 },
+    { name: 'Alta', dpr: 1.75, aa: true, terrainSeg: 230, treeCount: 2500, nearR: 56, farR: 120, fog: 0.025, ferns: 7000, grass: 6000, bushes: 1100, rocks: 600, logs: 80, mist: 18, rain: 13000, splash: 700, shadows: 1024, leaves: 160, shrooms: 100, webs: 30, beam: 14 },
   ];
   const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || matchMedia('(pointer: coarse)').matches;
   const settings = Object.assign({ q: mobile ? 1 : 2, master: 0.9, rain: 1, thunder: 1, sens: 1, fps: false, invert: false, mini: true }, store.get('settings', {}));
@@ -31,7 +31,7 @@
 
   let world, rain, splashes, lightning, storm, player, flashlight, input, map, fauna, camp;
   const audio = new T.StormAudio();
-  const state = { mode: 'menu', time: 0, objective: '', msgT: 0, saveT: 0, creakT: 8, flags: {} };
+  const state = { fastT: 0, mode: 'menu', time: 0, objective: '', msgT: 0, saveT: 0, creakT: 8, flags: {} };
   window.__ts = { state, get world() { return world; }, get player() { return player; }, get storm() { return storm; }, audio, get flashlight() { return flashlight; }, get lightning() { return lightning; }, renderer, camera };
 
   function build() {
@@ -39,7 +39,7 @@
     world.scene.add(camera);
     rain = new T.Rain(world.scene, Q.rain);
     splashes = new T.Splashes(world.scene, Q.splash);
-    lightning = new T.Lightning(world.scene);
+    lightning = new T.Lightning(world.scene); lightning.light.visible = false; // el relámpago usa la luz de la luna (una luz menos por píxel)
     storm = new T.Storm();
     flashlight = new T.Flashlight(world.scene, camera, Q);
     player = new T.Player(world, camera, audio, splashes);
@@ -56,6 +56,17 @@
     world.wetMats.forEach(m => { m.userData.env = m.envMapIntensity; });
     world.updateLOD(new V3(0, 0, 172), true);
     resize();
+    precompile();
+  }
+  // compila todos los shaders durante la carga (evita tirones al ver un animal o llegar al camping)
+  function precompile() {
+    const hidden = [];
+    world.scene.traverse(o => { if (!o.visible && o !== lightning.light) { hidden.push(o); o.visible = true; } });
+    for (const L of camp.lights) L.visible = true;
+    renderer.compile(world.scene, camera);
+    for (const L of camp.lights) L.visible = false;
+    renderer.compile(world.scene, camera);
+    hidden.forEach(o => { o.visible = false; });
   }
 
   /* ---------- interacción ---------- */
@@ -352,6 +363,7 @@
   let last = performance.now(), fpsAcc = 0, fpsN = 0, fps = 60, slowT = 0;
   function frame(now) {
     requestAnimationFrame(frame);
+    if (now - last < 1000 / 62) return;   // tope de 60 FPS: en pantallas de 120 Hz no se dibuja el doble
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     state.time += dt;
     if (state.mode === 'pause' || state.mode === 'note') { renderer.render(world.scene, camera); return; }
@@ -372,6 +384,15 @@
     });
     world.update(dt, state.time, camera.position, storm);
     camp.update(dt, state.time);
+    // relámpago: la misma luz direccional de la luna se dispara hacia la descarga
+    if (lightning.level > 0.03 && lightning.flashDir) {
+      world.moon.intensity += Math.min(1.2, lightning.level) * 0.95;
+      world.moon.color.setRGB(0.72, 0.78, 1.0);
+      world.moon.position.copy(camera.position).addScaledVector(lightning.flashDir, 200);
+    } else world.moon.color.setRGB(0.56, 0.65, 0.85);
+    // los faroles del camping solo cuentan como luz cuando estás cerca
+    const nearCamp = T.campDist(camera.position.x, camera.position.z) < 85;
+    for (const L of camp.lights) L.visible = nearCamp;
 
     if (playing) {
       // audio ambiente según el entorno inmediato
@@ -383,7 +404,7 @@
       if (sh) surf[sh.layer] = 1;
       if (Math.hypot(player.pos.x - camp.car.g.position.x, player.pos.z - camp.car.g.position.z) < 3.5) surf.metal = Math.max(surf.metal, 0.5);
       rain.u.uHide.value += ((sh ? sh.rain : 0) - rain.u.uHide.value) * (1 - Math.exp(-dt * 4));
-      audio.update({ rain: storm.rain, wind: storm.wind, gust: storm.gust, leafCover: Math.min(1, near / 8) * (sh ? 0.3 : 1), puddleNear: Math.max(0, 1 - Math.max(0, pd) / 7) * (sh ? 0.2 : 1), exertion: player.exertion, shelter: sh ? sh.level : 0, surf, dt });
+      if ((state.audT = (state.audT || 0) + 1) % 2 === 0) audio.update({ rain: storm.rain, wind: storm.wind, gust: storm.gust, leafCover: Math.min(1, near / 8) * (sh ? 0.3 : 1), puddleNear: Math.max(0, 1 - Math.max(0, pd) / 7) * (sh ? 0.2 : 1), exertion: player.exertion, shelter: sh ? sh.level : 0, surf, dt });
       // crujidos de árboles con el viento
       state.creakT -= dt * (0.4 + storm.wind);
       if (state.creakT <= 0) {
@@ -398,10 +419,10 @@
       $('batt').classList.toggle('low', flashlight.battery < 0.2);
       const deg = ((-player.yaw * 180 / Math.PI) % 360 + 360) % 360;
       tape.style.transform = `translateX(${-deg * 2.2}px)`;
-      if (settings.mini && state.mode === 'play' && (state.miniT = (state.miniT || 0) + dt) > 0.05) { state.miniT = 0; map.drawMini($('mini'), player); }
+      if (settings.mini && state.mode === 'play' && (state.miniT = (state.miniT || 0) + dt) > 0.12) { state.miniT = 0; map.drawMini($('mini'), player); }
       const it = nearestInteractable();
-      $('prompt').hidden = !it;
-      if (it) $('prompt').innerHTML = `<kbd>${input.touch ? '✋' : 'E'}</kbd>${it.label}`;
+      const ptxt = it ? `<kbd>${input.touch ? '✋' : 'E'}</kbd>${it.label}` : '';
+      if (ptxt !== state.ptxt) { state.ptxt = ptxt; $('prompt').hidden = !it; if (it) $('prompt').innerHTML = ptxt; }
       if (state.msgT > 0) { state.msgT -= dt; if (state.msgT <= 0) $('message').style.opacity = 0; }
       if (state.objT > 0) { state.objT -= dt; if (state.objT <= 0) $('objective').style.opacity = 0.45; }
       state.saveT += dt; if (state.saveT > 10) { state.saveT = 0; save(); }
@@ -413,9 +434,9 @@
     if (fpsAcc >= 1) {
       fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0;
       if (settings.fps) $('fps').textContent = fps + ' FPS · ' + Math.round(baseDpr * dprScale * 100) / 100 + 'x';
-      if (fps < 26 && dprScale > 0.6) { slowT++; if (slowT >= 2) { dprScale = Math.max(0.6, dprScale - 0.1); renderer.setPixelRatio(baseDpr * dprScale); resize(); slowT = 0; } }
-      else if (fps > 50 && dprScale < 1) { dprScale = Math.min(1, dprScale + 0.05); renderer.setPixelRatio(baseDpr * dprScale); resize(); }
-      else slowT = 0;
+      if (fps < 45 && dprScale > 0.5) { slowT++; if (slowT >= 2) { dprScale = Math.max(0.5, dprScale - 0.1); renderer.setPixelRatio(baseDpr * dprScale); resize(); slowT = 0; } }
+      else if (fps >= 58 && dprScale < 1) { if (++state.fastT >= 4) { state.fastT = 0; dprScale = Math.min(1, dprScale + 0.05); renderer.setPixelRatio(baseDpr * dprScale); resize(); } }
+      else { slowT = 0; state.fastT = 0; }
     }
   }
 

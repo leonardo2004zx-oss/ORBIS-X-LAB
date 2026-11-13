@@ -148,6 +148,7 @@
 
     // minimapa circular que gira con la mirada (la parte de arriba es hacia donde mirás)
     drawMini(cv, player) {
+      if (!this.small) { this.small = T.canvas(this.N / 2, this.N / 2); this.small.getContext('2d').drawImage(this.base, 0, 0, this.N / 2, this.N / 2); }
       const S = cv.width, g = cv.getContext('2d'), r = S / 2, zoom = 2.6; // píxeles de minimapa por metro
       const scale = zoom / (this.N / T.SIZE);
       const [px, py] = this.w2m(player.pos.x, player.pos.z);
@@ -155,7 +156,7 @@
       g.save(); g.beginPath(); g.arc(r, r, r - 1, 0, 7); g.clip();
       g.fillStyle = '#c9bfa4'; g.fillRect(0, 0, S, S);
       g.translate(r, r); g.rotate(player.yaw); g.scale(scale, scale); g.translate(-px, -py);
-      g.drawImage(this.base, 0, 0);
+      g.drawImage(this.small, 0, 0, this.N, this.N);
       if (this.trail.length > 1) {
         g.strokeStyle = 'rgba(40,40,52,0.7)'; g.lineWidth = 2.5 / scale * 1.2; g.beginPath();
         const from = Math.max(0, this.trail.length - 300);

@@ -98,7 +98,7 @@
             gl_FragColor = vec4(vec3(1.0, 0.9, 0.74) * prof * mist * fall * 0.075 * uI, 1.0);
           }`,
       });
-      const slices = 14, geos = [];
+      const slices = Q.beam || 14, geos = [];
       for (let i = 0; i < slices; i++) {
         const k = (i + 0.5) / slices, d = 0.6 + k * k * 17, rad = Math.tan(0.36) * d + 0.05;
         const g = new THREE.PlaneGeometry(rad * 2, rad * 2); g.translate(0, 0, -d);

@@ -42,6 +42,16 @@ Proyecto independiente: no depende de otras carpetas del repositorio.
   (lona de la carpa, madera del techo, chapa del auto); se recupera el aliento y se guarda la partida.
 - Los lugares nuevos se anotan solos en el mapa.
 
+### Optimización para celulares
+- Piezas fijas del camping fusionadas por material y todos los charcos en una sola malla:
+  de ~540 a ~180 dibujos por cuadro en calidad Media.
+- Luna y relámpagos comparten una sola luz; los faroles del camping solo se calculan cerca: 3 luces por píxel en el bosque.
+- Sin sombras de linterna en Media (solo en Alta), haz volumétrico con menos capas, menos niebla superpuesta,
+  rocas más livianas, distancias de árboles ajustadas por calidad.
+- Tope de 60 FPS (en pantallas de 120 Hz no se dibuja el doble), resolución dinámica que apunta a ~50 FPS,
+  shaders compilados durante la carga (sin tirones al llegar al camping o al ver un animal),
+  minimapa y audio actualizados con menos frecuencia.
+
 ## Próximas versiones
 4. Eventos de terror psicológico, sonido posicional y final jugable.
 5. Optimización, pulido cinematográfico y corrección de errores.

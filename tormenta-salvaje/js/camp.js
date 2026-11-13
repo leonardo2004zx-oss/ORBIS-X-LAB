@@ -21,6 +21,9 @@
       this.at = at;
       this._arch(); this._tents(at); this._pavilion(at(11, -5)); this._fires(at); this._car(at(-3, -17));
       this._cabin(at(-19, -11)); this._props(at); this._leanTo(); this._campPuddles(at);
+      world.finalizePuddles();
+      // fusionar todo lo estático: de cientos de mallas a unas pocas por material
+      for (const g of this.bakeList) T.bake(g, o => o === this.cabin.hinge);
     }
 
     mats() {
@@ -35,7 +38,7 @@
     _collide(x, z, r) { this.world._addCollider(x, z, r); }
     // pared recta como cadena de colisionadores circulares
     _wall(x0, z0, x1, z1, r) { const L = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.ceil(L / (r * 1.4))); for (let i = 0; i <= n; i++) this._collide(x0 + (x1 - x0) * i / n, z0 + (z1 - z0) * i / n, r); }
-    _shadow(o) { o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return o; }
+    _shadow(o) { o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); (this.bakeList = this.bakeList || []).push(o); return o; }
 
     /* ---------- arco de entrada ---------- */
     _arch() {
