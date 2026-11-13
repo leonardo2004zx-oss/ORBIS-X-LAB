@@ -5,7 +5,7 @@ Videojuego 3D de terror psicológico y supervivencia para el navegador (Android 
 
 Proyecto independiente: no depende de otras carpetas del repositorio.
 
-## Estado: versión 1 (bosque navegable)
+## Estado: versión 3 (bosque + camping explorable)
 - Bosque procedural de 440 × 440 m: coníferas altas, árboles de hoja ancha, abedules y troncos secos
   (troncos con raíces, ramas y follaje en tarjetas; no conos), helechos, pasto, arbustos, rocas, troncos caídos y ramas.
 - Sendero embarrado y brillante con hojas mojadas; charcos que siguen el terreno con ondas de gotas en tiempo real.
@@ -29,9 +29,20 @@ Proyecto independiente: no depende de otras carpetas del repositorio.
 - Portada animada, Nueva partida / Continuar / Configuración / Créditos; calidad Baja/Media/Alta, volúmenes,
   sensibilidad, FPS; resolución dinámica; guardado local automático.
 
+### Versión 3: camping, objetos y pistas
+- Camping Los Alerces al final del sendero, en un claro: arco de entrada, carpa roja familiar que se puede recorrer
+  (farol encendido, la lona brilla desde adentro, el jugador se agacha), carpa naranja cerrada, carpa derrumbada,
+  pabellón techado con mesas y farol colgante, dos fogatas apagadas, auto abandonado hundido en el barro,
+  cabaña del guardaparques con puerta articulada, reposeras volcadas, charcos.
+- Refugio de troncos a mitad del sendero.
+- Pistas: diario en la carpa, libro de registro en el pabellón y llave en la guantera del auto (3/3).
+  Lector de notas y lista de notas en la pausa. Pilas que recargan la linterna (la batería ahora se agota).
+- Objetivos encadenados: llegar al camping → revisar → conseguir la llave → abrir la cabaña → refugiarse.
+- Refugios: dentro la lluvia deja de caer, el exterior se amortigua y suena la superficie
+  (lona de la carpa, madera del techo, chapa del auto); se recupera el aliento y se guarda la partida.
+- Los lugares nuevos se anotan solos en el mapa.
+
 ## Próximas versiones
-2. Linterna, charcos, relámpagos y niebla: pulido (ya hay una primera versión de todo).
-3. Camping explorable, objetos, pistas y objetivos.
 4. Eventos de terror psicológico, sonido posicional y final jugable.
 5. Optimización, pulido cinematográfico y corrección de errores.
 
@@ -47,4 +58,5 @@ Proyecto independiente: no depende de otras carpetas del repositorio.
 | `js/player.js` | Controles, movimiento, linterna |
 | `js/map.js` | Mapa del parque y minimapa |
 | `js/fauna.js` | Animales y detalles del ambiente |
+| `js/camp.js` | Camping, refugios, objetos y pistas |
 | `js/main.js` | Menús, configuración, guardado, bucle |

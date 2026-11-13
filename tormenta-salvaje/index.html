@@ -101,6 +101,15 @@ input[type=range] { width: 100%; accent-color: var(--lamp); height: 28px; }
 .mapview .close { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); right: max(14px, env(safe-area-inset-right, 0px)); width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass); font-size: 22px; }
 .fps { top: calc(env(safe-area-inset-top, 0px) + 184px) !important; right: max(16px, env(safe-area-inset-right, 0px)) !important; }
 @media (max-height: 460px) { .mini { width: 92px; height: 92px; top: calc(env(safe-area-inset-top, 0px) + 58px); } }
+.paper { width: min(520px, 100%); max-height: 86vh; overflow-y: auto; background: #d9cfb4; color: #2a1d10; border-radius: 4px; padding: 26px 26px 18px; box-shadow: 0 20px 60px rgba(0,0,0,0.7); font-family: Georgia, 'Times New Roman', serif; transform: rotate(-0.6deg); }
+.paper h3 { font-family: var(--f-title); margin: 0 0 12px; font-size: 18px; letter-spacing: 0.04em; }
+.paper p { margin: 0 0 10px; line-height: 1.55; font-size: 15px; color: #2a1d10; white-space: pre-line; }
+.paper .hand { font-style: italic; color: #5a2a1a; }
+.paper .btn { background: #2a1d10; color: #e9dfc6; border-color: #2a1d10; }
+.paper .note-list button { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px dashed rgba(42,29,16,0.3); padding: 10px 0; font-size: 15px; color: #2a1d10; font-family: Georgia, serif; }
+.inv { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); display: flex; gap: 6px; }
+.inv span { background: var(--glass); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--ink); }
+.toast { position: absolute; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 50px); transform: translateX(-50%); background: var(--glass); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 13px; transition: opacity .6s; opacity: 0; white-space: nowrap; }
 .rotate { position: fixed; inset: 0; z-index: 30; display: none; place-items: center; text-align: center; background: #040507; padding: 24px; }
 .rotate p { color: var(--dim); max-width: 30ch; }
 @media (orientation: portrait) and (pointer: coarse) { body.playing .rotate { display: grid; } }
@@ -136,6 +145,8 @@ input[type=range] { width: 100%; accent-color: var(--lamp); height: 28px; }
   <div class="objective" id="objective"><b>Objetivo</b><span id="objText"></span></div>
   <div class="compass"><div class="tape" id="tape"></div></div>
   <div class="prompt" id="prompt" hidden></div>
+  <div class="inv" id="inv"></div>
+  <div class="toast" id="toast"></div>
   <div class="message" id="message"></div>
   <div class="fps" id="fps" hidden></div>
   <div class="touch" id="touch" hidden>
@@ -159,11 +170,19 @@ input[type=range] { width: 100%; accent-color: var(--lamp); height: 28px; }
   <div class="maphint" id="mapHint">Flecha roja: vos · línea gris: tu recorrido</div>
 </section>
 
+<section class="panel" id="pNote" hidden aria-label="Nota">
+  <div class="paper">
+    <div id="noteBody"></div>
+    <div class="actions"><button class="btn primary" id="noteClose">Guardar la nota</button></div>
+  </div>
+</section>
+
 <section class="panel" id="pPause" hidden aria-label="Pausa">
   <div class="card">
     <h2>Pausa</h2>
     <div class="actions" style="flex-direction:column; align-items:stretch">
       <button class="btn primary" id="pResume">Continuar</button>
+      <button class="btn" id="pNotes">Notas encontradas</button>
       <button class="btn" id="pSet">Configuración</button>
       <button class="btn" id="pQuit">Guardar y volver al menú</button>
     </div>
@@ -212,4 +231,5 @@ input[type=range] { width: 100%; accent-color: var(--lamp); height: 28px; }
 <script src="js/player.js"></script>
 <script src="js/map.js"></script>
 <script src="js/fauna.js"></script>
+<script src="js/camp.js"></script>
 <script src="js/main.js"></script>

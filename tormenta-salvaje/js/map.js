@@ -76,9 +76,10 @@
       g.strokeStyle = 'rgba(80,60,30,0.18)'; g.lineWidth = 2;
       [[N / 3, 0, N / 3, N], [2 * N / 3, 0, 2 * N / 3, N], [0, N / 2, N, N / 2]].forEach(([a, b, c2, d]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(c2, d); g.stroke(); });
       // título, escala y rosa de los vientos
-      g.fillStyle = '#3a2412'; g.textAlign = 'left';
-      g.font = `bold ${Math.round(N * 0.034)}px Cinzel, Georgia, serif`; g.fillText('PARQUE LOS ALERCES', N * 0.05, N * 0.07);
-      g.font = `italic ${Math.round(N * 0.019)}px Georgia, serif`; g.fillText('Sendero del Bosque Viejo · Guardaparques', N * 0.05, N * 0.1);
+      g.fillStyle = '#3a2412'; g.textAlign = 'right';
+      g.font = `bold ${Math.round(N * 0.034)}px Cinzel, Georgia, serif`; g.fillText('PARQUE LOS ALERCES', N * 0.95, N * 0.91);
+      g.font = `italic ${Math.round(N * 0.019)}px Georgia, serif`; g.fillText('Sendero del Bosque Viejo · Guardaparques', N * 0.95, N * 0.94);
+      g.textAlign = 'left';
       const sx = N * 0.06, sy = N * 0.95, len = 100 / T.SIZE * N;
       g.fillStyle = '#3a2412'; g.fillRect(sx, sy, len, 4); g.fillRect(sx, sy - 6, 2, 10); g.fillRect(sx + len - 2, sy - 6, 2, 10);
       g.font = `${Math.round(N * 0.017)}px Georgia, serif`; g.fillText('100 m', sx + len + 8, sy + 5);

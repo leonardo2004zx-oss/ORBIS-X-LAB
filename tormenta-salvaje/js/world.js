@@ -47,7 +47,17 @@
   for (let it = 0; it < 6; it++) for (let k = 1; k < PATH_H.length - 1; k++) PATH_H[k] = (PATH_H[k - 1] + PATH_H[k] * 2 + PATH_H[k + 1]) / 4;
   function pathHeightAtT(t) { const f = t * (PATH_H.length - 1), k = Math.min(PATH_H.length - 2, Math.floor(f)); return PATH_H[k] + (PATH_H[k + 1] - PATH_H[k]) * (f - k); }
 
+  // claro del camping al final del sendero
+  const CAMP = { x: -94, z: -182, r: 30 };
+  const CAMP_H = rawHeight(-82, -160) - 0.4;
+  const campDist = (x, z) => Math.hypot(x - CAMP.x, z - CAMP.z);
   function height(x, z) {
+    const h = heightBase(x, z), d = campDist(x, z);
+    if (d > 44) return h;
+    const k = Math.max(0, Math.min(1, (44 - d) / 16)), s = k * k * (3 - 2 * k);
+    return h + (CAMP_H + Math.sin(x * 0.7) * Math.cos(z * 0.6) * 0.08 - h) * s;
+  }
+  function heightBase(x, z) {
     const h0 = rawHeight(x, z), d = distToPath(x, z);
     if (d > 7) return h0;
     const ph = pathHeightAtT(gridSample(pathT, x, z)) - 0.25 - 0.12 * Math.max(0, 1 - d / 1.6);
@@ -151,7 +161,7 @@
         const d = distToPath(x, z), moss = fbm(x * 0.05 + 7, z * 0.05, 3), leaf = fbm(x * 0.09, z * 0.09 + 3, 2);
         let r = 0.42 + leaf * 0.3, g = 0.42 + leaf * 0.22 + moss * 0.25, b = 0.36 + leaf * 0.12;
         if (moss > 0.58) { r *= 0.7; g *= 1.05; b *= 0.6; }                       // musgo
-        const pk = Math.max(0, 1 - d / 3);                                       // barro del sendero
+        const pk = Math.max(0, 1 - d / 3, Math.min(1, (CAMP.r + 2 - campDist(x, z)) / 8) * 0.85); // barro del sendero y del claro
         r = r * (1 - pk) + 0.66 * pk; g = g * (1 - pk) + 0.52 * pk; b = b * (1 - pk) + 0.4 * pk;
         col[i * 3] = r; col[i * 3 + 1] = g; col[i * 3 + 2] = b;
         wet[i] = Math.min(1, pk * 1.3 + (fbm(x * 0.2, z * 0.2) > 0.62 ? 0.5 : 0));
@@ -206,7 +216,7 @@
           diffuseColor.a *= 1.0 - smoothstep(edge - 0.28, edge, rr);`);
       };
       this.puddleMat = mat; this.wetMats.push(mat);
-      const add = (x, z, rad) => {
+      const add = this.addPuddle = (x, z, rad) => {
         const n = 14, g = new THREE.PlaneGeometry(rad * 2.6, rad * 2, n, n); g.rotateX(-Math.PI / 2);
         const rot = r() * 6.28, c = Math.cos(rot), s = Math.sin(rot), P = g.attributes.position;
         for (let i = 0; i < P.count; i++) {
@@ -227,7 +237,7 @@
       for (let i = 0; i < 50; i++) {
         const x = (r() - 0.5) * SIZE * 0.8, z = (r() - 0.5) * SIZE * 0.8;
         const sl = Math.abs(height(x + 1, z) - height(x - 1, z)) + Math.abs(height(x, z + 1) - height(x, z - 1));
-        if (distToPath(x, z) > 6 && sl < 0.5) add(x, z, 0.5 + r() * 1.2);
+        if (distToPath(x, z) > 6 && campDist(x, z) > CAMP.r && sl < 0.5) add(x, z, 0.5 + r() * 1.2);
       }
     }
 
@@ -260,6 +270,7 @@
       while (all.length < total && guard++ < total * 30) {
         const x = (r() - 0.5) * SIZE * 0.96, z = (r() - 0.5) * SIZE * 0.96;
         const d = distToPath(x, z); if (d < 2.6 + r() * 1.6) continue;
+        if (campDist(x, z) < CAMP.r + 3) continue;
         if (Math.hypot(x - 0, z - 175) < 6) continue;
         const clump = fbm(x * 0.02 + 40, z * 0.02, 3);
         if (r() > 0.5 + clump * 0.8 + (d < 9 ? 0.25 : 0)) continue;
@@ -429,6 +440,7 @@
       while (out.length < n && g++ < n * 12) {
         const x = (r() - 0.5) * SIZE * 0.95, z = (r() - 0.5) * SIZE * 0.95;
         const d = distToPath(x, z); if (d < minPath) continue;
+        if (campDist(x, z) < CAMP.r - 2) continue;
         if (test && !test(x, z, d, r)) continue;
         out.push([x, z, r()]);
       }
@@ -455,7 +467,7 @@
       // borde del sendero: helechos densos que lo enmarcan
       const edge = [], re = mulberry(64);
       PATH_PTS.forEach(([x, z]) => { for (let i = 0; i < Math.round(Q.ferns / 800); i++) { const a = re() * 6.28, d = 2.2 + re() * 3.5; edge.push([x + Math.cos(a) * d, z + Math.sin(a) * d, re()]); } });
-      this._instanced(T.merge(fern), fernMat, edge.filter(([x, z]) => distToPath(x, z) > 1.8), k => 0.8 + k * 0.9, -0.05);
+      this._instanced(T.merge(fern), fernMat, edge.filter(([x, z]) => distToPath(x, z) > 1.8 && campDist(x, z) > CAMP.r - 4), k => 0.8 + k * 0.9, -0.05);
       // pasto
       const grass = []; for (let i = 0; i < 3; i++) grass.push({ geo: T.card(new V3(0, 0, 0), new V3(0, 1, 0), 0.9, 0.7, i * 1.05, 0), mat: 0 });
       const grassMat = new THREE.MeshStandardMaterial({ map: T.grassCard(), alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.5, color: 0x8a907a });
@@ -501,7 +513,7 @@
       const logMat = this.species[0].mats[0];
       const logs = [], rl = mulberry(9);
       for (let i = 0; i < this.Q.logs; i++) {
-        const x = (rl() - 0.5) * SIZE * 0.85, z = (rl() - 0.5) * SIZE * 0.85; if (distToPath(x, z) < 3) continue;
+        const x = (rl() - 0.5) * SIZE * 0.85, z = (rl() - 0.5) * SIZE * 0.85; if (distToPath(x, z) < 3 || campDist(x, z) < CAMP.r) continue;
         const a = rl() * 6.28, L = 3 + rl() * 7, R = 0.18 + rl() * 0.3;
         const p0 = new V3(x, height(x, z) + R * 0.6, z), p2 = new V3(x + Math.cos(a) * L, 0, z + Math.sin(a) * L); p2.y = height(p2.x, p2.z) + R * 0.5;
         const p1 = p0.clone().lerp(p2, 0.5); p1.y += 0.1;
@@ -510,7 +522,7 @@
       }
       // ramas sueltas
       for (let i = 0; i < this.Q.logs * 4; i++) {
-        const x = (rl() - 0.5) * SIZE * 0.85, z = (rl() - 0.5) * SIZE * 0.85; const a = rl() * 6.28, L = 0.8 + rl() * 2;
+        const x = (rl() - 0.5) * SIZE * 0.85, z = (rl() - 0.5) * SIZE * 0.85; if (campDist(x, z) < CAMP.r - 6) continue; const a = rl() * 6.28, L = 0.8 + rl() * 2;
         const p0 = new V3(x, height(x, z) + 0.05, z), p1 = new V3(x + Math.cos(a) * L, 0, z + Math.sin(a) * L); p1.y = height(p1.x, p1.z) + 0.05;
         logs.push({ geo: T.limb([p0, p1], 0.05, 0.015, 4, 1), mat: 0 });
       }
@@ -600,5 +612,5 @@
   }
 
   window.TS.World = World;
-  Object.assign(window.TS, { height, distToPath, PATH_PTS, SIZE, HALF, pathCurve });
+  Object.assign(window.TS, { height, distToPath, PATH_PTS, SIZE, HALF, pathCurve, CAMP, campDist });
 })();

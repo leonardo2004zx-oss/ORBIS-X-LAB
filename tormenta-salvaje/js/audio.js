@@ -63,6 +63,10 @@
         owl: [0, 1].map(() => this._renderOwl()),
         howl: [0, 1].map(() => this._renderHowl()),
         croak: [0, 1, 2].map(() => this._renderCroak()),
+        // lluvia sobre superficies: lona tensa (golpes graves y retumbo), madera (toques secos) y chapa (repiques)
+        tent: this._renderDrops(5, 2200, 140, 420, 0.006, 0.02, 0.9, true),
+        roof: this._renderDrops(5, 1500, 500, 1600, 0.004, 0.012, 0.8),
+        metal: this._renderDrops(5, 700, 2200, 5200, 0.01, 0.05, 0.45),
       };
       this._rainLayers(); this._windLayers(); this._breathLayer();
       this.ready = true;
@@ -280,6 +284,9 @@
       this.mudG = ctx.createGain(); this.mudG.connect(this.rainBus);
       this._loop(this.bufs.mud, 0.6, this.mudG, 1); this._loop(this.bufs.mud, 0.5, this.mudG, 1.07);
       this.puddleG = ctx.createGain(); this.puddleG.gain.value = 0; this.puddleG.connect(this.rainBus);
+      // capas de superficie: NO pasan por el filtro de refugio (se oyen nítidas desde adentro)
+      this.surf = {};
+      for (const k of ['tent', 'roof', 'metal']) { const g = ctx.createGain(); g.gain.value = 0; g.connect(this.comp); g.connect(this.revIn); this.surf[k] = g; this._loop(this.bufs[k], 0.8, g, 1); this._loop(this.bufs[k], 0.6, g, 0.94); }
       this._loop(this.bufs.puddle, 0.8, this.puddleG, 1);
       this.rainBus.connect(this.revIn);
     }
@@ -342,6 +349,7 @@
       this.breathG.gain.setTargetAtTime(Math.max(0, env) * (0.006 + ex * ex * 0.16), t, 0.04);
       this.breathF.frequency.setTargetAtTime(inhale ? 1500 + ex * 500 : 950 + ex * 250, t, 0.08);
       // refugio: el exterior se apaga y se oscurece
+      if (st.surf) for (const k in this.surf) this.surf[k].gain.setTargetAtTime((st.surf[k] || 0) * (0.25 + r * 0.9) * this.vol.rain, t, 0.25);
       const sh = st.shelter;
       this.shelterLP.frequency.setTargetAtTime(20000 * (1 - sh) + 700 * sh, t, 0.3);
       this.outdoor.gain.setTargetAtTime(1 - sh * 0.45, t, 0.3);
@@ -465,6 +473,23 @@
       }
     }
     _noiseSrc(buf, t, dur) { const s = this.ctx.createBufferSource(); s.buffer = buf; s.start(t, Math.random() * (buf.duration - dur - 0.05)); s.stop(t + dur); return s; }
+
+    /* ---------- objetos ---------- */
+    pickup(kind) {
+      if (!this.ready) return; this._c('pickup:' + kind);
+      const ctx = this.ctx, t = ctx.currentTime;
+      if (kind === 'battery') { for (let k = 0; k < 2; k++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'square'; o.frequency.value = 1800 - k * 500; g.gain.setValueAtTime(0.08, t + k * 0.09); g.gain.exponentialRampToValueAtTime(0.001, t + k * 0.09 + 0.03); o.connect(g); g.connect(this.player); o.start(t + k * 0.09); o.stop(t + k * 0.09 + 0.05); } }
+      if (kind === 'paper') { for (let k = 0; k < 3; k++) this._play(this.bufs.cloth[k], this.player, 0.55, 2.2 + k * 0.3, t + k * 0.12); }
+      if (kind === 'key') { for (let k = 0; k < 5; k++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = rnd(3200, 5200); const tt = t + k * rnd(0.04, 0.09); g.gain.setValueAtTime(0.06, tt); g.gain.exponentialRampToValueAtTime(0.0005, tt + 0.25); o.connect(g); g.connect(this.player); o.start(tt); o.stop(tt + 0.3); } }
+      if (kind === 'door') {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(30, t); o.frequency.linearRampToValueAtTime(75, t + 1.2); o.frequency.linearRampToValueAtTime(40, t + 1.9);
+        const b = ctx.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = 700; b.Q.value = 8; const g = ctx.createGain(); g.gain.setValueAtTime(0, t + 0.3); g.gain.linearRampToValueAtTime(0.4, t + 0.5); g.gain.linearRampToValueAtTime(0, t + 2);
+        o.connect(b); b.connect(g); g.connect(this.player); o.start(t + 0.3); o.stop(t + 2.1);
+        const c = ctx.createOscillator(), cg = ctx.createGain(); c.type = 'square'; c.frequency.value = 900; cg.gain.setValueAtTime(0.12, t); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.05); c.connect(cg); cg.connect(this.player); c.start(t); c.stop(t + 0.06);
+      }
+      if (kind === 'locked') { for (let k = 0; k < 3; k++) { const c = ctx.createOscillator(), cg = ctx.createGain(); c.type = 'square'; c.frequency.value = 220; const tt = t + k * 0.12; cg.gain.setValueAtTime(0.1, tt); cg.gain.exponentialRampToValueAtTime(0.001, tt + 0.06); c.connect(cg); cg.connect(this.player); c.start(tt); c.stop(tt + 0.08); } }
+      if (kind === 'glovebox') { this._play(this.bufs.snap[1], this.player, 0.25, 1.6); this.pickup('key'); }
+    }
 
     // silencio repentino: todo el exterior cae casi a cero y vuelve
     silence(sec) {

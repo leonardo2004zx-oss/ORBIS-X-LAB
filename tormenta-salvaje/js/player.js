@@ -146,11 +146,12 @@
       this.dir.lerp(want, 1 - Math.exp(-dt * 11)).normalize();
       const right = new V3().crossVectors(want, camera.up).normalize();
       this.pos.copy(camera.position).addScaledVector(right, 0.18).add(new V3(0, -0.2, 0)).addScaledVector(want, 0.2);
-      this.battery = Math.max(0.12, this.battery - dt / 900);
+      if (this.on) this.battery = Math.max(0, this.battery - dt / 720);   // ~12 min de luz por carga completa
       let I = this.on ? 1 : 0;
       if (this.on && this.battery < 0.2 && Math.random() < 0.02) this.flicker = 0.15;
       if (this.flicker > 0) { this.flicker -= dt; I *= Math.random() < 0.5 ? 0.1 : 0.7; }
       I *= 0.6 + 0.4 * Math.min(1, this.battery / 0.3);
+      if (this.battery <= 0.02) I *= 0.08 + Math.random() * 0.06;          // sin pilas: apenas un resplandor
       const L = this.light;
       L.intensity = 2.8 * I; L.position.copy(this.pos); L.target.position.copy(this.pos).addScaledVector(this.dir, 10);
       this.cone.position.copy(this.pos).addScaledVector(this.dir, 0.05);
@@ -203,7 +204,7 @@
         const dx = nx - c.x, dz = nz - c.z, d = Math.hypot(dx, dz), m = c.r + 0.32;
         if (d < m && d > 1e-4) { nx = c.x + dx / d * m; nz = c.z + dz / d * m; }
       }
-      const lim = T.HALF * 0.86, rr = Math.hypot(nx, nz); if (rr > lim) { nx *= lim / rr; nz *= lim / rr; }
+      const lim = T.HALF - 6; nx = Math.max(-lim, Math.min(lim, nx)); nz = Math.max(-lim, Math.min(lim, nz)); // borde del terreno
       const moved = Math.hypot(nx - this.pos.x, nz - this.pos.z);
       this.pos.x = nx; this.pos.z = nz; this.pos.y = this.world.groundHeight(nx, nz);
       this.moving = Math.min(1, moved / dt / 1.75);
@@ -223,6 +224,7 @@
       this.bob += moved * (Math.PI / strideLen);
       // cámara: balanceo de cabeza suave
       const c = this.camera, bobY = Math.sin(this.bob * 2) * 0.035 * this.moving * (1 + this.running * 0.6), bobX = Math.cos(this.bob) * 0.025 * this.moving;
+      this.eye += ((this.crouch ? 1.28 : 1.62) - this.eye) * (1 - Math.exp(-dt * 6));   // agacharse dentro de la carpa
       c.position.set(this.pos.x + rx * bobX, this.pos.y + this.eye + bobY, this.pos.z + rz * bobX);
       c.rotation.set(0, 0, 0); c.rotation.order = 'YXZ';
       c.rotation.y = this.yaw; c.rotation.x = this.pitch; c.rotation.z = -bobX * 0.15;
