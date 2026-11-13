@@ -68,6 +68,8 @@ window.__lab = {
   titanHp: (k, hp) => { const T = titans.list.find((x) => x.kind === k); if (T) T.hp = hp; },
   titanAttack: (k, move) => { const T = titans.list.find((x) => x.kind === k); if (T && !T.busy()) startAct(T, move); },
   fightLog: () => { const l = titans.log || []; titans.log = []; return l.join(' '); },
+  titanDemo: (n) => titanDemo(n),
+  titanDebug: () => titans.list.map((T) => { let n = 0, bad = 0; const bb = new THREE.Box3(); T.root.updateMatrixWorld(true); T.root.traverse((o) => { if (o.isMesh) { n++; const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i += 7) if (!isFinite(p.getX(i) + p.getY(i) + p.getZ(i))) { bad++; break; } bb.expandByObject(o); } }); return { k: T.kind, vis: T.root.visible, inScene: !!T.root.parent, meshes: n, badGeo: bad, min: bb.min.toArray().map((v) => +v.toFixed(1)), max: bb.max.toArray().map((v) => +v.toFixed(1)), y: T.y, cam: camera.position.toArray().map((v) => +v.toFixed(1)), tgt: controls.target.toArray().map((v) => +v.toFixed(1)) }; }),
   cineState: () => ({ slow: +cine.slow.toFixed(2), hitStop: +cine.hitStop.toFixed(2) }),
   gfx: (on) => { if (on !== undefined) setGfx(on); return { enhanced: gfx.enhanced, post: gfx.ready && gfx.post, env: !!scene.environment, rubble: rubble.count }; },
 };

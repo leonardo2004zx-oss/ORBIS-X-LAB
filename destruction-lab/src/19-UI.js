@@ -11,7 +11,7 @@ const HINTS = {
   storm: '<strong>Iniciá la tormenta</strong>: los rayos buscan lo más alto. Tocá para que caiga un rayo donde quieras.',
   volcano: '<strong>Tocá el suelo</strong> donde va a brotar el volcán. Primero se eleva, después hace erupción.',
   blackhole: '<strong>Tocá</strong> sobre qué punto se abre el agujero negro. Al terminar colapsa con una onda expansiva.',
-  titans: '<strong>Tocá</strong> donde empieza la pelea. Basalto surge del suelo y Vex cae del cielo; también podés soltar uno solo a arrasar la ciudad.',
+  titans: '<strong>Tocá</strong> donde empieza la pelea: Basalto surge del suelo y el robot VEX cae del cielo. En «Inspeccionar VEX» lo ves de cerca y probás sus animaciones.',
   build: '<strong>Tocá el suelo</strong> para levantar un edificio y probar su resistencia.',
 };
 function setTool(t) {
@@ -50,8 +50,13 @@ bindSlider('bh-pow', (v) => (blackhole.power = v));
 bindSlider('bh-dur', (v) => (blackhole.dur = v));
 bindSlider('titan-fury', (v) => (titans.fury = v));
 bindSlider('titan-dur', (v) => (titans.dur = v));
-bindSeg('titan-mode', 'm', (v) => (titans.mode = v));
+bindSeg('titan-mode', 'm', (v) => {
+  titans.mode = v;
+  // inspection starts right away in the open park north of the city, facing the camera
+  if (v === 'inspect') { if (titans.list.length) clearTitans(); controls.userT = 0; startTitans(new THREE.Vector3(-20, 0, 42)); }
+});
 $('#titan-cine').addEventListener('change', (e) => { titans.cine = e.target.checked; });
+document.querySelectorAll('#titan-demo button').forEach((b) => b.addEventListener('click', () => { Sfx.init(); titanDemo(b.dataset.d); }));
 $('#titan-btn').addEventListener('click', () => { if (titans.list.length) retreatTitans(); });
 function setQuake(on) {
   quake.on = on;

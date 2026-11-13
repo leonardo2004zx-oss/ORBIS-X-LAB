@@ -111,6 +111,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .seg.mini { flex: 1 1 100%; padding: 3px; }
 .seg.mini button { padding: 6px 4px; font-size: 13px; }
+#titan-demo { flex-wrap: wrap; } #titan-demo button { flex: 1 1 22%; }
 .icon-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .icon-btn.gfx-btn { width: auto; padding: 0 10px; display: flex; flex-direction: column; justify-content: center; gap: 1px; line-height: 1; }
 .gfx-btn small { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
@@ -207,7 +208,8 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
       <div class="slider"><label for="bh-dur">Duración</label><input id="bh-dur" type="range" min="5" max="40" value="15"><output id="bh-dur-out">15</output></div>
     </div>
     <div class="ctl" data-for="titans" hidden>
-      <div class="seg mini" id="titan-mode"><button data-m="fight" aria-pressed="true">Combate</button><button data-m="basalt" aria-pressed="false">Solo Basalto</button><button data-m="vex" aria-pressed="false">Solo Vex</button></div>
+      <div class="seg mini" id="titan-mode"><button data-m="fight" aria-pressed="true">Combate</button><button data-m="basalt" aria-pressed="false">Solo Basalto</button><button data-m="vex" aria-pressed="false">Solo VEX</button><button data-m="inspect" aria-pressed="false">Inspeccionar VEX</button></div>
+      <div class="seg mini" id="titan-demo" hidden><button data-d="walk">Caminar</button><button data-d="punch">Golpes</button><button data-d="slam">Martillazo</button><button data-d="block">Bloquear</button><button data-d="cannon">Cañón</button><button data-d="run">Embestir</button><button data-d="fall">Caer</button></div>
       <div class="slider"><label for="titan-fury">Furia</label><input id="titan-fury" type="range" min="1" max="10" value="6"><output id="titan-fury-out">6</output></div>
       <div class="slider"><label for="titan-dur">Duración</label><input id="titan-dur" type="range" min="20" max="180" step="10" value="60"><output id="titan-dur-out">60</output></div>
       <label class="check" for="titan-cine" style="flex:1 1 auto"><span>Cámara de cine</span><input type="checkbox" id="titan-cine" checked></label>

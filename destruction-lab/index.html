@@ -111,6 +111,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .seg.mini { flex: 1 1 100%; padding: 3px; }
 .seg.mini button { padding: 6px 4px; font-size: 13px; }
+#titan-demo { flex-wrap: wrap; } #titan-demo button { flex: 1 1 22%; }
 .icon-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .icon-btn.gfx-btn { width: auto; padding: 0 10px; display: flex; flex-direction: column; justify-content: center; gap: 1px; line-height: 1; }
 .gfx-btn small { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; }
@@ -207,7 +208,8 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
       <div class="slider"><label for="bh-dur">Duración</label><input id="bh-dur" type="range" min="5" max="40" value="15"><output id="bh-dur-out">15</output></div>
     </div>
     <div class="ctl" data-for="titans" hidden>
-      <div class="seg mini" id="titan-mode"><button data-m="fight" aria-pressed="true">Combate</button><button data-m="basalt" aria-pressed="false">Solo Basalto</button><button data-m="vex" aria-pressed="false">Solo Vex</button></div>
+      <div class="seg mini" id="titan-mode"><button data-m="fight" aria-pressed="true">Combate</button><button data-m="basalt" aria-pressed="false">Solo Basalto</button><button data-m="vex" aria-pressed="false">Solo VEX</button><button data-m="inspect" aria-pressed="false">Inspeccionar VEX</button></div>
+      <div class="seg mini" id="titan-demo" hidden><button data-d="walk">Caminar</button><button data-d="punch">Golpes</button><button data-d="slam">Martillazo</button><button data-d="block">Bloquear</button><button data-d="cannon">Cañón</button><button data-d="run">Embestir</button><button data-d="fall">Caer</button></div>
       <div class="slider"><label for="titan-fury">Furia</label><input id="titan-fury" type="range" min="1" max="10" value="6"><output id="titan-fury-out">6</output></div>
       <div class="slider"><label for="titan-dur">Duración</label><input id="titan-dur" type="range" min="20" max="180" step="10" value="60"><output id="titan-dur-out">60</output></div>
       <label class="check" for="titan-cine" style="flex:1 1 auto"><span>Cámara de cine</span><input type="checkbox" id="titan-cine" checked></label>
@@ -3048,6 +3050,259 @@ function blackholeUpdate(dt) {
     }
   }
 }
+/* ------------------------------------------------------------------ VEX: giant combat robot (hard-surface model built in code) */
+// About 27 m tall. Bevelled and tapered armour plates, bare-metal joints, hydraulic pistons that really extend and
+// compress with the joints, cables, a chest reactor, a lit visor and hands with fingers that close into fists.
+// Parts are merged per bone and material so the whole robot costs a few dozen draw calls.
+const VEXR = {};
+function vexTextures() {
+  if (VEXR.tex) return VEXR.tex;
+  // painted armour: panel seams, rivets, stencils, scratches down to bare metal, grime and chipped edges
+  const a = new Painter(512, 512);
+  a.rect(0, 0, 512, 512, { c: '#56606b', h: 0.55, r: 0.48, m: 0.55 });
+  const seamsX = [0, 96, 230, 330, 512], seamsY = [0, 140, 260, 400, 512];
+  for (const x of seamsX) a.rect(x - 2, 0, 4, 512, { c: '#2b3036', h: 0.2, r: 0.7, m: 0.4 });
+  for (const y of seamsY) a.rect(0, y - 2, 512, 4, { c: '#2b3036', h: 0.2, r: 0.7, m: 0.4 });
+  for (const x of seamsX) for (let y = 10; y < 512; y += 22) a.rect(x - 9, y, 5, 5, { c: '#78818c', h: 0.85, r: 0.35, m: 0.85 });
+  for (const y of seamsY) for (let x = 12; x < 512; x += 22) a.rect(x, y + 6, 5, 5, { c: '#78818c', h: 0.85, r: 0.35, m: 0.85 });
+  a.rect(250, 160, 70, 40, { c: '#3d454e', h: 0.4, r: 0.6 });   // access hatch
+  a.c.font = 'bold 54px Arial, sans-serif'; a.c.fillStyle = 'rgba(225,225,215,0.85)'; a.c.fillText('VX-07', 110, 230);
+  a.c.font = 'bold 22px Arial, sans-serif'; a.c.fillText('WARNING · HYDRAULICS', 20, 380);
+  for (let i = 0; i < 220; i++) { // scratches showing bare metal
+    const x = Math.random() * 512, y = Math.random() * 512, l = 6 + Math.random() * 40, ang = Math.random() * 6.28;
+    a.c.strokeStyle = 'rgba(190,198,206,0.55)'; a.ro.strokeStyle = 'rgb(70,70,70)'; a.me.strokeStyle = 'rgb(240,240,240)';
+    for (const g of [a.c, a.ro, a.me]) { g.lineWidth = 1 + Math.random(); g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(ang) * l, y + Math.sin(ang) * l); g.stroke(); }
+  }
+  for (let i = 0; i < 160; i++) { const x = Math.random() * 512, y = Math.random() * 512, s = 2 + Math.random() * 6; a.rect(x, y, s, s * 0.7, { c: '#8a929b', h: 0.45, r: 0.3, m: 0.95 }); } // chipped paint
+  a.grime(0.32, 707); a.streaks(0, 512, 150, 0.12); a.streaks(0, 512, 410, 0.12);
+  // hazard stripes for accents
+  const hz = new Painter(256, 256);
+  hz.rect(0, 0, 256, 256, { c: '#1b1c1e', h: 0.5, r: 0.5, m: 0.3 });
+  hz.c.save(); hz.c.translate(128, 128); hz.c.rotate(-Math.PI / 4); hz.c.fillStyle = '#e0a020'; for (let x = -400; x < 400; x += 64) hz.c.fillRect(x, -400, 32, 800); hz.c.restore();
+  hz.grime(0.35, 808);
+  for (let i = 0; i < 90; i++) { const x = Math.random() * 256, y = Math.random() * 256; hz.rect(x, y, 3 + Math.random() * 5, 2 + Math.random() * 3, { c: '#7d8288', r: 0.3, m: 0.9 }); }
+  // brushed bare metal for pistons, axles, joints
+  const mt = new Painter(256, 256);
+  mt.rect(0, 0, 256, 256, { c: '#b7bdc4', h: 0.5, r: 0.22, m: 1 });
+  for (let y = 0; y < 256; y++) { const v = 150 + Math.random() * 70 | 0; mt.c.fillStyle = `rgba(${v},${v + 4},${v + 10},0.35)`; mt.c.fillRect(0, y, 256, 1); }
+  mt.grime(0.15, 909);
+  // dark structural frame
+  const fr = new Painter(256, 256);
+  fr.rect(0, 0, 256, 256, { c: '#2a2e33', h: 0.5, r: 0.6, m: 0.8 });
+  for (let i = 0; i < 40; i++) fr.rect(Math.random() * 256, Math.random() * 256, 30 + Math.random() * 60, 3, { c: '#3a3f46', h: 0.62 });
+  fr.grime(0.3, 1010);
+  const T = { armor: a.textures(4), hazard: hz.textures(2), metal: mt.textures(1.5), frame: fr.textures(3) };
+  for (const s of Object.values(T)) for (const k of ['map', 'normalMap', 'orm']) { s[k].wrapS = s[k].wrapT = THREE.RepeatWrapping; s[k].repeat.set(0.16, 0.16); }
+  T.hazard.map.repeat.set(0.3, 0.3); T.hazard.normalMap.repeat.set(0.3, 0.3); T.hazard.orm.repeat.set(0.3, 0.3);
+  return (VEXR.tex = T);
+}
+function vexMaterials() {
+  if (VEXR.mats) return VEXR.mats;
+  const t = vexTextures();
+  const pbr = (s, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ map: s.map, normalMap: s.normalMap, roughnessMap: s.orm, metalnessMap: s.orm, roughness: 1, metalness: 1 }, extra));
+  VEXR.mats = {
+    armor: pbr(t.armor, { color: 0xd6dde6 }),
+    accent: pbr(t.armor, { color: 0x3b5a8a }),
+    hazard: pbr(t.hazard),
+    metal: pbr(t.metal),
+    frame: pbr(t.frame),
+    rubber: new THREE.MeshStandardMaterial({ color: 0x17181a, roughness: 0.9, metalness: 0.1 }),
+    visor: new THREE.MeshStandardMaterial({ color: 0x102030, emissive: 0x38c8ff, emissiveIntensity: 4.5, roughness: 0.2, metalness: 0.3 }),
+    core: new THREE.MeshStandardMaterial({ color: 0x0a1a28, emissive: 0x60d8ff, emissiveIntensity: 7, roughness: 0.3 }),
+    thrust: new THREE.MeshStandardMaterial({ color: 0x101418, emissive: 0xff8a30, emissiveIntensity: 3, roughness: 0.5 }),
+    runR: new THREE.MeshStandardMaterial({ color: 0x200000, emissive: 0xff2010, emissiveIntensity: 5 }),
+  };
+  return VEXR.mats;
+}
+// --- hard-surface helpers
+function chamferShape(w, h, c) {
+  const s = new THREE.Shape(), x = w / 2, y = h / 2; c = Math.min(c, x * 0.9, y * 0.9);
+  s.moveTo(-x + c, -y); s.lineTo(x - c, -y); s.lineTo(x, -y + c); s.lineTo(x, y - c); s.lineTo(x - c, y); s.lineTo(-x + c, y); s.lineTo(-x, y - c); s.lineTo(-x, -y + c); s.closePath();
+  return s;
+}
+// box with chamfered edges and bevelled faces, exact outer size w × h × d, centred
+function plate(w, h, d, b = 0.18, ch = 0.35) {
+  b = Math.min(b, w / 4, h / 4, d / 3);
+  const g = new THREE.ExtrudeGeometry(chamferShape(w - 2 * b, h - 2 * b, ch), { depth: Math.max(0.02, d - 2 * b), bevelEnabled: true, bevelSize: b, bevelThickness: b, bevelSegments: 1, steps: 1 });
+  g.translate(0, 0, -Math.max(0.02, d - 2 * b) / 2);
+  return g;
+}
+// narrow the top (t=1) or bottom of a geometry: armour that tapers like real plating
+function taper(g, sxTop, szTop = sxTop, sxBot = 1, szBot = 1) {
+  g.computeBoundingBox(); const bb = g.boundingBox, p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const t = (p.getY(i) - bb.min.y) / (bb.max.y - bb.min.y || 1); p.setX(i, p.getX(i) * (sxBot + (sxTop - sxBot) * t)); p.setZ(i, p.getZ(i) * (szBot + (szTop - szBot) * t)); }
+  g.computeVertexNormals(); return g;
+}
+const cylY = (r1, r2, h, seg = 16) => new THREE.CylinderGeometry(r1, r2, h, seg);
+const cylX = (r, h, seg = 16) => new THREE.CylinderGeometry(r, r, h, seg).rotateZ(Math.PI / 2);
+const cylZ = (r, h, seg = 16) => new THREE.CylinderGeometry(r, r, h, seg).rotateX(Math.PI / 2);
+const at = (g, x, y, z, rx = 0, ry = 0, rz = 0) => { if (rx || ry || rz) g.applyMatrix4(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(rx, ry, rz))); return g.translate(x, y, z); };
+
+// one bucket per bone: { material: [geometries] }, merged into one mesh per material at the end
+function partBucket() { const b = {}; return { add(mat, g) { (b[mat] = b[mat] || []).push(g); return g; }, build(bone, M) { for (const k in b) { const m = new THREE.Mesh(mergeGeos(b[k]), M[k]); m.castShadow = true; m.receiveShadow = true; bone.add(m); } } }; }
+
+/* a hydraulic piston between two bones: the housing stays on A, the polished rod slides out toward B */
+class Piston {
+  constructor(space, boneA, la, boneB, lb, r, M) {
+    this.space = space; this.A = boneA; this.B = boneB; this.la = la; this.lb = lb;
+    this.house = new THREE.Mesh(cylY(r, r, 1, 12).translate(0, 0.5, 0), M.frame);
+    this.rod = new THREE.Mesh(cylY(r * 0.5, r * 0.5, 1, 10).translate(0, 0.5, 0), M.metal);
+    this.cap = new THREE.Mesh(cylY(r * 1.25, r * 1.25, 0.35, 12), M.metal);
+    for (const m of [this.house, this.rod, this.cap]) { m.castShadow = true; space.add(m); }
+  }
+  update() {
+    const a = this.space.worldToLocal(this.A.localToWorld(this.la.clone())), b = this.space.worldToLocal(this.B.localToWorld(this.lb.clone()));
+    const d = new THREE.Vector3().subVectors(b, a), len = d.length(); d.normalize();
+    const q = new THREE.Quaternion().setFromUnitVectors(UPV, d), hl = Math.min(len * 0.62, len);
+    this.house.position.copy(a); this.house.quaternion.copy(q); this.house.scale.set(1, hl, 1);
+    this.rod.position.copy(b); this.rod.quaternion.setFromUnitVectors(UPV, d.clone().negate()); this.rod.scale.set(1, len * 0.55, 1);
+    this.cap.position.copy(a).addScaledVector(d, hl); this.cap.quaternion.copy(q);
+  }
+}
+
+function buildVexRobot() {
+  const M = vexMaterials();
+  const root = new THREE.Group(), tilt = new THREE.Group(); root.add(tilt);
+  const HIP = 13.5, THIGH = 6.6, SHIN = 6.2, UARM = 5.8, FARM = 5.6;
+  const hips = new THREE.Group(); hips.position.y = HIP; tilt.add(hips);
+  const B = { hips: partBucket(), torso: partBucket(), head: partBucket() };
+  // --- pelvis
+  B.hips.add('frame', at(taper(plate(6.2, 2.6, 4.2, 0.2), 1.15, 1.05), 0, 0.2, 0));
+  B.hips.add('armor', at(taper(plate(3.2, 2.6, 0.7, 0.15), 0.7, 1), 0, -0.6, 2.2, 0.15));            // groin plate
+  for (const s of [-1, 1]) {
+    B.hips.add('armor', at(taper(plate(1.0, 3.6, 3.6, 0.18), 1, 1, 1, 0.8), s * 3.9, -0.4, 0, 0, 0, s * 0.18)); // hip skirt
+    B.hips.add('hazard', at(plate(0.2, 1.2, 2.2, 0.05), s * 4.45, 0.3, 0, 0, 0, s * 0.18));
+    B.hips.add('metal', at(new THREE.SphereGeometry(1.25, 14, 10), s * 3.2, 0, 0));                  // hip ball joints
+  }
+  // --- torso: waist core, abdominal plates, wide chest, reactor, collar, back thrusters
+  const torso = new THREE.Group(); hips.add(torso);
+  B.torso.add('frame', at(cylY(1.7, 2.1, 3.2, 14), 0, 1.6, 0));
+  for (let i = 0; i < 3; i++) B.torso.add(i === 1 ? 'accent' : 'armor', at(taper(plate(4.4 - i * 0.2, 1.05, 1.2, 0.12), 0.92), 0, 0.7 + i * 0.95, 1.65));
+  for (const s of [-1, 1]) B.torso.add('metal', at(cylY(0.32, 0.32, 3.6, 10), s * 1.9, 1.7, -1.3, 0, 0, s * 0.1)); // spine side rods
+  B.torso.add('armor', at(taper(plate(11.8, 7.0, 6.6, 0.35, 0.9), 1, 1, 0.72, 0.82), 0, 6.6, 0));     // chest block, wider at the top
+  for (const s of [-1, 1]) {
+    B.torso.add('accent', at(taper(plate(4.6, 4.4, 0.9, 0.2, 0.6), 0.95, 1, 0.8), s * 3.1, 7.2, 3.35, -0.12, s * 0.16));   // pectoral plates
+    B.torso.add('hazard', at(plate(1.1, 0.35, 0.3, 0.05), s * 3.6, 9.2, 3.55, -0.12, s * 0.16));
+    B.torso.add('armor', at(taper(plate(3.2, 2.6, 2.8, 0.2), 0.8, 0.9), s * 4.6, 9.9, -0.6, 0, 0, -s * 0.18));             // collar / trapezius armour
+    B.torso.add('frame', at(plate(0.5, 4.4, 2.2, 0.08), s * 1.2, 11.2, -2.6, 0.25));                                     // back pylons
+    B.torso.add('frame', at(cylZ(1.25, 2.4, 16), s * 2.6, 6.8, -3.9));                                                  // thruster housings
+    B.torso.add('thrust', at(cylZ(0.85, 0.5, 14), s * 2.6, 6.8, -5.15));
+    B.torso.add('metal', at(new THREE.TorusGeometry(1.05, 0.18, 6, 16), s * 2.6, 6.8, -5.1));
+    B.torso.add('runR', at(new THREE.SphereGeometry(0.22, 8, 6), s * 5.9, 9.8, 1.4));                                    // running lights
+  }
+  B.torso.add('frame', at(new THREE.CylinderGeometry(1.95, 2.25, 0.9, 24).rotateX(Math.PI / 2), 0, 6.8, 3.35));        // reactor housing
+  B.torso.add('metal', at(new THREE.TorusGeometry(1.65, 0.22, 8, 28), 0, 6.8, 3.85));
+  B.torso.add('core', at(new THREE.SphereGeometry(1.25, 20, 14).scale(1, 1, 0.45), 0, 6.8, 3.8));
+  for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; B.torso.add('frame', at(plate(0.35, 1.1, 0.4, 0.05), Math.cos(a) * 1.95, 6.8 + Math.sin(a) * 1.95, 4.05, 0, 0, a + Math.PI / 2)); }
+  // cables from the back to the shoulders
+  for (const s of [-1, 1]) for (const k of [0, 1]) {
+    const c = new THREE.CatmullRomCurve3([new THREE.Vector3(s * 1.4, 9.4 - k * 0.7, -3.3), new THREE.Vector3(s * 4, 10.6 - k * 0.6, -3.6), new THREE.Vector3(s * 6.8, 9.6 - k * 0.5, -1.6)]);
+    B.torso.add('rubber', new THREE.TubeGeometry(c, 14, 0.22, 6, false));
+  }
+  // --- head: small armoured helmet, visor slit, chin guard, sensor fins
+  const head = new THREE.Group(); head.position.set(0, 11.2, 0.4); torso.add(head);
+  B.head.add('frame', at(cylY(0.9, 1.1, 1.2, 10), 0, -0.2, -0.2));                                    // neck
+  B.head.add('armor', at(taper(plate(2.9, 2.2, 3.0, 0.25, 0.6), 0.82, 0.9), 0, 1.1, 0));
+  B.head.add('frame', at(taper(plate(2.5, 0.6, 0.8, 0.1), 0.9), 0, 1.25, 1.35));
+  B.head.add('visor', at(plate(2.2, 0.32, 0.25, 0.05, 0.1), 0, 1.25, 1.72));
+  B.head.add('accent', at(taper(plate(1.8, 0.8, 1.0, 0.12), 1.2, 1, 1, 1), 0, 0.35, 1.1));            // chin guard
+  for (const s of [-1, 1]) B.head.add('armor', at(plate(0.25, 1.4, 1.8, 0.06), s * 1.55, 1.6, -0.3, 0.3, 0, s * 0.25)); // sensor fins
+  B.head.add('hazard', at(plate(0.3, 0.9, 1.6, 0.05), 0, 2.35, -0.2, 0.25));
+  // --- arms
+  const arms = [], elbows = [], hands = [], fing = [];
+  for (const s of [-1, 1]) {
+    const sh = new THREE.Group(); sh.position.set(s * 7.4, 9.0, 0); torso.add(sh);
+    const bs = partBucket();
+    bs.add('metal', new THREE.SphereGeometry(1.6, 16, 12));                                            // shoulder joint
+    bs.add('armor', at(taper(plate(4.6, 3.4, 5.2, 0.3, 0.8), 1, 1, 0.85, 0.9), s * 0.6, 0.9, 0, 0, 0, -s * 0.22)); // pauldron
+    bs.add('accent', at(plate(4.0, 0.5, 4.6, 0.12), s * 0.9, 2.75, 0, 0, 0, -s * 0.22));
+    bs.add('hazard', at(plate(0.25, 1.6, 3.6, 0.05), s * 3.05, 0.6, 0, 0, 0, -s * 0.22));
+    bs.add('frame', at(cylY(1.1, 1.0, UARM - 0.6, 12), 0, -UARM / 2, 0));                              // upper-arm core
+    bs.add('armor', at(taper(plate(2.6, 3.4, 2.8, 0.2, 0.5), 0.9, 0.9), 0, -2.6, 0.15));
+    bs.add('metal', at(cylX(0.95, 2.6, 14), 0, -UARM, 0));                                             // elbow axle
+    bs.build(sh, M);
+    const el = new THREE.Group(); el.position.y = -UARM; sh.add(el);
+    const be = partBucket();
+    be.add('armor', at(taper(plate(2.9, FARM - 0.4, 3.1, 0.25, 0.6), 1.12, 1.1), 0, -FARM / 2, 0.1));     // heavy forearm
+    be.add('accent', at(plate(3.1, 1.0, 3.3, 0.12), 0, -FARM + 1.1, 0.1));                               // wrist cuff
+    be.add('frame', at(plate(0.5, 2.6, 1.8, 0.08), s * 1.6, -2.4, 0));                                   // side vent
+    for (let i = 0; i < 4; i++) be.add('thrust', at(plate(0.12, 0.25, 1.4, 0.02), s * 1.88, -1.6 - i * 0.55, 0));
+    be.add('metal', at(new THREE.SphereGeometry(0.8, 10, 8), 0, -FARM, 0));
+    be.build(el, M);
+    // hand: palm + one group for the four proximal phalanges, one for the distal ones, and a thumb
+    const hand = new THREE.Group(); hand.position.y = -FARM - 0.5; el.add(hand);
+    const bh = partBucket();
+    bh.add('frame', at(plate(2.5, 1.9, 1.3, 0.12), 0, -0.9, 0)); bh.add('armor', at(plate(2.6, 1.6, 0.45, 0.1), 0, -0.9, 0.62));
+    bh.build(hand, M);
+    const prox = new THREE.Group(); prox.position.y = -1.85; hand.add(prox);
+    const dist = new THREE.Group(); dist.position.y = -1.05; prox.add(dist);
+    const bp = partBucket(), bd = partBucket();
+    for (let f = 0; f < 4; f++) { const x = -0.9 + f * 0.6; bp.add('frame', at(plate(0.48, 1.05, 0.62, 0.06), x, -0.5, 0)); bp.add('metal', at(cylX(0.24, 0.5, 8), x, 0, 0)); bd.add('armor', at(taper(plate(0.44, 0.9, 0.58, 0.06), 0.7), x, -0.45, 0)); }
+    bp.build(prox, M); bd.build(dist, M);
+    const thumb = new THREE.Group(); thumb.position.set(-s * 1.25, -0.9, 0.35); hand.add(thumb);
+    const bt = partBucket(); bt.add('frame', at(plate(0.5, 1.4, 0.6, 0.06), 0, -0.6, 0.1, 0.3)); bt.build(thumb, M);
+    arms.push(sh); elbows.push(el); hands.push(hand); fing.push({ prox, dist, thumb, s });
+  }
+  // --- legs: thigh, knee, shin with calf hydraulics, ankle and a big mechanical foot
+  const legs = [], knees = [], ankles = [];
+  for (const s of [-1, 1]) {
+    const leg = new THREE.Group(); leg.position.set(s * 3.2, 0, 0); hips.add(leg);
+    const bl = partBucket();
+    bl.add('frame', at(cylY(1.15, 1.0, THIGH, 12), 0, -THIGH / 2, 0));
+    bl.add('armor', at(taper(plate(3.7, THIGH - 1.2, 3.9, 0.3, 0.8), 0.85, 0.85), 0, -THIGH / 2 + 0.2, 0.25));
+    bl.add('accent', at(plate(0.5, THIGH - 2.6, 3.0, 0.1), s * 1.9, -THIGH / 2, 0.2));
+    bl.add('metal', at(cylX(1.15, 3.0, 16), 0, -THIGH, 0));                                             // knee axle
+    bl.build(leg, M);
+    const knee = new THREE.Group(); knee.position.y = -THIGH; leg.add(knee);
+    const bk = partBucket();
+    bk.add('armor', at(taper(plate(2.6, 2.0, 1.5, 0.2, 0.5), 0.75, 1), 0, 0.2, 1.55, -0.2));                // knee cap
+    bk.add('frame', at(cylY(1.0, 0.85, SHIN, 12), 0, -SHIN / 2, -0.3));
+    bk.add('armor', at(taper(plate(3.2, SHIN - 0.8, 2.4, 0.25, 0.6), 0.9, 0.9, 1.1, 1), 0, -SHIN / 2 - 0.1, 0.8)); // shin guard
+    bk.add('hazard', at(plate(2.4, 0.5, 0.2, 0.05), 0, -1.6, 2.05));
+    bk.add('metal', at(cylX(0.85, 2.4, 14), 0, -SHIN, 0));                                              // ankle axle
+    bk.build(knee, M);
+    const ankle = new THREE.Group(); ankle.position.y = -SHIN; knee.add(ankle);
+    const bf = partBucket();
+    bf.add('frame', at(plate(3.6, 0.9, 5.8, 0.15), 0, -0.25, 0.9));
+    bf.add('armor', at(taper(plate(3.4, 0.8, 2.4, 0.2, 0.4), 0.8, 1), 0, -0.05, 2.6));                       // toe armour
+    bf.add('armor', at(plate(2.6, 0.9, 1.8, 0.15), 0, 0.1, -1.4));                                        // heel
+    bf.add('rubber', at(plate(3.7, 0.25, 6.2, 0.05), 0, -0.68, 0.9));                                      // sole
+    bf.build(ankle, M);
+    legs.push(leg); knees.push(knee); ankles.push(ankle);
+  }
+  B.hips.build(hips, M); B.torso.build(torso, M); B.head.build(head, M);
+  // hydraulics: shoulder→elbow (front), hip→knee (front), knee→ankle (calf, two), neck
+  const pistons = [];
+  for (let i = 0; i < 2; i++) {
+    const s = i ? 1 : -1;
+    pistons.push(new Piston(tilt, arms[i], new THREE.Vector3(0, -0.8, 1.1), elbows[i], new THREE.Vector3(0, -1.6, 1.25), 0.38, M));
+    pistons.push(new Piston(tilt, hips, new THREE.Vector3(s * 3.2, -0.8, 1.6), knees[i], new THREE.Vector3(0, -1.6, 1.25), 0.45, M));
+    pistons.push(new Piston(tilt, knees[i], new THREE.Vector3(s * 0.7, -0.8, -1.3), ankles[i], new THREE.Vector3(s * 0.7, 0.4, -1.4), 0.4, M));
+    pistons.push(new Piston(tilt, knees[i], new THREE.Vector3(-s * 0.7, -0.8, -1.3), ankles[i], new THREE.Vector3(-s * 0.7, 0.4, -1.4), 0.4, M));
+  }
+  const fistL = new THREE.Object3D(), fistR = new THREE.Object3D();
+  const rig = new Rig();
+  rig.add('tiltX', tilt, 'x', 40, 9); rig.add('hipsY', hips, 'py', 60, 12);
+  rig.add('legL', legs[0], 'x', 95, 15); rig.add('legR', legs[1], 'x', 95, 15); rig.add('legLz', legs[0], 'z'); rig.add('legRz', legs[1], 'z');
+  rig.add('kneeL', knees[0], 'x', 95, 15); rig.add('kneeR', knees[1], 'x', 95, 15);
+  rig.add('torsoX', torso, 'x', 70, 13); rig.add('torsoY', torso, 'y', 70, 12); rig.add('torsoZ', torso, 'z', 60, 12);
+  rig.add('armL', arms[0], 'x', 110, 15); rig.add('armR', arms[1], 'x', 110, 15); rig.add('armLz', arms[0], 'z', 95, 14); rig.add('armRz', arms[1], 'z', 95, 14);
+  rig.add('elbL', elbows[0], 'x', 120, 15); rig.add('elbR', elbows[1], 'x', 120, 15);
+  rig.add('headX', head, 'x', 80, 12); rig.add('headY', head, 'y', 80, 12);
+  rig.add('fistL', fistL, 'x', 160, 20); rig.add('fistR', fistR, 'x', 160, 20);
+  const visorMat = M.visor, coreMat = M.core;
+  // per-frame extras: feet stay flat, fingers follow the fist value, pistons follow the joints, reactor pulses
+  const post = (T) => {
+    for (let i = 0; i < 2; i++) { ankles[i].rotation.x = -(legs[i].rotation.x + knees[i].rotation.x) * 0.92 - T.rig.j.tiltX.cur * 0; }
+    for (let i = 0; i < 2; i++) { const f = fing[i], k = (i ? fistR : fistL).rotation.x; f.prox.rotation.x = k * 1.4; f.dist.rotation.x = k * 1.6; f.thumb.rotation.z = f.s * k * 0.9; }
+    root.updateMatrixWorld(true);
+    for (const p of pistons) p.update();
+    coreMat.emissiveIntensity = 6 + Math.sin(pedTime.value * 3) * 1.2 + T.flash * 6;
+    visorMat.emissiveIntensity = T.state === 'ko' || T.state === 'gone' ? 0.3 : 4.5 + T.flash * 3;
+  };
+  return { root, tilt, rig, hips, legs, knees, torso, arms, elbows, head, mats: [M.armor, M.accent], post, humanoid: true, robot: true,
+    height: 27, radius: 6.5, speed: 5.2, colY: 13, colR: 5.8, colH: 7, hipH: HIP, hipBase: 13.2, footX: 3.2 };
+}
 /* ------------------------------------------------------------------ titans: two original giant creatures, choreographed brawl */
 // BASALTO: volcanic rock golem (magma cracks, crystal spines). Boxer: jab-cross-uppercut, haymaker, hammer slam,
 //          shoulder charge, grab-and-throw, guard, a magma blade when cornered, and boulders from the street.
@@ -3055,7 +3310,7 @@ function blackholeUpdate(dt) {
 //          tail wrap-and-slam, side dodges and a plasma beam.
 // Every joint is driven by a damped spring toward its pose, so moves have anticipation, inertia and follow-through.
 // Bodies are kinematic colliders that really push and break the city (simplified physics). No gore: the loser crumbles or is beamed away.
-const TITAN_NAMES = { basalt: 'Basalto', vex: 'Vex' };
+const TITAN_NAMES = { basalt: 'Basalto', vex: 'VEX' };
 const titans = { mode: 'fight', fury: 6, dur: 60, list: [], phase: 'idle', t: 0, winner: null, winT: 0, cine: true };
 const cine = { hitStop: 0, slow: 0, kick: 0, theta: 0, dir: 1 };
 function cineScale(realDt) {
@@ -3135,7 +3390,7 @@ function buildBasalt() {
   rig.add('armL', arms[0], 'x', 120, 15); rig.add('armR', arms[1], 'x', 120, 15); rig.add('armLz', arms[0], 'z', 100, 14); rig.add('armRz', arms[1], 'z', 100, 14);
   rig.add('elbL', elbows[0], 'x', 130, 15); rig.add('elbR', elbows[1], 'x', 130, 15);
   rig.add('headX', head, 'x', 90, 12); rig.add('headY', head, 'y', 90, 12);
-  return { root, tilt, rig, hips, legs, knees, torso, arms, elbows, head, blade, mats: [rock], height: 27, radius: 6.5, speed: 5, colY: 13, colR: 5.5, colH: 7 };
+  return { humanoid: true, hipBase: 10.8, footX: 3.6, root, tilt, rig, hips, legs, knees, torso, arms, elbows, head, blade, mats: [rock], height: 27, radius: 6.5, speed: 5, colY: 13, colR: 5.5, colH: 7 };
 }
 function buildVex() {
   const chitin = new THREE.MeshStandardMaterial({ map: chitinTex, color: 0x9a8fc8, roughness: 0.35, metalness: 0.45, emissive: 0x20d8ff, emissiveIntensity: 0 });
@@ -3173,7 +3428,7 @@ function buildVex() {
 class Titan {
   constructor(kind, x, z, yaw) {
     this.kind = kind; this.name = TITAN_NAMES[kind];
-    Object.assign(this, kind === 'basalt' ? buildBasalt() : buildVex());
+    Object.assign(this, kind === 'basalt' ? buildBasalt() : buildVexRobot());
     this.pos = new THREE.Vector3(x, 0, z); this.yaw = yaw; this.hp = 100; this.state = 'emerge'; this.t = 0;
     this.y = kind === 'basalt' ? -this.height : 140; this.vy = 0; this.vel = new THREE.Vector3(); this.kb = new THREE.Vector3();
     this.ph = 0; this.walkAmt = 0; this.strafe = 0; this.strafeDir = Math.random() < 0.5 ? 1 : -1; this.cd = 2.5; this.think = 0;
@@ -3307,6 +3562,27 @@ const MOVES = {
   },
 };
 
+// VEX (robot) fights with the humanoid moves, lifted to its hip height, plus a chest plasma cannon
+(function () {
+  const lift = 13.2 - 10.8, src = MOVES.basalt, out = {};
+  for (const n of ['jab', 'cross', 'upper', 'haymaker', 'hammer', 'charge', 'grab', 'guard']) {
+    const m = JSON.parse(JSON.stringify(src[n]));
+    for (const ph of m.ph) {
+      if (ph.pose.hipsY !== undefined) ph.pose.hipsY += lift;
+      const L = ph.pose.armL !== undefined && ph.pose.armL < -1, Rr = ph.pose.armR !== undefined && ph.pose.armR < -1;
+      if (L) ph.pose.fistL = 1; if (Rr) ph.pose.fistR = 1;
+      if (ph.block) { ph.pose.fistL = 1; ph.pose.fistR = 1; }
+    }
+    out[n] = m;
+  }
+  out.grab.ph[0].pose.fistL = out.grab.ph[0].pose.fistR = 0; out.grab.ph[1].pose.fistL = out.grab.ph[1].pose.fistR = 0.7;
+  out.beam = { gap: [18, 95], w: 1.5, cool: 9, ph: [
+    { d: 1.0, pose: { torsoX: -0.12, armL: -0.4, armR: -0.4, armLz: -0.9, armRz: 0.9, elbL: -0.9, elbR: -0.9, fistL: 1, fistR: 1, hipsY: 12.6, kneeL: 0.6, kneeR: 0.6 }, s: 1, ev: 'charge' },
+    { d: 1.6, pose: { torsoX: 0.1, armL: -0.2, armR: -0.2, armLz: -1.1, armRz: 1.1, elbL: -0.5, elbR: -0.5, fistL: 1, fistR: 1, hipsY: 12.4, kneeL: 0.7, kneeR: 0.7 }, s: 1.4, ev: 'fire' },
+    { d: 0.45, pose: {}, s: 1, ev: 'beamOff' }] };
+  MOVES.insect = MOVES.vex; MOVES.vex = out;
+})();
+
 /* ---------- start / stop */
 function startTitans(P) {
   if (titans.list.length) { toast('Ya hay titanes en la ciudad'); return; }
@@ -3314,16 +3590,18 @@ function startTitans(P) {
   titans.phase = 'on'; titans.t = 0; titans.winner = null; titans.winT = 0;
   const a = rnd(0, Math.PI * 2), d = m === 'fight' ? 24 : 0;
   if (m === 'fight' || m === 'basalt') titans.list.push(new Titan('basalt', P.x + Math.cos(a) * d, P.z + Math.sin(a) * d, 0));
-  if (m === 'fight' || m === 'vex') titans.list.push(new Titan('vex', P.x - Math.cos(a) * d, P.z - Math.sin(a) * d, 0));
+  if (m === 'fight' || m === 'vex' || m === 'inspect') titans.list.push(new Titan('vex', P.x - Math.cos(a) * d, P.z - Math.sin(a) * d, 0));
+  if (m === 'inspect') { titans.list[0].inspect = true; titans.list[0].yaw = Math.atan2(camera.position.x - P.x, camera.position.z - P.z); }
   const [A, B] = titans.list;
   if (A && B) { A.foe = B; B.foe = A; B.t = -1.6; A.yaw = Math.atan2(B.pos.x - A.pos.x, B.pos.z - A.pos.z); B.yaw = A.yaw + Math.PI; }
   sirenUntil = simTime + 40;
   setTimeout(() => dispatchEmergency(P.x, P.z), 6000);
-  popup(m === 'fight' ? '¡COMBATE!' : TITAN_NAMES[m].toUpperCase(), '#ffb02e');
+  if (m !== 'inspect') popup(m === 'fight' ? '¡COMBATE!' : TITAN_NAMES[m].toUpperCase(), '#ffb02e');
+  $('#titan-demo').hidden = m !== 'inspect';
   showTitanHud(true); refreshRunning();
 }
 function retreatTitans() { for (const T of titans.list) if (!['down', 'gone', 'ko'].includes(T.state)) { endAct(T); T.state = 'leave'; T.t = 0; } titans.phase = 'leaving'; refreshRunning(); }
-function clearTitans() { for (const T of titans.list) T.remove(); titans.list.length = 0; titans.phase = 'idle'; showTitanHud(false); Sfx.beam(0); cine.slow = cine.hitStop = 0; }
+function clearTitans() { $('#titan-demo').hidden = true; for (const T of titans.list) T.remove(); titans.list.length = 0; titans.phase = 'idle'; showTitanHud(false); Sfx.beam(0); cine.slow = cine.hitStop = 0; }
 
 /* ---------- per physics step: kinematic body follows the model; ploughing through buildings */
 function titansStep(dt) {
@@ -3351,7 +3629,7 @@ function titansUpdate(dt) {
     titans.winner = alive[0]; endAct(titans.winner); titans.winner.state = 'roar'; titans.winner.t = 0;
     Sfx.roar(titans.winner.kind, 1.3, soundDelay(titans.winner.pos));
   }
-  if (titans.phase === 'on' && titans.list.length === 1 && titans.t > titans.dur) retreatTitans();
+  if (titans.phase === 'on' && titans.list.length === 1 && !titans.list[0].inspect && titans.t > titans.dur) retreatTitans();
   if (titans.phase === 'on' && titans.winner) { titans.winT += dt; if (titans.winT > 9) retreatTitans(); }
   if (titans.list.every((T) => T.state === 'gone')) { clearTitans(); refreshRunning(); }
   updateTitanHud();
@@ -3366,10 +3644,13 @@ function updateCine(dt) {
   const sep = L.length > 1 ? L[0].pos.distanceTo(L[1].pos) : 20;
   cine.kick = Math.max(0, cine.kick - dt);
   const g = controls.goal;
-  g.target.lerp(new THREE.Vector3(mid.x, 11, mid.z), Math.min(1, dt * 2));
-  g.radius += (THREE.MathUtils.clamp(sep * 1.25 + 38, 48, 120) * (1 - cine.kick * 0.25) - g.radius) * Math.min(1, dt * 1.5);
-  g.phi += ((cine.kick > 0 ? 1.3 : 1.18) - g.phi) * Math.min(1, dt);
-  g.theta += dt * 0.07 * cine.dir;
+  const insp = L.length === 1 && L[0].inspect;
+  g.target.lerp(new THREE.Vector3(mid.x, insp ? 9 : 13, mid.z), Math.min(1, dt * 2));
+  if (insp) { const want = L[0].yaw + 0.55 * Math.sin(titans.t * 0.22); g.theta += Math.atan2(Math.sin(want - g.theta), Math.cos(want - g.theta)) * Math.min(1, dt * 0.8); }
+  const baseR = insp ? 44 : THREE.MathUtils.clamp(sep * 1.2 + 36, 46, 115);
+  g.radius += (baseR * (1 - cine.kick * 0.22) - g.radius) * Math.min(1, dt * 1.5);
+  g.phi += ((cine.kick > 0 ? 1.42 : 1.33) - g.phi) * Math.min(1, dt);
+  if (!insp) g.theta += dt * 0.07 * cine.dir;
 }
 
 function faceTo(T, x, z, dt, rate = 3) {
@@ -3394,7 +3675,7 @@ function endAct(T) {
 function nextPhase(T) {
   const a = T.act; a.i++; a.t = 0; a.hitDone = false;
   const p = a.def.ph[a.i];
-  if (!p) { const nx = a.def.counter || a.def.next, ok = a.connected || !!a.def.counter; endAct(T); T.state = 'neutral'; if (nx && ok && T.foe && !T.foe.busy()) startAct(T, nx); else T.cd = rnd(0.5, 1.2) * (1.4 - titans.fury * 0.08); return; }
+  if (!p) { const nx = a.def.counter || a.def.next, ok = a.connected || !!a.def.counter || T.inspect; endAct(T); T.state = 'neutral'; if (nx && ok && T.foe && !T.foe.busy()) startAct(T, nx); else T.cd = rnd(0.5, 1.2) * (1.4 - titans.fury * 0.08); return; }
   T.rig.stiff(p.s || 1);
   T.block = !!p.block; T.invuln = p.iframes ? p.d : 0;
   if (p.ev) moveEvent(T, p.ev);
@@ -3456,13 +3737,25 @@ function emerge(T, dt) {
     T.root.visible = true;
     const k = Math.min(1, T.t / 1.4);
     T.y = 140 * (1 - k) * (1 - k);
-    for (let i = 0; i < 3; i++) fire.emit(T.pos.x + rnd(-3, 3), T.y + 14, T.pos.z + rnd(-3, 3), rnd(-2, 2), rnd(6, 14), rnd(-2, 2), rnd(0.3, 0.6), rnd(3, 5), 0.4, 0.9, 1, 1, 0, 0.3, 0);
-    if (k >= 1) { T.y = 0; blast(new THREE.Vector3(T.pos.x, 0.5, T.pos.z), 8, 12, { noFire: true }); T.state = 'roar'; T.t = 0; Sfx.roar('vex', 1, soundDelay(T.pos)); T.rig.kick('bodyY', -25); T.rig.kick('headX', -3); cine.kick = 1; }
+    for (let i = 0; i < 3; i++) fire.emit(T.pos.x + rnd(-3, 3), T.y + (T.robot ? 18 : 14), T.pos.z + rnd(-3, 3), rnd(-2, 2), rnd(6, 14), rnd(-2, 2), rnd(0.3, 0.6), rnd(3, 5), T.robot ? 1 : 0.4, T.robot ? 0.55 : 0.9, T.robot ? 0.2 : 1, 1, 0, 0.3, 0);
+    if (k >= 1) { T.y = 0; blast(new THREE.Vector3(T.pos.x, 0.5, T.pos.z), 8, 12, { noFire: true }); T.state = 'roar'; T.t = 0; Sfx.roar('vex', 1, soundDelay(T.pos)); T.rig.kick(T.humanoid ? 'hipsY' : 'bodyY', -25); T.rig.kick('headX', -3); cine.kick = 1; if (T.robot) popup('VEX DESPLEGADO', '#6ff0ff'); }
   }
 }
 
+/* inspection mode: VEX alone, driven by the demo buttons */
+function titanDemo(name) {
+  const T = titans.list.find((x) => x.inspect); if (!T || T.busy()) return;
+  if (name === 'walk') { T.demo = T.demo === 'walk' ? null : 'walk'; return; }
+  T.demo = null;
+  if (name === 'fall') { endAct(T); T.state = 'air'; T.t = 0; T.vy = 9; T.vel.copy(T.fwd).multiplyScalar(-9); T.launched = true; Sfx.clank(0); return; }
+  if (name === 'punch') startAct(T, 'jab'); else if (name === 'run') startAct(T, 'charge'); else if (name === 'block') startAct(T, 'guard'); else if (name === 'cannon') startAct(T, 'beam'); else if (name === 'slam') startAct(T, 'hammer');
+}
 /* neutral: footwork and decisions */
 function neutral(T, foe, dt) {
+  if (T.inspect) {
+    if (T.demo === 'walk') { T.yaw += 0.22 * dt; T.pos.addScaledVector(T.fwd, T.speed * 0.75 * dt); return T.speed * 0.75; }
+    return 0;
+  }
   let tx, tz;
   if (foe) { tx = foe.pos.x; tz = foe.pos.z; }
   else {
@@ -3477,7 +3770,7 @@ function neutral(T, foe, dt) {
   T.cd -= dt;
   // react to an incoming attack: Basalto raises his guard, Vex sidesteps
   if (foe && foe.state === 'act' && foe.act && foe.act.i === 0 && gap < 12 && !T.reacted && Math.random() < 0.18 + titans.fury * 0.025) {
-    T.reacted = true; startAct(T, T.kind === 'basalt' ? 'guard' : 'dodge'); return 0;
+    T.reacted = true; startAct(T, T.humanoid ? 'guard' : 'dodge'); return 0;
   }
   if (!(foe && foe.state === 'act')) T.reacted = false;
   if (T.cd <= 0) {
@@ -3549,9 +3842,9 @@ function moveEvent(T, ev) {
     case 'grab': {
       if (!foe || foe.busy() || foe.invuln > 0) break;
       const gap = T.pos.distanceTo(foe.pos) - T.radius - foe.radius;
-      if (gap < (T.kind === 'vex' ? 12 : 6) && angleTo(T, foe) < 1.1) {
+      if (gap < (T.humanoid ? 6.5 : 12) && angleTo(T, foe) < 1.1) {
         T.act.held = foe; endAct(foe); foe.state = 'held'; foe.t = 0;
-        popup(T.kind === 'vex' ? '¡LO ATRAPA CON LA COLA!' : '¡LLAVE!', T.kind === 'vex' ? '#6ff0ff' : '#ffb02e');
+        popup('¡LLAVE!', T.kind === 'vex' ? '#6ff0ff' : '#ffb02e');
         Sfx.boom(0.35, soundDelay(foe.pos)); T.act.connected = true;
       } else { T.act.i = T.act.def.ph.length - 2; }
       break;
@@ -3614,14 +3907,14 @@ function tryHit(A, h) {
   return true;
 }
 function applyHit(A, B, h, hp) {
-  const dmg = h.dmg * (0.38 + titans.fury * 0.025) * (A.kind === 'vex' ? 1.3 : 1);
+  const dmg = h.dmg * (0.38 + titans.fury * 0.025) * (A.robot ? 1.05 : 1);
   (titans.log = titans.log || []).push('HIT>' + B.kind[0] + ':' + h.type);
   B.hp = Math.max(0, B.hp - dmg); B.flash = 1;
   const dir = new THREE.Vector3(B.pos.x - A.pos.x, 0, B.pos.z - A.pos.z).normalize();
   // impact: sparks, chips of rock or cyan plasma, dust, light, sound, camera
-  const chips = B.kind === 'basalt' ? [0.35, 0.3, 0.27] : [0.2, 0.85, 1];
+  const chips = B.kind === 'basalt' ? [0.35, 0.3, 0.27] : B.robot ? [0.55, 0.57, 0.6] : [0.2, 0.85, 1];
   for (let i = 0; i < (h.type === 'light' ? 18 : 45); i++) sparks.emit(hp.x, hp.y, hp.z, dir.x * 8 + rnd(-10, 10), rnd(-3, 12), dir.z * 8 + rnd(-10, 10), rnd(0.3, 1.1));
-  for (let i = 0; i < (h.type === 'light' ? 6 : 16); i++) (B.kind === 'basalt' ? dust : fire).emit(hp.x, hp.y, hp.z, dir.x * 6 + rnd(-5, 5), rnd(-2, 7), dir.z * 6 + rnd(-5, 5), rnd(0.8, 2), rnd(1.5, 3.5), chips[0], chips[1], chips[2], 0.85, 1.2, 0.8, 4);
+  for (let i = 0; i < (h.type === 'light' ? 6 : 16); i++) (B.kind === 'basalt' || B.robot ? dust : fire).emit(hp.x, hp.y, hp.z, dir.x * 6 + rnd(-5, 5), rnd(-2, 7), dir.z * 6 + rnd(-5, 5), rnd(0.8, 2), rnd(1.5, 3.5), chips[0], chips[1], chips[2], 0.85, 1.2, 0.8, 4);
   flashLight.position.copy(hp); flashLight.color.setHex(B.kind === 'basalt' ? 0xffa050 : 0x70e8ff); flashLight.intensity = Math.max(flashLight.intensity, h.type === 'light' ? 900 : 2600);
   addShake(h.type === 'light' ? 0.25 : 0.7, hp);
   Sfx.punch(h.type !== 'light', soundDelay(hp));
@@ -3635,10 +3928,10 @@ function applyHit(A, B, h, hp) {
   if (B.hp <= 0) { knockOut(B, dir); return; }
   if (h.type === 'light') {
     B.state = 'stagger'; B.t = 0; B.stagT = 0.32; B.kb.copy(dir).multiplyScalar(5);
-    if (B.kind === 'basalt') { B.rig.kick('headY', side * 6); B.rig.kick('torsoY', side * 3); B.rig.kick('torsoX', -2); } else { B.rig.kick('headY', side * 6); B.rig.kick('bodyYaw', side * 2.5); B.rig.kick('bodyZ', side * 2); }
+    if (B.humanoid) { B.rig.kick('headY', side * 6); B.rig.kick('torsoY', side * 3); B.rig.kick('torsoX', -2); } else { B.rig.kick('headY', side * 6); B.rig.kick('bodyYaw', side * 2.5); B.rig.kick('bodyZ', side * 2); }
   } else if (h.type === 'heavy') {
     B.state = 'stagger'; B.t = 0; B.stagT = 0.75; B.kb.copy(dir).multiplyScalar(14);
-    if (B.kind === 'basalt') { B.rig.kick('torsoX', -6); B.rig.kick('headX', -7); B.rig.kick('torsoY', side * 4); } else { B.rig.kick('bodyX', -4); B.rig.kick('bodyZ', side * 4); B.rig.kick('headX', -6); }
+    if (B.humanoid) { B.rig.kick('torsoX', -6); B.rig.kick('headX', -7); B.rig.kick('torsoY', side * 4); } else { B.rig.kick('bodyX', -4); B.rig.kick('bodyZ', side * 4); B.rig.kick('headX', -6); }
     if (Math.random() < 0.5) Sfx.roar(B.kind, 0.6, soundDelay(B.pos));
   } else {
     // launched: flies back through the buildings and goes down
@@ -3661,9 +3954,9 @@ function knockOut(B, dir) {
 }
 function holdVictim(T) {
   const v = T.act.held; if (!v) return;
-  const p = T.kind === 'basalt' ? T.w(new THREE.Vector3(0, 26, 7)) : T.w(new THREE.Vector3(0, 18, -16));
+  const p = T.humanoid ? T.w(new THREE.Vector3(0, T.height * 0.98, 7.5)) : T.w(new THREE.Vector3(0, 18, -16));
   v.pos.set(p.x, 0, p.z); v.y = Math.max(0, p.y - v.height * 0.45);
-  v.yaw += 0.04; v.rig.kick(v.kind === 'basalt' ? 'legL' : 'leg0x', rnd(-1, 1)); v.rig.kick(v.kind === 'basalt' ? 'armR' : 'leg1z', rnd(-1, 1));
+  v.yaw += 0.04; v.rig.kick(v.humanoid ? 'legL' : 'leg0x', rnd(-1, 1)); v.rig.kick(v.humanoid ? 'armR' : 'leg1z', rnd(-1, 1));
 }
 function release(T, thrown) {
   const v = T.act.held; T.act.held = null; if (!v) return;
@@ -3676,15 +3969,16 @@ function release(T, thrown) {
 function animate(T, dt, speed) {
   const r = T.rig, pose = poseTargets(T), st = T.state;
   T.walkAmt += ((speed > 0.8 ? Math.min(1, speed / T.speed) : 0) - T.walkAmt) * Math.min(1, dt * 5);
-  T.ph += dt * (T.kind === 'basalt' ? 2.6 : 3.8) * (0.2 + T.walkAmt * 1.2);
+  T.ph += dt * (T.robot ? 2.3 : T.humanoid ? 2.6 : 3.8) * (0.2 + T.walkAmt * 1.2);
   const w = T.walkAmt, s = Math.sin(T.ph), c = Math.cos(T.ph), breath = Math.sin(pedTime.value * 1.6);
   const foe = T.foe && T.foe.state !== 'gone' ? T.foe : null;
   const look = foe ? Math.atan2(Math.sin(Math.atan2(foe.pos.x - T.pos.x, foe.pos.z - T.pos.z) - T.yaw), Math.cos(Math.atan2(foe.pos.x - T.pos.x, foe.pos.z - T.pos.z) - T.yaw)) : 0;
   const down = st === 'getdown' || st === 'ko' || (st === 'air' && T.launched !== false && T.vy < 4);
-  if (T.kind === 'basalt') {
+  if (T.humanoid) {
     const base = {
       tiltX: down ? -1.35 : st === 'getup' ? -0.5 : 0,
-      hipsY: (st === 'getup' ? 8.5 : 10.8) + Math.abs(c) * 0.7 * w + breath * 0.15,
+      hipsY: T.hipBase - (st === 'getup' ? 2.3 : 0) - Math.abs(s) * 0.55 * w + Math.abs(c) * 0.25 * w + breath * 0.15,
+      fistL: T.inspect && !T.act ? 0.25 : 0.85, fistR: T.inspect && !T.act ? 0.25 : 0.85,
       legL: s * 0.55 * w - 0.12, legR: -s * 0.55 * w + 0.12, legLz: -0.08 + c * 0.12 * T.strafe, legRz: 0.08 + c * 0.12 * T.strafe,
       kneeL: 0.3 + Math.max(0, -s) * 0.7 * w, kneeR: 0.3 + Math.max(0, s) * 0.7 * w,
       torsoX: 0.18 + w * 0.15 + breath * 0.03, torsoY: s * 0.14 * w + look * 0.3, torsoZ: -s * 0.05 * w,
@@ -3696,7 +3990,7 @@ function animate(T, dt, speed) {
     const tgt = Object.assign(base, pose || {});
     for (const k in tgt) r.set(k, tgt[k]);
     // footsteps
-    for (let i = 0; i < 2; i++) { const v = i ? -s : s; if (w > 0.35 && T.lastStep[i] > 0 && v <= 0 && T.y < 1) { const p = T.w(new THREE.Vector3(i ? 3.6 : -3.6, 0, 2)); stomp(p.x, p.z, 3.5, 3.5 + titans.fury * 0.2); } T.lastStep[i] = v; }
+    for (let i = 0; i < 2; i++) { const v = i ? -s : s; if (w > 0.35 && T.lastStep[i] > 0 && v <= 0 && T.y < 1) { const p = T.w(new THREE.Vector3(i ? T.footX : -T.footX, 0, 2)); stomp(p.x, p.z, 3.5, (T.robot ? 4.5 : 3.5) + titans.fury * 0.2); T.rig.kick('hipsY', -2.2); T.rig.kick('torsoX', 0.6); if (T.robot) Sfx.clank(soundDelay(p)); } T.lastStep[i] = v; }
   } else {
     const base = {
       tiltZ: down ? 1.2 : 0,
@@ -3711,6 +4005,7 @@ function animate(T, dt, speed) {
     for (let i = 0; i < 4; i++) { const L = T.legs[i], v = Math.sin(T.ph + L.userData.ph); if (w > 0.35 && T.lastStep[i] > 0 && v <= 0 && T.y < 1) { const p = T.w(L.userData.tip.clone().add(L.position).add(T.body.position)); stomp(p.x, p.z, 2.6, 3 + titans.fury * 0.15); } T.lastStep[i] = v; }
   }
   r.step(dt);
+  if (T.post) T.post(T);
   // beam
   if (T.kind === 'vex' && T.act && T.act.name === 'beam') vexBeam(T, dt);
 }
@@ -3719,10 +4014,10 @@ const beamMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 2.6, 3
 const beamCore = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 3.2, 3.2), transparent: true, opacity: 1, depthWrite: false, fog: false });
 function vexBeam(T, dt) {
   const a = T.act, foe = T.foe && !['gone', 'down', 'ko'].includes(T.foe.state) ? T.foe : null;
-  const mouth = T.w(T.head.position.clone().add(T.body.position).add(new THREE.Vector3(0, 0, 6)));
+  const mouth = T.robot ? T.torso.localToWorld(new THREE.Vector3(0, 6.8, 4.8)) : T.w(T.head.position.clone().add(T.body.position).add(new THREE.Vector3(0, 0, 6)));
   const aim = foe ? foe.pos.clone().setY(foe.y + foe.height * 0.55) : T.pos.clone().addScaledVector(T.fwd, 35).setY(5);
   if (a.i === 0) {
-    const k = a.t / 0.9; T.glow.color.setRGB(0.25 + k * 2, 2.2 + k * 2, 3 + k);
+    const k = a.t / 0.9; if (T.glow) T.glow.color.setRGB(0.25 + k * 2, 2.2 + k * 2, 3 + k); else T.flash = Math.max(T.flash, Math.min(1, k));
     for (let i = 0; i < 3; i++) { const p = mouth.clone().add(new THREE.Vector3(rnd(-6, 6), rnd(-6, 6), rnd(-6, 6))); fire.emit(p.x, p.y, p.z, (mouth.x - p.x) * 3, (mouth.y - p.y) * 3, (mouth.z - p.z) * 3, 0.3, rnd(0.8, 1.5), 0.3, 0.9, 1, 1, -1, 0, 0); }
   } else if (a.i === 1) {
     if (!T.beam) { T.beam = new THREE.Group(); const g = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true).rotateX(Math.PI / 2).translate(0, 0, 0.5); T.beam.add(new THREE.Mesh(g, beamMat), new THREE.Mesh(g, beamCore)); T.beam.children[1].scale.set(0.35, 0.35, 1); scene.add(T.beam); }
@@ -3771,7 +4066,8 @@ function vanish(T) {
     skyFlash = Math.max(skyFlash, 0.6);
     for (let i = 0; i < 60; i++) sparks.emit(p.x, 8, p.z, rnd(-18, 18), rnd(0, 25), rnd(-18, 18), rnd(0.5, 1.5));
     for (let i = 0; i < 25; i++) fire.emit(p.x + rnd(-6, 6), rnd(2, 14), p.z + rnd(-6, 6), 0, rnd(5, 15), 0, rnd(0.6, 1.2), rnd(3, 6), 0.3, 0.9, 1, 1, 1, 0.3, 0);
-    popup('VEX ES ABDUCIDO', '#6ff0ff');
+    for (let i = 0; i < 30; i++) dust.emit(p.x + rnd(-5, 5), rnd(4, 18), p.z + rnd(-5, 5), rnd(-1, 1), rnd(2, 5), rnd(-1, 1), rnd(4, 8), rnd(4, 7), 0.16, 0.16, 0.17, 0.8, 1.5, 0.3);
+    popup(T.robot ? 'VEX FUERA DE COMBATE' : 'VEX ES ABDUCIDO', '#6ff0ff');
   }
   T.state = 'gone'; T.remove();
   const w = titans.list.find((x) => x !== T && x.state !== 'gone');
@@ -3796,8 +4092,8 @@ Sfx.roar = function (kind, s = 1, delay = 0) {
   const c = this.ctx, t = c.currentTime + delay, dur = kind === 'basalt' ? 2.2 : 1.6;
   const o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
   if (kind === 'basalt') { o.type = 'sawtooth'; o.frequency.setValueAtTime(62, t); o.frequency.exponentialRampToValueAtTime(38, t + dur); f.type = 'lowpass'; f.frequency.setValueAtTime(240, t); f.frequency.linearRampToValueAtTime(520, t + dur * 0.4); f.frequency.linearRampToValueAtTime(180, t + dur); }
-  else { o.type = 'square'; o.frequency.setValueAtTime(260, t); o.frequency.linearRampToValueAtTime(620, t + dur * 0.35); o.frequency.linearRampToValueAtTime(190, t + dur); f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 3;
-    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 22; lg.gain.value = 45; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur); }
+  else { o.type = 'sawtooth'; o.frequency.setValueAtTime(150, t); o.frequency.linearRampToValueAtTime(118, t + dur * 0.5); o.frequency.linearRampToValueAtTime(96, t + dur); f.type = 'bandpass'; f.frequency.value = 520; f.Q.value = 1.6;
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 6; lg.gain.value = 4; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur); }
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 * s, t + 0.15); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(f); f.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.1);
   const n = this.noiseSrc(t, dur), nf = c.createBiquadFilter(), ng = c.createGain();
@@ -3817,6 +4113,14 @@ Sfx.punch = function (heavy, delay = 0) {
   f.type = 'bandpass'; f.frequency.value = heavy ? 700 : 1300; f.Q.value = 0.8;
   g.gain.setValueAtTime(heavy ? 0.7 : 0.4, t); g.gain.exponentialRampToValueAtTime(0.001, t + (heavy ? 0.55 : 0.25));
   n.connect(f); f.connect(g); g.connect(this.master);
+};
+// a giant metal foot landing: low thud with a short metallic ring
+Sfx.clank = function (delay = 0) {
+  if (!this.ok()) return;
+  const c = this.ctx, t = c.currentTime + delay;
+  const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(85, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.4);
+  g.gain.setValueAtTime(0.8, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.6); o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.7);
+  for (const fr of [310, 467]) { const r = c.createOscillator(), rg = c.createGain(); r.type = 'triangle'; r.frequency.value = fr; rg.gain.setValueAtTime(0.06, t); rg.gain.exponentialRampToValueAtTime(0.001, t + 0.5); r.connect(rg); rg.connect(this.master); r.start(t); r.stop(t + 0.6); }
 };
 Sfx.clang = function (delay = 0) {
   if (!this.ok()) return;
@@ -4032,7 +4336,7 @@ const HINTS = {
   storm: '<strong>Iniciá la tormenta</strong>: los rayos buscan lo más alto. Tocá para que caiga un rayo donde quieras.',
   volcano: '<strong>Tocá el suelo</strong> donde va a brotar el volcán. Primero se eleva, después hace erupción.',
   blackhole: '<strong>Tocá</strong> sobre qué punto se abre el agujero negro. Al terminar colapsa con una onda expansiva.',
-  titans: '<strong>Tocá</strong> donde empieza la pelea. Basalto surge del suelo y Vex cae del cielo; también podés soltar uno solo a arrasar la ciudad.',
+  titans: '<strong>Tocá</strong> donde empieza la pelea: Basalto surge del suelo y el robot VEX cae del cielo. En «Inspeccionar VEX» lo ves de cerca y probás sus animaciones.',
   build: '<strong>Tocá el suelo</strong> para levantar un edificio y probar su resistencia.',
 };
 function setTool(t) {
@@ -4071,8 +4375,13 @@ bindSlider('bh-pow', (v) => (blackhole.power = v));
 bindSlider('bh-dur', (v) => (blackhole.dur = v));
 bindSlider('titan-fury', (v) => (titans.fury = v));
 bindSlider('titan-dur', (v) => (titans.dur = v));
-bindSeg('titan-mode', 'm', (v) => (titans.mode = v));
+bindSeg('titan-mode', 'm', (v) => {
+  titans.mode = v;
+  // inspection starts right away in the open park north of the city, facing the camera
+  if (v === 'inspect') { if (titans.list.length) clearTitans(); controls.userT = 0; startTitans(new THREE.Vector3(-20, 0, 42)); }
+});
 $('#titan-cine').addEventListener('change', (e) => { titans.cine = e.target.checked; });
+document.querySelectorAll('#titan-demo button').forEach((b) => b.addEventListener('click', () => { Sfx.init(); titanDemo(b.dataset.d); }));
 $('#titan-btn').addEventListener('click', () => { if (titans.list.length) retreatTitans(); });
 function setQuake(on) {
   quake.on = on;
@@ -4534,6 +4843,8 @@ window.__lab = {
   titanHp: (k, hp) => { const T = titans.list.find((x) => x.kind === k); if (T) T.hp = hp; },
   titanAttack: (k, move) => { const T = titans.list.find((x) => x.kind === k); if (T && !T.busy()) startAct(T, move); },
   fightLog: () => { const l = titans.log || []; titans.log = []; return l.join(' '); },
+  titanDemo: (n) => titanDemo(n),
+  titanDebug: () => titans.list.map((T) => { let n = 0, bad = 0; const bb = new THREE.Box3(); T.root.updateMatrixWorld(true); T.root.traverse((o) => { if (o.isMesh) { n++; const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i += 7) if (!isFinite(p.getX(i) + p.getY(i) + p.getZ(i))) { bad++; break; } bb.expandByObject(o); } }); return { k: T.kind, vis: T.root.visible, inScene: !!T.root.parent, meshes: n, badGeo: bad, min: bb.min.toArray().map((v) => +v.toFixed(1)), max: bb.max.toArray().map((v) => +v.toFixed(1)), y: T.y, cam: camera.position.toArray().map((v) => +v.toFixed(1)), tgt: controls.target.toArray().map((v) => +v.toFixed(1)) }; }),
   cineState: () => ({ slow: +cine.slow.toFixed(2), hitStop: +cine.hitStop.toFixed(2) }),
   gfx: (on) => { if (on !== undefined) setGfx(on); return { enhanced: gfx.enhanced, post: gfx.ready && gfx.post, env: !!scene.environment, rubble: rubble.count }; },
 };

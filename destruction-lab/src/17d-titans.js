@@ -5,7 +5,7 @@
 //          tail wrap-and-slam, side dodges and a plasma beam.
 // Every joint is driven by a damped spring toward its pose, so moves have anticipation, inertia and follow-through.
 // Bodies are kinematic colliders that really push and break the city (simplified physics). No gore: the loser crumbles or is beamed away.
-const TITAN_NAMES = { basalt: 'Basalto', vex: 'Vex' };
+const TITAN_NAMES = { basalt: 'Basalto', vex: 'VEX' };
 const titans = { mode: 'fight', fury: 6, dur: 60, list: [], phase: 'idle', t: 0, winner: null, winT: 0, cine: true };
 const cine = { hitStop: 0, slow: 0, kick: 0, theta: 0, dir: 1 };
 function cineScale(realDt) {
@@ -85,7 +85,7 @@ function buildBasalt() {
   rig.add('armL', arms[0], 'x', 120, 15); rig.add('armR', arms[1], 'x', 120, 15); rig.add('armLz', arms[0], 'z', 100, 14); rig.add('armRz', arms[1], 'z', 100, 14);
   rig.add('elbL', elbows[0], 'x', 130, 15); rig.add('elbR', elbows[1], 'x', 130, 15);
   rig.add('headX', head, 'x', 90, 12); rig.add('headY', head, 'y', 90, 12);
-  return { root, tilt, rig, hips, legs, knees, torso, arms, elbows, head, blade, mats: [rock], height: 27, radius: 6.5, speed: 5, colY: 13, colR: 5.5, colH: 7 };
+  return { humanoid: true, hipBase: 10.8, footX: 3.6, root, tilt, rig, hips, legs, knees, torso, arms, elbows, head, blade, mats: [rock], height: 27, radius: 6.5, speed: 5, colY: 13, colR: 5.5, colH: 7 };
 }
 function buildVex() {
   const chitin = new THREE.MeshStandardMaterial({ map: chitinTex, color: 0x9a8fc8, roughness: 0.35, metalness: 0.45, emissive: 0x20d8ff, emissiveIntensity: 0 });
@@ -123,7 +123,7 @@ function buildVex() {
 class Titan {
   constructor(kind, x, z, yaw) {
     this.kind = kind; this.name = TITAN_NAMES[kind];
-    Object.assign(this, kind === 'basalt' ? buildBasalt() : buildVex());
+    Object.assign(this, kind === 'basalt' ? buildBasalt() : buildVexRobot());
     this.pos = new THREE.Vector3(x, 0, z); this.yaw = yaw; this.hp = 100; this.state = 'emerge'; this.t = 0;
     this.y = kind === 'basalt' ? -this.height : 140; this.vy = 0; this.vel = new THREE.Vector3(); this.kb = new THREE.Vector3();
     this.ph = 0; this.walkAmt = 0; this.strafe = 0; this.strafeDir = Math.random() < 0.5 ? 1 : -1; this.cd = 2.5; this.think = 0;
@@ -257,6 +257,27 @@ const MOVES = {
   },
 };
 
+// VEX (robot) fights with the humanoid moves, lifted to its hip height, plus a chest plasma cannon
+(function () {
+  const lift = 13.2 - 10.8, src = MOVES.basalt, out = {};
+  for (const n of ['jab', 'cross', 'upper', 'haymaker', 'hammer', 'charge', 'grab', 'guard']) {
+    const m = JSON.parse(JSON.stringify(src[n]));
+    for (const ph of m.ph) {
+      if (ph.pose.hipsY !== undefined) ph.pose.hipsY += lift;
+      const L = ph.pose.armL !== undefined && ph.pose.armL < -1, Rr = ph.pose.armR !== undefined && ph.pose.armR < -1;
+      if (L) ph.pose.fistL = 1; if (Rr) ph.pose.fistR = 1;
+      if (ph.block) { ph.pose.fistL = 1; ph.pose.fistR = 1; }
+    }
+    out[n] = m;
+  }
+  out.grab.ph[0].pose.fistL = out.grab.ph[0].pose.fistR = 0; out.grab.ph[1].pose.fistL = out.grab.ph[1].pose.fistR = 0.7;
+  out.beam = { gap: [18, 95], w: 1.5, cool: 9, ph: [
+    { d: 1.0, pose: { torsoX: -0.12, armL: -0.4, armR: -0.4, armLz: -0.9, armRz: 0.9, elbL: -0.9, elbR: -0.9, fistL: 1, fistR: 1, hipsY: 12.6, kneeL: 0.6, kneeR: 0.6 }, s: 1, ev: 'charge' },
+    { d: 1.6, pose: { torsoX: 0.1, armL: -0.2, armR: -0.2, armLz: -1.1, armRz: 1.1, elbL: -0.5, elbR: -0.5, fistL: 1, fistR: 1, hipsY: 12.4, kneeL: 0.7, kneeR: 0.7 }, s: 1.4, ev: 'fire' },
+    { d: 0.45, pose: {}, s: 1, ev: 'beamOff' }] };
+  MOVES.insect = MOVES.vex; MOVES.vex = out;
+})();
+
 /* ---------- start / stop */
 function startTitans(P) {
   if (titans.list.length) { toast('Ya hay titanes en la ciudad'); return; }
@@ -264,16 +285,18 @@ function startTitans(P) {
   titans.phase = 'on'; titans.t = 0; titans.winner = null; titans.winT = 0;
   const a = rnd(0, Math.PI * 2), d = m === 'fight' ? 24 : 0;
   if (m === 'fight' || m === 'basalt') titans.list.push(new Titan('basalt', P.x + Math.cos(a) * d, P.z + Math.sin(a) * d, 0));
-  if (m === 'fight' || m === 'vex') titans.list.push(new Titan('vex', P.x - Math.cos(a) * d, P.z - Math.sin(a) * d, 0));
+  if (m === 'fight' || m === 'vex' || m === 'inspect') titans.list.push(new Titan('vex', P.x - Math.cos(a) * d, P.z - Math.sin(a) * d, 0));
+  if (m === 'inspect') { titans.list[0].inspect = true; titans.list[0].yaw = Math.atan2(camera.position.x - P.x, camera.position.z - P.z); }
   const [A, B] = titans.list;
   if (A && B) { A.foe = B; B.foe = A; B.t = -1.6; A.yaw = Math.atan2(B.pos.x - A.pos.x, B.pos.z - A.pos.z); B.yaw = A.yaw + Math.PI; }
   sirenUntil = simTime + 40;
   setTimeout(() => dispatchEmergency(P.x, P.z), 6000);
-  popup(m === 'fight' ? '¡COMBATE!' : TITAN_NAMES[m].toUpperCase(), '#ffb02e');
+  if (m !== 'inspect') popup(m === 'fight' ? '¡COMBATE!' : TITAN_NAMES[m].toUpperCase(), '#ffb02e');
+  $('#titan-demo').hidden = m !== 'inspect';
   showTitanHud(true); refreshRunning();
 }
 function retreatTitans() { for (const T of titans.list) if (!['down', 'gone', 'ko'].includes(T.state)) { endAct(T); T.state = 'leave'; T.t = 0; } titans.phase = 'leaving'; refreshRunning(); }
-function clearTitans() { for (const T of titans.list) T.remove(); titans.list.length = 0; titans.phase = 'idle'; showTitanHud(false); Sfx.beam(0); cine.slow = cine.hitStop = 0; }
+function clearTitans() { $('#titan-demo').hidden = true; for (const T of titans.list) T.remove(); titans.list.length = 0; titans.phase = 'idle'; showTitanHud(false); Sfx.beam(0); cine.slow = cine.hitStop = 0; }
 
 /* ---------- per physics step: kinematic body follows the model; ploughing through buildings */
 function titansStep(dt) {
@@ -301,7 +324,7 @@ function titansUpdate(dt) {
     titans.winner = alive[0]; endAct(titans.winner); titans.winner.state = 'roar'; titans.winner.t = 0;
     Sfx.roar(titans.winner.kind, 1.3, soundDelay(titans.winner.pos));
   }
-  if (titans.phase === 'on' && titans.list.length === 1 && titans.t > titans.dur) retreatTitans();
+  if (titans.phase === 'on' && titans.list.length === 1 && !titans.list[0].inspect && titans.t > titans.dur) retreatTitans();
   if (titans.phase === 'on' && titans.winner) { titans.winT += dt; if (titans.winT > 9) retreatTitans(); }
   if (titans.list.every((T) => T.state === 'gone')) { clearTitans(); refreshRunning(); }
   updateTitanHud();
@@ -316,10 +339,13 @@ function updateCine(dt) {
   const sep = L.length > 1 ? L[0].pos.distanceTo(L[1].pos) : 20;
   cine.kick = Math.max(0, cine.kick - dt);
   const g = controls.goal;
-  g.target.lerp(new THREE.Vector3(mid.x, 11, mid.z), Math.min(1, dt * 2));
-  g.radius += (THREE.MathUtils.clamp(sep * 1.25 + 38, 48, 120) * (1 - cine.kick * 0.25) - g.radius) * Math.min(1, dt * 1.5);
-  g.phi += ((cine.kick > 0 ? 1.3 : 1.18) - g.phi) * Math.min(1, dt);
-  g.theta += dt * 0.07 * cine.dir;
+  const insp = L.length === 1 && L[0].inspect;
+  g.target.lerp(new THREE.Vector3(mid.x, insp ? 9 : 13, mid.z), Math.min(1, dt * 2));
+  if (insp) { const want = L[0].yaw + 0.55 * Math.sin(titans.t * 0.22); g.theta += Math.atan2(Math.sin(want - g.theta), Math.cos(want - g.theta)) * Math.min(1, dt * 0.8); }
+  const baseR = insp ? 44 : THREE.MathUtils.clamp(sep * 1.2 + 36, 46, 115);
+  g.radius += (baseR * (1 - cine.kick * 0.22) - g.radius) * Math.min(1, dt * 1.5);
+  g.phi += ((cine.kick > 0 ? 1.42 : 1.33) - g.phi) * Math.min(1, dt);
+  if (!insp) g.theta += dt * 0.07 * cine.dir;
 }
 
 function faceTo(T, x, z, dt, rate = 3) {
@@ -344,7 +370,7 @@ function endAct(T) {
 function nextPhase(T) {
   const a = T.act; a.i++; a.t = 0; a.hitDone = false;
   const p = a.def.ph[a.i];
-  if (!p) { const nx = a.def.counter || a.def.next, ok = a.connected || !!a.def.counter; endAct(T); T.state = 'neutral'; if (nx && ok && T.foe && !T.foe.busy()) startAct(T, nx); else T.cd = rnd(0.5, 1.2) * (1.4 - titans.fury * 0.08); return; }
+  if (!p) { const nx = a.def.counter || a.def.next, ok = a.connected || !!a.def.counter || T.inspect; endAct(T); T.state = 'neutral'; if (nx && ok && T.foe && !T.foe.busy()) startAct(T, nx); else T.cd = rnd(0.5, 1.2) * (1.4 - titans.fury * 0.08); return; }
   T.rig.stiff(p.s || 1);
   T.block = !!p.block; T.invuln = p.iframes ? p.d : 0;
   if (p.ev) moveEvent(T, p.ev);
@@ -406,13 +432,25 @@ function emerge(T, dt) {
     T.root.visible = true;
     const k = Math.min(1, T.t / 1.4);
     T.y = 140 * (1 - k) * (1 - k);
-    for (let i = 0; i < 3; i++) fire.emit(T.pos.x + rnd(-3, 3), T.y + 14, T.pos.z + rnd(-3, 3), rnd(-2, 2), rnd(6, 14), rnd(-2, 2), rnd(0.3, 0.6), rnd(3, 5), 0.4, 0.9, 1, 1, 0, 0.3, 0);
-    if (k >= 1) { T.y = 0; blast(new THREE.Vector3(T.pos.x, 0.5, T.pos.z), 8, 12, { noFire: true }); T.state = 'roar'; T.t = 0; Sfx.roar('vex', 1, soundDelay(T.pos)); T.rig.kick('bodyY', -25); T.rig.kick('headX', -3); cine.kick = 1; }
+    for (let i = 0; i < 3; i++) fire.emit(T.pos.x + rnd(-3, 3), T.y + (T.robot ? 18 : 14), T.pos.z + rnd(-3, 3), rnd(-2, 2), rnd(6, 14), rnd(-2, 2), rnd(0.3, 0.6), rnd(3, 5), T.robot ? 1 : 0.4, T.robot ? 0.55 : 0.9, T.robot ? 0.2 : 1, 1, 0, 0.3, 0);
+    if (k >= 1) { T.y = 0; blast(new THREE.Vector3(T.pos.x, 0.5, T.pos.z), 8, 12, { noFire: true }); T.state = 'roar'; T.t = 0; Sfx.roar('vex', 1, soundDelay(T.pos)); T.rig.kick(T.humanoid ? 'hipsY' : 'bodyY', -25); T.rig.kick('headX', -3); cine.kick = 1; if (T.robot) popup('VEX DESPLEGADO', '#6ff0ff'); }
   }
 }
 
+/* inspection mode: VEX alone, driven by the demo buttons */
+function titanDemo(name) {
+  const T = titans.list.find((x) => x.inspect); if (!T || T.busy()) return;
+  if (name === 'walk') { T.demo = T.demo === 'walk' ? null : 'walk'; return; }
+  T.demo = null;
+  if (name === 'fall') { endAct(T); T.state = 'air'; T.t = 0; T.vy = 9; T.vel.copy(T.fwd).multiplyScalar(-9); T.launched = true; Sfx.clank(0); return; }
+  if (name === 'punch') startAct(T, 'jab'); else if (name === 'run') startAct(T, 'charge'); else if (name === 'block') startAct(T, 'guard'); else if (name === 'cannon') startAct(T, 'beam'); else if (name === 'slam') startAct(T, 'hammer');
+}
 /* neutral: footwork and decisions */
 function neutral(T, foe, dt) {
+  if (T.inspect) {
+    if (T.demo === 'walk') { T.yaw += 0.22 * dt; T.pos.addScaledVector(T.fwd, T.speed * 0.75 * dt); return T.speed * 0.75; }
+    return 0;
+  }
   let tx, tz;
   if (foe) { tx = foe.pos.x; tz = foe.pos.z; }
   else {
@@ -427,7 +465,7 @@ function neutral(T, foe, dt) {
   T.cd -= dt;
   // react to an incoming attack: Basalto raises his guard, Vex sidesteps
   if (foe && foe.state === 'act' && foe.act && foe.act.i === 0 && gap < 12 && !T.reacted && Math.random() < 0.18 + titans.fury * 0.025) {
-    T.reacted = true; startAct(T, T.kind === 'basalt' ? 'guard' : 'dodge'); return 0;
+    T.reacted = true; startAct(T, T.humanoid ? 'guard' : 'dodge'); return 0;
   }
   if (!(foe && foe.state === 'act')) T.reacted = false;
   if (T.cd <= 0) {
@@ -499,9 +537,9 @@ function moveEvent(T, ev) {
     case 'grab': {
       if (!foe || foe.busy() || foe.invuln > 0) break;
       const gap = T.pos.distanceTo(foe.pos) - T.radius - foe.radius;
-      if (gap < (T.kind === 'vex' ? 12 : 6) && angleTo(T, foe) < 1.1) {
+      if (gap < (T.humanoid ? 6.5 : 12) && angleTo(T, foe) < 1.1) {
         T.act.held = foe; endAct(foe); foe.state = 'held'; foe.t = 0;
-        popup(T.kind === 'vex' ? '¡LO ATRAPA CON LA COLA!' : '¡LLAVE!', T.kind === 'vex' ? '#6ff0ff' : '#ffb02e');
+        popup('¡LLAVE!', T.kind === 'vex' ? '#6ff0ff' : '#ffb02e');
         Sfx.boom(0.35, soundDelay(foe.pos)); T.act.connected = true;
       } else { T.act.i = T.act.def.ph.length - 2; }
       break;
@@ -564,14 +602,14 @@ function tryHit(A, h) {
   return true;
 }
 function applyHit(A, B, h, hp) {
-  const dmg = h.dmg * (0.38 + titans.fury * 0.025) * (A.kind === 'vex' ? 1.3 : 1);
+  const dmg = h.dmg * (0.38 + titans.fury * 0.025) * (A.robot ? 1.05 : 1);
   (titans.log = titans.log || []).push('HIT>' + B.kind[0] + ':' + h.type);
   B.hp = Math.max(0, B.hp - dmg); B.flash = 1;
   const dir = new THREE.Vector3(B.pos.x - A.pos.x, 0, B.pos.z - A.pos.z).normalize();
   // impact: sparks, chips of rock or cyan plasma, dust, light, sound, camera
-  const chips = B.kind === 'basalt' ? [0.35, 0.3, 0.27] : [0.2, 0.85, 1];
+  const chips = B.kind === 'basalt' ? [0.35, 0.3, 0.27] : B.robot ? [0.55, 0.57, 0.6] : [0.2, 0.85, 1];
   for (let i = 0; i < (h.type === 'light' ? 18 : 45); i++) sparks.emit(hp.x, hp.y, hp.z, dir.x * 8 + rnd(-10, 10), rnd(-3, 12), dir.z * 8 + rnd(-10, 10), rnd(0.3, 1.1));
-  for (let i = 0; i < (h.type === 'light' ? 6 : 16); i++) (B.kind === 'basalt' ? dust : fire).emit(hp.x, hp.y, hp.z, dir.x * 6 + rnd(-5, 5), rnd(-2, 7), dir.z * 6 + rnd(-5, 5), rnd(0.8, 2), rnd(1.5, 3.5), chips[0], chips[1], chips[2], 0.85, 1.2, 0.8, 4);
+  for (let i = 0; i < (h.type === 'light' ? 6 : 16); i++) (B.kind === 'basalt' || B.robot ? dust : fire).emit(hp.x, hp.y, hp.z, dir.x * 6 + rnd(-5, 5), rnd(-2, 7), dir.z * 6 + rnd(-5, 5), rnd(0.8, 2), rnd(1.5, 3.5), chips[0], chips[1], chips[2], 0.85, 1.2, 0.8, 4);
   flashLight.position.copy(hp); flashLight.color.setHex(B.kind === 'basalt' ? 0xffa050 : 0x70e8ff); flashLight.intensity = Math.max(flashLight.intensity, h.type === 'light' ? 900 : 2600);
   addShake(h.type === 'light' ? 0.25 : 0.7, hp);
   Sfx.punch(h.type !== 'light', soundDelay(hp));
@@ -585,10 +623,10 @@ function applyHit(A, B, h, hp) {
   if (B.hp <= 0) { knockOut(B, dir); return; }
   if (h.type === 'light') {
     B.state = 'stagger'; B.t = 0; B.stagT = 0.32; B.kb.copy(dir).multiplyScalar(5);
-    if (B.kind === 'basalt') { B.rig.kick('headY', side * 6); B.rig.kick('torsoY', side * 3); B.rig.kick('torsoX', -2); } else { B.rig.kick('headY', side * 6); B.rig.kick('bodyYaw', side * 2.5); B.rig.kick('bodyZ', side * 2); }
+    if (B.humanoid) { B.rig.kick('headY', side * 6); B.rig.kick('torsoY', side * 3); B.rig.kick('torsoX', -2); } else { B.rig.kick('headY', side * 6); B.rig.kick('bodyYaw', side * 2.5); B.rig.kick('bodyZ', side * 2); }
   } else if (h.type === 'heavy') {
     B.state = 'stagger'; B.t = 0; B.stagT = 0.75; B.kb.copy(dir).multiplyScalar(14);
-    if (B.kind === 'basalt') { B.rig.kick('torsoX', -6); B.rig.kick('headX', -7); B.rig.kick('torsoY', side * 4); } else { B.rig.kick('bodyX', -4); B.rig.kick('bodyZ', side * 4); B.rig.kick('headX', -6); }
+    if (B.humanoid) { B.rig.kick('torsoX', -6); B.rig.kick('headX', -7); B.rig.kick('torsoY', side * 4); } else { B.rig.kick('bodyX', -4); B.rig.kick('bodyZ', side * 4); B.rig.kick('headX', -6); }
     if (Math.random() < 0.5) Sfx.roar(B.kind, 0.6, soundDelay(B.pos));
   } else {
     // launched: flies back through the buildings and goes down
@@ -611,9 +649,9 @@ function knockOut(B, dir) {
 }
 function holdVictim(T) {
   const v = T.act.held; if (!v) return;
-  const p = T.kind === 'basalt' ? T.w(new THREE.Vector3(0, 26, 7)) : T.w(new THREE.Vector3(0, 18, -16));
+  const p = T.humanoid ? T.w(new THREE.Vector3(0, T.height * 0.98, 7.5)) : T.w(new THREE.Vector3(0, 18, -16));
   v.pos.set(p.x, 0, p.z); v.y = Math.max(0, p.y - v.height * 0.45);
-  v.yaw += 0.04; v.rig.kick(v.kind === 'basalt' ? 'legL' : 'leg0x', rnd(-1, 1)); v.rig.kick(v.kind === 'basalt' ? 'armR' : 'leg1z', rnd(-1, 1));
+  v.yaw += 0.04; v.rig.kick(v.humanoid ? 'legL' : 'leg0x', rnd(-1, 1)); v.rig.kick(v.humanoid ? 'armR' : 'leg1z', rnd(-1, 1));
 }
 function release(T, thrown) {
   const v = T.act.held; T.act.held = null; if (!v) return;
@@ -626,15 +664,16 @@ function release(T, thrown) {
 function animate(T, dt, speed) {
   const r = T.rig, pose = poseTargets(T), st = T.state;
   T.walkAmt += ((speed > 0.8 ? Math.min(1, speed / T.speed) : 0) - T.walkAmt) * Math.min(1, dt * 5);
-  T.ph += dt * (T.kind === 'basalt' ? 2.6 : 3.8) * (0.2 + T.walkAmt * 1.2);
+  T.ph += dt * (T.robot ? 2.3 : T.humanoid ? 2.6 : 3.8) * (0.2 + T.walkAmt * 1.2);
   const w = T.walkAmt, s = Math.sin(T.ph), c = Math.cos(T.ph), breath = Math.sin(pedTime.value * 1.6);
   const foe = T.foe && T.foe.state !== 'gone' ? T.foe : null;
   const look = foe ? Math.atan2(Math.sin(Math.atan2(foe.pos.x - T.pos.x, foe.pos.z - T.pos.z) - T.yaw), Math.cos(Math.atan2(foe.pos.x - T.pos.x, foe.pos.z - T.pos.z) - T.yaw)) : 0;
   const down = st === 'getdown' || st === 'ko' || (st === 'air' && T.launched !== false && T.vy < 4);
-  if (T.kind === 'basalt') {
+  if (T.humanoid) {
     const base = {
       tiltX: down ? -1.35 : st === 'getup' ? -0.5 : 0,
-      hipsY: (st === 'getup' ? 8.5 : 10.8) + Math.abs(c) * 0.7 * w + breath * 0.15,
+      hipsY: T.hipBase - (st === 'getup' ? 2.3 : 0) - Math.abs(s) * 0.55 * w + Math.abs(c) * 0.25 * w + breath * 0.15,
+      fistL: T.inspect && !T.act ? 0.25 : 0.85, fistR: T.inspect && !T.act ? 0.25 : 0.85,
       legL: s * 0.55 * w - 0.12, legR: -s * 0.55 * w + 0.12, legLz: -0.08 + c * 0.12 * T.strafe, legRz: 0.08 + c * 0.12 * T.strafe,
       kneeL: 0.3 + Math.max(0, -s) * 0.7 * w, kneeR: 0.3 + Math.max(0, s) * 0.7 * w,
       torsoX: 0.18 + w * 0.15 + breath * 0.03, torsoY: s * 0.14 * w + look * 0.3, torsoZ: -s * 0.05 * w,
@@ -646,7 +685,7 @@ function animate(T, dt, speed) {
     const tgt = Object.assign(base, pose || {});
     for (const k in tgt) r.set(k, tgt[k]);
     // footsteps
-    for (let i = 0; i < 2; i++) { const v = i ? -s : s; if (w > 0.35 && T.lastStep[i] > 0 && v <= 0 && T.y < 1) { const p = T.w(new THREE.Vector3(i ? 3.6 : -3.6, 0, 2)); stomp(p.x, p.z, 3.5, 3.5 + titans.fury * 0.2); } T.lastStep[i] = v; }
+    for (let i = 0; i < 2; i++) { const v = i ? -s : s; if (w > 0.35 && T.lastStep[i] > 0 && v <= 0 && T.y < 1) { const p = T.w(new THREE.Vector3(i ? T.footX : -T.footX, 0, 2)); stomp(p.x, p.z, 3.5, (T.robot ? 4.5 : 3.5) + titans.fury * 0.2); T.rig.kick('hipsY', -2.2); T.rig.kick('torsoX', 0.6); if (T.robot) Sfx.clank(soundDelay(p)); } T.lastStep[i] = v; }
   } else {
     const base = {
       tiltZ: down ? 1.2 : 0,
@@ -661,6 +700,7 @@ function animate(T, dt, speed) {
     for (let i = 0; i < 4; i++) { const L = T.legs[i], v = Math.sin(T.ph + L.userData.ph); if (w > 0.35 && T.lastStep[i] > 0 && v <= 0 && T.y < 1) { const p = T.w(L.userData.tip.clone().add(L.position).add(T.body.position)); stomp(p.x, p.z, 2.6, 3 + titans.fury * 0.15); } T.lastStep[i] = v; }
   }
   r.step(dt);
+  if (T.post) T.post(T);
   // beam
   if (T.kind === 'vex' && T.act && T.act.name === 'beam') vexBeam(T, dt);
 }
@@ -669,10 +709,10 @@ const beamMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 2.6, 3
 const beamCore = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 3.2, 3.2), transparent: true, opacity: 1, depthWrite: false, fog: false });
 function vexBeam(T, dt) {
   const a = T.act, foe = T.foe && !['gone', 'down', 'ko'].includes(T.foe.state) ? T.foe : null;
-  const mouth = T.w(T.head.position.clone().add(T.body.position).add(new THREE.Vector3(0, 0, 6)));
+  const mouth = T.robot ? T.torso.localToWorld(new THREE.Vector3(0, 6.8, 4.8)) : T.w(T.head.position.clone().add(T.body.position).add(new THREE.Vector3(0, 0, 6)));
   const aim = foe ? foe.pos.clone().setY(foe.y + foe.height * 0.55) : T.pos.clone().addScaledVector(T.fwd, 35).setY(5);
   if (a.i === 0) {
-    const k = a.t / 0.9; T.glow.color.setRGB(0.25 + k * 2, 2.2 + k * 2, 3 + k);
+    const k = a.t / 0.9; if (T.glow) T.glow.color.setRGB(0.25 + k * 2, 2.2 + k * 2, 3 + k); else T.flash = Math.max(T.flash, Math.min(1, k));
     for (let i = 0; i < 3; i++) { const p = mouth.clone().add(new THREE.Vector3(rnd(-6, 6), rnd(-6, 6), rnd(-6, 6))); fire.emit(p.x, p.y, p.z, (mouth.x - p.x) * 3, (mouth.y - p.y) * 3, (mouth.z - p.z) * 3, 0.3, rnd(0.8, 1.5), 0.3, 0.9, 1, 1, -1, 0, 0); }
   } else if (a.i === 1) {
     if (!T.beam) { T.beam = new THREE.Group(); const g = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true).rotateX(Math.PI / 2).translate(0, 0, 0.5); T.beam.add(new THREE.Mesh(g, beamMat), new THREE.Mesh(g, beamCore)); T.beam.children[1].scale.set(0.35, 0.35, 1); scene.add(T.beam); }
@@ -721,7 +761,8 @@ function vanish(T) {
     skyFlash = Math.max(skyFlash, 0.6);
     for (let i = 0; i < 60; i++) sparks.emit(p.x, 8, p.z, rnd(-18, 18), rnd(0, 25), rnd(-18, 18), rnd(0.5, 1.5));
     for (let i = 0; i < 25; i++) fire.emit(p.x + rnd(-6, 6), rnd(2, 14), p.z + rnd(-6, 6), 0, rnd(5, 15), 0, rnd(0.6, 1.2), rnd(3, 6), 0.3, 0.9, 1, 1, 1, 0.3, 0);
-    popup('VEX ES ABDUCIDO', '#6ff0ff');
+    for (let i = 0; i < 30; i++) dust.emit(p.x + rnd(-5, 5), rnd(4, 18), p.z + rnd(-5, 5), rnd(-1, 1), rnd(2, 5), rnd(-1, 1), rnd(4, 8), rnd(4, 7), 0.16, 0.16, 0.17, 0.8, 1.5, 0.3);
+    popup(T.robot ? 'VEX FUERA DE COMBATE' : 'VEX ES ABDUCIDO', '#6ff0ff');
   }
   T.state = 'gone'; T.remove();
   const w = titans.list.find((x) => x !== T && x.state !== 'gone');
@@ -746,8 +787,8 @@ Sfx.roar = function (kind, s = 1, delay = 0) {
   const c = this.ctx, t = c.currentTime + delay, dur = kind === 'basalt' ? 2.2 : 1.6;
   const o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
   if (kind === 'basalt') { o.type = 'sawtooth'; o.frequency.setValueAtTime(62, t); o.frequency.exponentialRampToValueAtTime(38, t + dur); f.type = 'lowpass'; f.frequency.setValueAtTime(240, t); f.frequency.linearRampToValueAtTime(520, t + dur * 0.4); f.frequency.linearRampToValueAtTime(180, t + dur); }
-  else { o.type = 'square'; o.frequency.setValueAtTime(260, t); o.frequency.linearRampToValueAtTime(620, t + dur * 0.35); o.frequency.linearRampToValueAtTime(190, t + dur); f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 3;
-    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 22; lg.gain.value = 45; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur); }
+  else { o.type = 'sawtooth'; o.frequency.setValueAtTime(150, t); o.frequency.linearRampToValueAtTime(118, t + dur * 0.5); o.frequency.linearRampToValueAtTime(96, t + dur); f.type = 'bandpass'; f.frequency.value = 520; f.Q.value = 1.6;
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 6; lg.gain.value = 4; lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + dur); }
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5 * s, t + 0.15); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(f); f.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.1);
   const n = this.noiseSrc(t, dur), nf = c.createBiquadFilter(), ng = c.createGain();
@@ -767,6 +808,14 @@ Sfx.punch = function (heavy, delay = 0) {
   f.type = 'bandpass'; f.frequency.value = heavy ? 700 : 1300; f.Q.value = 0.8;
   g.gain.setValueAtTime(heavy ? 0.7 : 0.4, t); g.gain.exponentialRampToValueAtTime(0.001, t + (heavy ? 0.55 : 0.25));
   n.connect(f); f.connect(g); g.connect(this.master);
+};
+// a giant metal foot landing: low thud with a short metallic ring
+Sfx.clank = function (delay = 0) {
+  if (!this.ok()) return;
+  const c = this.ctx, t = c.currentTime + delay;
+  const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(85, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.4);
+  g.gain.setValueAtTime(0.8, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.6); o.connect(g); g.connect(this.master); o.start(t); o.stop(t + 0.7);
+  for (const fr of [310, 467]) { const r = c.createOscillator(), rg = c.createGain(); r.type = 'triangle'; r.frequency.value = fr; rg.gain.setValueAtTime(0.06, t); rg.gain.exponentialRampToValueAtTime(0.001, t + 0.5); r.connect(rg); rg.connect(this.master); r.start(t); r.stop(t + 0.6); }
 };
 Sfx.clang = function (delay = 0) {
   if (!this.ok()) return;
