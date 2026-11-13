@@ -221,7 +221,7 @@
       this.nextChange -= dt;
       if (this.nextChange <= 0) {
         // ciclos: cargada → torrencial → amaina un poco → vuelve
-        const opts = [0.45, 0.7, 0.85, 1.0, 1.0];
+        const opts = [0.28, 0.4, 0.6, 0.8, 0.95, 1.0];  // incluye respiros con luna
         this.target = opts[(Math.random() * opts.length) | 0];
         this.nextChange = rnd(35, 80);
       }

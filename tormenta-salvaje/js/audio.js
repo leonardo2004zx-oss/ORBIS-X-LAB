@@ -60,6 +60,9 @@
         stepLeaves: [0, 1, 2, 3].map(() => this._renderStep('leaves')),
         snap: [0, 1, 2].map(() => this._renderSnap()),
         cloth: [0, 1, 2, 3].map(() => this._renderCloth()),
+        owl: [0, 1].map(() => this._renderOwl()),
+        howl: [0, 1].map(() => this._renderHowl()),
+        croak: [0, 1, 2].map(() => this._renderCroak()),
       };
       this._rainLayers(); this._windLayers(); this._breathLayer();
       this.ready = true;
@@ -200,6 +203,49 @@
         if (t > 0.01 && t < 0.18) s += h * (Math.random() < 0.06 ? 1.5 : 0.1) * Math.exp(-(t - 0.01) / 0.05); // astillas
         s += Math.sin(t * 2 * Math.PI * 180) * Math.exp(-t / 0.04) * 0.6;                   // golpe de madera
         d[i] = s;
+      }
+      return b;
+    }
+    // búho: "hu… hu-huuu" con soplo, tono que cae apenas
+    _renderOwl() {
+      const sr = this.sr, n = Math.floor(2.6 * sr), b = this.ctx.createBuffer(1, n, sr), d = b.getChannelData(0);
+      const f0 = rnd(300, 380), notes = [[0, 0.32], [0.62, 0.16], [0.86, 0.16], [1.1, 0.6]];
+      let ph = 0, lp = 0;
+      for (let i = 0; i < n; i++) {
+        const t = i / sr; let env = 0, fm = 1;
+        for (const [st, du] of notes) if (t >= st && t < st + du + 0.15) { const x = (t - st) / du; env = Math.max(env, Math.min(1, x * 6) * Math.exp(-Math.max(0, x - 0.6) * 4)); fm = 1 - Math.min(1, x) * 0.06; }
+        ph += 2 * Math.PI * f0 * fm / sr;
+        const w = Math.random() * 2 - 1; lp = lp * 0.9 + w * 0.1;
+        d[i] = (Math.sin(ph) * 0.8 + Math.sin(ph * 2) * 0.08 + lp * 0.6) * env * 0.6;
+      }
+      return b;
+    }
+    // aullido lejano: sube, se sostiene con vibrato y cae; armónicos y aire
+    _renderHowl() {
+      const sr = this.sr, n = Math.floor(5 * sr), b = this.ctx.createBuffer(1, n, sr), d = b.getChannelData(0);
+      const a = rnd(330, 400), p = rnd(560, 680), e = rnd(300, 360);
+      let ph = 0, lp = 0;
+      for (let i = 0; i < n; i++) {
+        const t = i / sr, x = t / 4.6;
+        const f = x < 0.25 ? a + (p - a) * Math.sin(x / 0.25 * Math.PI / 2) : x < 0.7 ? p * (1 + 0.012 * Math.sin(t * 2 * Math.PI * 5.5)) : p + (e - p) * Math.pow((x - 0.7) / 0.3, 1.5);
+        ph += 2 * Math.PI * f / sr;
+        const env = Math.min(1, t / 0.5) * Math.max(0, Math.min(1, (4.6 - t) / 0.9));
+        const w = Math.random() * 2 - 1; lp = lp * 0.85 + w * 0.15;
+        d[i] = (Math.sin(ph) + Math.sin(ph * 2) * 0.25 + Math.sin(ph * 3) * 0.1 + lp * 0.3) * env * 0.5;
+      }
+      return b;
+    }
+    // sapo: "crrr-ak" (pulsos rápidos de un tono nasal)
+    _renderCroak() {
+      const sr = this.sr, n = Math.floor(1.4 * sr), b = this.ctx.createBuffer(1, n, sr), d = b.getChannelData(0);
+      const f = rnd(260, 520), pr = rnd(18, 32), reps = 2 + (Math.random() * 3 | 0); let ph = 0;
+      for (let i = 0; i < n; i++) {
+        const t = i / sr, k = Math.floor(t / 0.34), x = t - k * 0.34;
+        if (k >= reps) { d[i] = 0; continue; }
+        const env = Math.min(1, x / 0.01) * Math.max(0, 1 - x / 0.24);
+        const pulse = Math.pow(Math.max(0, Math.sin(t * 2 * Math.PI * pr)), 3);
+        ph += 2 * Math.PI * f * (1 + x * 0.5) / sr;
+        d[i] = (Math.sin(ph) + Math.sin(ph * 2.02) * 0.5 + Math.sin(ph * 3.01) * 0.25) * pulse * env * 0.45;
       }
       return b;
     }
@@ -378,6 +424,48 @@
       o.connect(b1); o.connect(b2); b1.connect(g); b2.connect(g); g.connect(out);
       o.start(t0); o.stop(t0 + dur + 0.1);
     }
+    /* ---------- fauna ---------- */
+    _at(pos, ref) { return pos ? this._panner(pos, ref || 4) : this.player; }
+    owl(pos) { if (!this.ready) return; this._c('owl'); this._play(this.bufs.owl[(Math.random() * 2) | 0], this._at(pos, 8), 0.55, rnd(0.92, 1.06)); }
+    howl(pos) { if (!this.ready) return; this._c('howl'); const p = this._at(pos, 40); const s = this._play(this.bufs.howl[(Math.random() * 2) | 0], p, 0.5, rnd(0.9, 1.05)); }
+    croak(pos) { if (!this.ready) return; this._c('croak'); this._play(this.bufs.croak[(Math.random() * 3) | 0], this._at(pos, 2), 0.5, rnd(0.9, 1.1)); }
+    rustle(pos, g) { if (!this.ready) return; this._c('rustle'); this._play(this.bufs.stepLeaves[(Math.random() * 4) | 0], this._at(pos, 3), g || 0.6, rnd(0.8, 1.1)); }
+    plop(pos) { if (!this.ready) return; this._c('plop'); this._play(this.bufs.stepPuddle[(Math.random() * 4) | 0], this._at(pos, 2), 0.45, rnd(1.4, 1.8)); }
+    // resoplido de ciervo: soplo nasal corto y fuerte
+    snort(pos) {
+      if (!this.ready) return; this._c('snort');
+      const ctx = this.ctx, t0 = ctx.currentTime, out = this._at(pos, 6);
+      for (let k = 0; k < 2; k++) {
+        const t = t0 + k * 0.32, n = this._noiseSrc(this.pink, t, 0.4);
+        const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = rnd(700, 1100); f.Q.value = 1.4;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(k ? 0.6 : 1.0, t + 0.015); g.gain.exponentialRampToValueAtTime(0.001, t + (k ? 0.18 : 0.3));
+        n.connect(f); f.connect(g); g.connect(out);
+      }
+    }
+    // aleteo: ráfagas graves rítmicas
+    flap(pos, sec) {
+      if (!this.ready) return; this._c('flap');
+      const ctx = this.ctx, t0 = ctx.currentTime, out = this._at(pos, 4), beats = Math.round((sec || 1.2) * 7);
+      for (let k = 0; k < beats; k++) {
+        const t = t0 + k / 7 + rnd(0, 0.02), n = this._noiseSrc(this.brown, t, 0.12);
+        const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
+        const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5 * (1 - k / beats * 0.6), t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        n.connect(f); f.connect(g); g.connect(out);
+      }
+    }
+    // chillidos de murciélago: barridos agudos, muy bajitos
+    bat(pos) {
+      if (!this.ready) return; this._c('bat');
+      const ctx = this.ctx, t0 = ctx.currentTime, out = this._at(pos, 2);
+      for (let k = 0; k < 3; k++) {
+        const t = t0 + k * rnd(0.05, 0.09), o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.setValueAtTime(rnd(8000, 9500), t); o.frequency.exponentialRampToValueAtTime(rnd(5200, 6200), t + 0.012);
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.06, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.014);
+        o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.02);
+      }
+    }
+    _noiseSrc(buf, t, dur) { const s = this.ctx.createBufferSource(); s.buffer = buf; s.start(t, Math.random() * (buf.duration - dur - 0.05)); s.stop(t + dur); return s; }
+
     // silencio repentino: todo el exterior cae casi a cero y vuelve
     silence(sec) {
       if (!this.ready) return;

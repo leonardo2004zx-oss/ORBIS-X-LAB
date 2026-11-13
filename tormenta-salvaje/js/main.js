@@ -10,9 +10,9 @@
 
   /* ---------- calidad ---------- */
   const QUALITY = [
-    { name: 'Baja', dpr: 1, aa: false, terrainSeg: 120, treeCount: 1500, nearR: 32, farR: 78, fog: 0.034, ferns: 2600, grass: 2400, bushes: 450, rocks: 300, logs: 40, mist: 10, rain: 3800, splash: 260, shadows: 0 },
-    { name: 'Media', dpr: 1.35, aa: false, terrainSeg: 170, treeCount: 2000, nearR: 42, farR: 96, fog: 0.029, ferns: 4500, grass: 4000, bushes: 750, rocks: 450, logs: 60, mist: 14, rain: 7500, splash: 450, shadows: 512 },
-    { name: 'Alta', dpr: 1.75, aa: true, terrainSeg: 230, treeCount: 2500, nearR: 56, farR: 120, fog: 0.025, ferns: 7000, grass: 6000, bushes: 1100, rocks: 600, logs: 80, mist: 18, rain: 13000, splash: 700, shadows: 1024 },
+    { name: 'Baja', dpr: 1, aa: false, terrainSeg: 120, treeCount: 1500, nearR: 32, farR: 78, fog: 0.034, ferns: 2600, grass: 2400, bushes: 450, rocks: 300, logs: 40, mist: 10, rain: 3800, splash: 260, shadows: 0, leaves: 60, shrooms: 40, webs: 14 },
+    { name: 'Media', dpr: 1.35, aa: false, terrainSeg: 170, treeCount: 2000, nearR: 42, farR: 96, fog: 0.029, ferns: 4500, grass: 4000, bushes: 750, rocks: 450, logs: 60, mist: 14, rain: 7500, splash: 450, shadows: 512, leaves: 110, shrooms: 70, webs: 22 },
+    { name: 'Alta', dpr: 1.75, aa: true, terrainSeg: 230, treeCount: 2500, nearR: 56, farR: 120, fog: 0.025, ferns: 7000, grass: 6000, bushes: 1100, rocks: 600, logs: 80, mist: 18, rain: 13000, splash: 700, shadows: 1024, leaves: 160, shrooms: 100, webs: 30 },
   ];
   const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || matchMedia('(pointer: coarse)').matches;
   const settings = Object.assign({ q: mobile ? 1 : 2, master: 0.9, rain: 1, thunder: 1, sens: 1, fps: false, invert: false, mini: true }, store.get('settings', {}));
@@ -29,7 +29,7 @@
   renderer.shadowMap.enabled = !!Q.shadows; renderer.shadowMap.type = THREE.PCFShadowMap;
   const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 900);
 
-  let world, rain, splashes, lightning, storm, player, flashlight, input, map;
+  let world, rain, splashes, lightning, storm, player, flashlight, input, map, fauna;
   const audio = new T.StormAudio();
   const state = { mode: 'menu', time: 0, objective: '', msgT: 0, saveT: 0, creakT: 8, flags: {} };
   window.__ts = { state, get world() { return world; }, get player() { return player; }, get storm() { return storm; }, audio, get flashlight() { return flashlight; }, get lightning() { return lightning; }, renderer, camera };
@@ -45,6 +45,7 @@
     player = new T.Player(world, camera, audio, splashes);
     input = new T.Input(canvas, { stick: $('stick'), knob: $('knob'), lookZone: $('look'), runBtn: $('bRun'), useBtn: $('bUse'), lightBtn: $('bLight'), pauseBtn: $('bPause') });
     input.onAction = onAction;
+    fauna = new T.Fauna(world, audio, splashes, Q); window.__ts.fauna = fauna;
     map = new T.ParkMap(world, 1024);
     map.addPlace({ x: 0, z: 178, label: 'Tu auto', icon: 'car' });
     map.addPlace({ x: world.signPos.x, z: world.signPos.z, label: 'Cartel', icon: 'sign' });
@@ -252,6 +253,7 @@
     } else menuCamera(dt);
     const I = flashlight.update(dt, state.time, camera, playing ? player.moving : 0.3, playing ? player.running : 0);
     const fl = { pos: flashlight.pos, dir: flashlight.dir, cos: flashlight.cos, on: I };
+    fauna.update(dt, { player, camera, fl, storm, playing: state.mode === 'play' });
     rain.update(state.time, camera, storm, fl);
     splashes.update(dt, camera, storm, fl, (x, z) => {
       return world.groundHeight(x, z) + 0.02;

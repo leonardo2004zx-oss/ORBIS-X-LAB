@@ -72,7 +72,7 @@
       this._mist();
       // luz ambiente fría (luna tras las nubes) — muy baja: la linterna manda
       this.hemi = new THREE.HemisphereLight(0x34466a, 0x070605, 0.2); scene.add(this.hemi);
-      this.moon = new THREE.DirectionalLight(0x6f86b8, 0.12); this.moon.position.set(-60, 120, -40); scene.add(this.moon);
+      this.moon = new THREE.DirectionalLight(0x8fa6d8, 0.12); this.moon.position.copy(this.moonDir).multiplyScalar(200); scene.add(this.moon);
     }
 
     _env() {
@@ -88,25 +88,53 @@
     }
 
     _sky() {
-      const geo = new THREE.SphereGeometry(900, 32, 16);
+      this.moonDir = new V3(-0.22, 0.84, -0.5).normalize();
+      const geo = new THREE.SphereGeometry(700, 48, 24);
       this.skyMat = new THREE.ShaderMaterial({
         side: THREE.BackSide, depthWrite: false, fog: false,
-        uniforms: { uTime: this.uniforms.uTime, uFlash: { value: 0 }, uFlashDir: { value: new V3(0.3, 0.6, -0.7) } },
+        uniforms: { uTime: this.uniforms.uTime, uFlash: { value: 0 }, uFlashDir: { value: new V3(0.3, 0.6, -0.7) }, uClear: { value: 0.2 }, uMoonDir: { value: this.moonDir } },
         vertexShader: 'varying vec3 vP; void main(){ vP=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-        fragmentShader: `varying vec3 vP; uniform float uTime; uniform float uFlash; uniform vec3 uFlashDir;
+        fragmentShader: `varying vec3 vP; uniform float uTime; uniform float uFlash; uniform vec3 uFlashDir; uniform float uClear; uniform vec3 uMoonDir;
           float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+          float h3(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
           float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}
           float fb(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=n(p)*a;p*=2.1;a*=.5;}return s;}
           void main(){
-            float y=max(vP.y,0.0);
-            vec2 uv=vP.xz/(y+0.25)*1.6 + vec2(uTime*0.03, uTime*0.012);
+            vec3 d = normalize(vP);
+            float y=max(d.y,0.0);
+            vec2 uv=d.xz/(y+0.25)*1.6 + vec2(uTime*0.03, uTime*0.012);
             float cl=fb(uv), cl2=fb(uv*2.3+3.0);
+            // claros entre las nubes: más grandes cuando la tormenta afloja
+            float thr = 0.26 + uClear * 0.36;
+            float gap = (1.0 - smoothstep(thr - 0.07, thr + 0.05, cl)) * smoothstep(0.02, 0.2, y);
+            // cielo despejado: azul noche profundo con estrellas que titilan
+            vec3 night = mix(vec3(0.012,0.018,0.04), vec3(0.004,0.006,0.016), y);
+            vec3 sp = d * 220.0; vec3 cell = floor(sp); float hs = h3(cell);
+            vec3 off = vec3(h3(cell+1.3), h3(cell+2.7), h3(cell+4.1)) - 0.5;
+            float sd = length(fract(sp) - 0.5 - off * 0.6);
+            float star = step(0.985, hs) * smoothstep(0.12, 0.0, sd) * (0.4 + 0.6 * h3(cell+7.7));
+            star *= 0.6 + 0.4 * sin(uTime * (2.0 + hs * 6.0) + hs * 50.0);
+            vec3 starCol = mix(vec3(0.75,0.82,1.0), vec3(1.0,0.88,0.72), h3(cell+9.1));
+            // luna: disco con mares y cráteres, halo y luz plateada en los bordes de las nubes
+            float md = dot(d, normalize(uMoonDir));
+            float disc = smoothstep(0.99915, 0.99935, md);
+            vec3 mu = normalize(cross(uMoonDir, vec3(0.0,1.0,0.0))), mv = cross(mu, uMoonDir);
+            vec2 mp = vec2(dot(d, mu), dot(d, mv)) * 30.0;
+            float maria = fb(mp * 1.5 + 4.0);
+            vec3 moonCol = vec3(0.92,0.94,1.0) * (1.25 - maria * 0.55);
+            float halo = pow(max(md, 0.0), 900.0) * 0.5 + pow(max(md, 0.0), 60.0) * 0.08;
+            float seen = mix(0.12, 1.0, gap);
+            vec3 clearSky = night + starCol * star * 1.6 + moonCol * disc * seen * 1.6;
+            // nubes
             vec3 base=mix(vec3(0.03,0.04,0.055), vec3(0.075,0.09,0.12), cl);
             base=mix(base, vec3(0.02,0.025,0.035), smoothstep(0.1,0.9,y)*0.5);
-            float dirL=pow(max(dot(normalize(vP),normalize(uFlashDir)),0.0), 6.0);
-            vec3 flash=vec3(0.38,0.44,0.62)*min(uFlash,1.0)*(0.25+cl2*0.9)*(0.25+dirL*1.1);
+            float lining = smoothstep(thr - 0.05, thr + 0.08, cl) * (1.0 - smoothstep(thr + 0.08, thr + 0.32, cl));
+            base += vec3(0.5,0.56,0.7) * pow(max(md, 0.0), 14.0) * (0.12 + lining * 0.9) * (0.3 + uClear);
+            vec3 col = mix(base, clearSky, gap) + vec3(0.6,0.65,0.8) * halo * (0.35 + gap * 0.65) * (0.3 + uClear);
+            float dirL=pow(max(dot(d,normalize(uFlashDir)),0.0), 6.0);
+            vec3 flash=vec3(0.38,0.44,0.62)*min(uFlash,1.0)*(0.25+cl2*0.9)*(0.25+dirL*1.1)*(1.0-gap*0.6);
             flash=flash/(1.0+flash*1.4); // tono suave: ilumina las nubes sin quemar a blanco
-            gl_FragColor=vec4(base+flash,1.0);
+            gl_FragColor=vec4(col+flash,1.0);
           }`,
       });
       const sky = new THREE.Mesh(geo, this.skyMat); sky.renderOrder = -10; sky.frustumCulled = false; this.scene.add(sky);
@@ -512,7 +540,7 @@
       const c = T.canvas(128, 128), g = c.getContext('2d');
       const grd = g.createRadialGradient(64, 64, 4, 64, 64, 64); grd.addColorStop(0, 'rgba(255,255,255,0.55)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
-      const mat = new THREE.SpriteMaterial({ map: T.tex(c), color: 0x6c7a90, transparent: true, opacity: 0.11, depthWrite: false, fog: true });
+      const mat = new THREE.SpriteMaterial({ map: T.tex(c), color: 0x7d8a9c, transparent: true, opacity: 0.07, depthWrite: false, fog: false });
       this.mistMat = mat;
       this.mist = [];
       for (let i = 0; i < this.Q.mist; i++) {
@@ -550,6 +578,13 @@
     }
 
     update(dt, time, camPos, storm) {
+      // claros: cuando la lluvia afloja aparecen la luna y las estrellas, y la luna ilumina el bosque
+      const clearT = Math.max(0.03, Math.min(0.78, 1.05 - storm.rain * 1.15));
+      this.clear = (this.clear == null ? clearT : this.clear + (clearT - this.clear) * (1 - Math.exp(-dt / 4)));
+      this.skyMat.uniforms.uClear.value = this.clear;
+      this.sky.position.copy(camPos); // el domo viaja con la cámara: nunca queda fuera del plano lejano
+      this.moon.intensity = 0.06 + this.clear * 0.34;
+      this.moon.position.copy(camPos).addScaledVector(this.moonDir, 200); this.moon.target.position.copy(camPos); this.moon.target.updateMatrixWorld();
       this.uniforms.uTime.value = time;
       this.uniforms.uWind.value = 0.5 + storm.wind * 1.4;
       if (this.rainUniform) this.rainUniform.value = storm.rain;
@@ -559,7 +594,7 @@
         const x = Math.round(camPos.x / 120) * 0 + camPos.x + u.ox, z = camPos.z + u.oz;
         s.position.set(x, height(x, z) + u.y, z);
       }
-      this.mistMat.opacity = 0.06 + storm.fog * 0.1;
+      this.mistMat.opacity = 0.03 + storm.fog * 0.05;
       this.scene.fog.density = this.fogBase * (0.8 + storm.fog * 0.6);
     }
   }

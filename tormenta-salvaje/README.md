@@ -17,6 +17,12 @@ Proyecto independiente: no depende de otras carpetas del repositorio.
   pasos según superficie (barro, charco, hojas), ramas que se quiebran, ropa mojada y respiración según el esfuerzo.
 - Primera persona, caminar/correr con resistencia, colisiones con troncos y rocas, brújula, objetivo, cartel interactivo.
 - Controles: joystick virtual + deslizar para mirar + botones (Android); WASD, ratón, Shift, E, F, Esc (PC).
+- Cielo con luna (mares, halo y bordes plateados en las nubes) y estrellas que titilan, visibles en los claros
+  que se abren cuando la tormenta afloja; la luna ilumina el bosque según qué tan despejado esté.
+- Fauna: ciervo que se congela en el haz (ojos que reflejan la linterna), resopla y huye; búhos posados que giran la
+  cabeza, ululan y se espantan; murciélagos en los respiros; polillas alrededor de la linterna; sapos que croan y
+  saltan al charco; ojos en la oscuridad que desaparecen al iluminarlos; aullidos lejanos.
+- Detalles: hojas arrastradas por las ráfagas, hongos bioluminiscentes al pie de los árboles y telarañas con gotas.
 - Mapa del parque en papel (tecla M, Tab o botón Mapa): relieve, curvas de nivel, cada árbol, sendero, charcos,
   lugares conocidos, tu posición y dirección, y tu recorrido a lápiz (se guarda). Zoom con + / − o la rueda.
   Minimapa circular que gira con la mirada (se puede ocultar en Configuración).
@@ -40,4 +46,5 @@ Proyecto independiente: no depende de otras carpetas del repositorio.
 | `js/audio.js` | Motor de audio procedural |
 | `js/player.js` | Controles, movimiento, linterna |
 | `js/map.js` | Mapa del parque y minimapa |
+| `js/fauna.js` | Animales y detalles del ambiente |
 | `js/main.js` | Menús, configuración, guardado, bucle |

@@ -76,7 +76,7 @@
   class Flashlight {
     constructor(scene, camera, Q) {
       this.on = true; this.battery = 1; this.flicker = 0;
-      const L = this.light = new THREE.SpotLight(0xffe6c2, 3.4, 46, 0.38, 0.45, 1.1);
+      const L = this.light = new THREE.SpotLight(0xffe6c2, 2.8, 46, 0.38, 0.45, 0.95);
       L.castShadow = !!Q.shadows;
       if (Q.shadows) { L.shadow.mapSize.set(Q.shadows, Q.shadows); L.shadow.camera.near = 0.3; L.shadow.camera.far = 32; L.shadow.bias = -0.0015; L.shadow.radius = 2; }
       scene.add(L); scene.add(L.target);
@@ -152,7 +152,7 @@
       if (this.flicker > 0) { this.flicker -= dt; I *= Math.random() < 0.5 ? 0.1 : 0.7; }
       I *= 0.6 + 0.4 * Math.min(1, this.battery / 0.3);
       const L = this.light;
-      L.intensity = 3.4 * I; L.position.copy(this.pos); L.target.position.copy(this.pos).addScaledVector(this.dir, 10);
+      L.intensity = 2.8 * I; L.position.copy(this.pos); L.target.position.copy(this.pos).addScaledVector(this.dir, 10);
       this.cone.position.copy(this.pos).addScaledVector(this.dir, 0.05);
       this.cone.lookAt(this.pos.clone().add(this.dir));
       this.cone.rotateY(Math.PI);
