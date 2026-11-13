@@ -115,6 +115,7 @@ function frame(now) {
     shockStep(DT);
     volcanoStep(DT);
     blackholeStep(DT);
+    titansStep(DT);
     trafficStep();
     const s0 = performance.now();
     world.step(eventQueue);
@@ -132,6 +133,8 @@ function frame(now) {
   stormUpdate(sdt);
   volcanoUpdate(sdt);
   blackholeUpdate(sdt);
+  titansUpdate(sdt);
+  titanRocksUpdate();
   updateCracks(sdt);
   updateFires(sdt);
   updateLights(sdt);

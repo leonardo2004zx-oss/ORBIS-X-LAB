@@ -62,6 +62,11 @@ window.__lab = {
   people: () => { const c = {}; for (const p of peds) c[p.state] = (c[p.state] || 0) + 1; return { n: peds.length, ...c, threats: threats.map((t) => t.kind).join('+'), siren: simTime < sirenUntil, emergency: emergency.length, evac: evacuation }; },
   evac: (on) => setEvacuation(on),
   dmg: () => allBlocks().filter((b) => b.dmg > 0.1).length,
+  titans: (mode, x, z, fury) => { if (mode) titans.mode = mode; if (fury) titans.fury = fury; startTitans(new THREE.Vector3(x, 0, z)); },
+  titanState: () => titans.list.map((T) => ({ k: T.kind, s: T.state, hp: Math.round(T.hp), x: Math.round(T.pos.x), z: Math.round(T.pos.z) })),
+  retreat: () => retreatTitans(),
+  titanHp: (k, hp) => { const T = titans.list.find((x) => x.kind === k); if (T) T.hp = hp; },
+  titanAttack: (k, kind) => { const T = titans.list.find((x) => x.kind === k); if (T) { T.state = kind; T.t = 0; } },
   gfx: (on) => { if (on !== undefined) setGfx(on); return { enhanced: gfx.enhanced, post: gfx.ready && gfx.post, env: !!scene.environment, rubble: rubble.count }; },
 };
 boot();

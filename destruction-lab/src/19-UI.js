@@ -11,6 +11,7 @@ const HINTS = {
   storm: '<strong>Iniciá la tormenta</strong>: los rayos buscan lo más alto. Tocá para que caiga un rayo donde quieras.',
   volcano: '<strong>Tocá el suelo</strong> donde va a brotar el volcán. Primero se eleva, después hace erupción.',
   blackhole: '<strong>Tocá</strong> sobre qué punto se abre el agujero negro. Al terminar colapsa con una onda expansiva.',
+  titans: '<strong>Tocá</strong> donde empieza la pelea. Basalto surge del suelo y Vex cae del cielo; también podés soltar uno solo a arrasar la ciudad.',
   build: '<strong>Tocá el suelo</strong> para levantar un edificio y probar su resistencia.',
 };
 function setTool(t) {
@@ -47,6 +48,10 @@ bindSlider('volcano-pow', (v) => (volcano.power = v));
 bindSlider('volcano-dur', (v) => (volcano.dur = v));
 bindSlider('bh-pow', (v) => (blackhole.power = v));
 bindSlider('bh-dur', (v) => (blackhole.dur = v));
+bindSlider('titan-fury', (v) => (titans.fury = v));
+bindSlider('titan-dur', (v) => (titans.dur = v));
+bindSeg('titan-mode', 'm', (v) => (titans.mode = v));
+$('#titan-btn').addEventListener('click', () => { if (titans.list.length) retreatTitans(); });
 function setQuake(on) {
   quake.on = on;
   if (on) { addThreat('quake', quake.epi.x, quake.epi.z, 25 + quake.intensity * 7, quake.dur, { siren: quake.intensity >= 6 }); quake.wakeT = 0; quake.t = 0; quake.crackT = 0.5; toast(quake.intensity >= 8 ? 'Terremoto extremo' : 'Terremoto en curso'); }
@@ -62,10 +67,11 @@ function stopAll() {
   if (tsunami.phase === 'advance') tsunami.phase = 'recede';
   if (volcano.phase === 'rising' || volcano.phase === 'erupt') { if (volcano.phase === 'rising') clearVolcano(); else { volcano.phase = 'dormant'; volcano.t = 0; } }
   if (blackhole.phase === 'grow' || blackhole.phase === 'active') { blackhole.phase = 'collapse'; blackhole.t = 0; }
+  if (titans.list.length) retreatTitans();
   refreshRunning();
 }
 function refreshRunning() {
-  const run = { quake: quake.on, tornado: tornado.on, storm: storm.on, tsunami: tsunami.phase !== 'idle', volcano: volcano.phase === 'rising' || volcano.phase === 'erupt', blackhole: blackhole.phase === 'grow' || blackhole.phase === 'active' };
+  const run = { quake: quake.on, tornado: tornado.on, storm: storm.on, tsunami: tsunami.phase !== 'idle', volcano: volcano.phase === 'rising' || volcano.phase === 'erupt', blackhole: blackhole.phase === 'grow' || blackhole.phase === 'active', titans: titans.list.length > 0 };
   for (const k in run) document.querySelector(`.tool[data-tool="${k}"]`).classList.toggle('running', run[k]);
   const set = (id, on, a, b) => { const el = $(id); el.textContent = on ? b : a; el.classList.toggle('stop', on); };
   set('#quake-btn', quake.on, 'Iniciar', 'Detener');
@@ -107,6 +113,10 @@ function onTap(cx, cy) {
     const p = pick(cx, cy, true); if (!p) return;
     if (p.x > RIVER.x0 - 4 && p.x < RIVER.x1 + 4) { toast('Elegí un punto fuera del río'); return; }
     startVolcano(p);
+  } else if (tool === 'titans') {
+    const p = pick(cx, cy, true); if (!p) return;
+    if (p.x > RIVER.x0 - 6 && p.x < RIVER.x1 + 6) { toast('Elegí un punto fuera del río'); return; }
+    startTitans(p);
   } else if (tool === 'blackhole') {
     const p = pick(cx, cy); if (!p) return;
     startBlackHole(p);

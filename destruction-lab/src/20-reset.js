@@ -20,6 +20,7 @@ function clearScene() {
   tornado.on = false; tornado.fade = 0; funnel.visible = false;
   tsunami.phase = 'idle'; tsunami.depth = 0; tsunami.crest = 0; tsunami.front = -200; water.visible = false;
   storm.on = false;
+  clearTitans(); titanRocks.length = 0;
   clearCracks(); clearVolcano(); volcano.bombs.length = 0; clearBlackHole();
   for (const w of shockwaves) { scene.remove(w.ring, w.shell); w.ring.material.dispose(); w.shell.material.dispose(); }
   shockwaves.length = 0; env.ash = env.ashTarget = 0; skyFlash = 0;

@@ -38,6 +38,12 @@ Son aproximaciones visuales en WebGL: no hay humo volumétrico real, reflejos de
 - **Evacuación**: botón Evacuar en el panel; todos van a los parques.
 - **Panel plegable** y protección contra toques accidentales al mover la cámara.
 
+## Titanes (criaturas originales)
+- **Basalto**: gólem de roca volcánica con grietas de magma y cristales en la espalda. Surge del suelo, pisotea, golpea, arranca rocas y las lanza (proyectiles físicos).
+- **Vex**: alienígena insectoide de cuatro patas con espinas bioluminiscentes y cola con aguijón. Cae del cielo, azota con la cola y dispara un rayo de plasma que corta edificios.
+- Modos: **Combate** (pelean entre sí, con barras de vida, retroceso al recibir golpes y derrota sin violencia gráfica: Basalto se desmorona en rocas y Vex es abducido en un destello) o **Solo Basalto / Solo Vex** arrasando la ciudad. Furia y duración ajustables; botón Retirar.
+- Interactúan de verdad con la física: cuerpos cinemáticos que empujan y rompen edificios, pisadas que fragmentan lo que está debajo. La gente huye, suenan sirenas y llegan emergencias.
+
 ## Rendimiento
 Calidad baja/media/alta, límites de escombros y de partículas, resolución dinámica y piezas que se duermen solas cuando quedan quietas.
 

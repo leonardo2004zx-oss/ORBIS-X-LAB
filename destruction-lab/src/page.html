@@ -62,6 +62,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .chip-btn[aria-pressed="true"] { background: var(--hot); color: #2a0b00; border-color: transparent; }
 .tools-pill { pointer-events: auto; align-self: flex-end; display: flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-family: var(--display); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
 .tools-pill svg { width: 18px; height: 18px; }
+.titan-hud { position: fixed; z-index: 6; left: 50%; transform: translateX(-50%); top: calc(62px + env(safe-area-inset-top, 0px)); display: flex; gap: 10px; pointer-events: none; width: min(520px, calc(100vw - 32px)); }
+.titan-hud .tb { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 5px 8px; display: grid; gap: 4px; }
+.titan-hud span { font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+.titan-hud i { display: block; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.titan-hud b { display: block; height: 100%; width: 100%; transition: width .25s; }
+.titan-hud .basalt b { background: linear-gradient(90deg, #ff5a1f, #ffb347); } .titan-hud .vex b { background: linear-gradient(90deg, #26c6ff, #8ff3ff); }
 .hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
 .hint strong { color: var(--fg); font-weight: 600; }
 .ctl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -121,7 +127,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
 
 .err { position: fixed; z-index: 30; left: 0; right: 0; top: 0; background: #5a1408; color: #ffe2d8; font-size: 12px; padding: 8px 16px; padding-top: calc(8px + env(safe-area-inset-top, 0px)); white-space: pre-wrap; max-height: 40vh; overflow: auto; }
 
-@media (max-width: 760px) { .toolbar { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding: 4px; } .tool { padding: 5px 0 4px; } .tool svg { width: 20px; height: 20px; } .tool span { letter-spacing: 0; font-size: 11.5px; } .tool.running::after { right: 4px; } .icon-btn { width: 38px; height: 38px; } .top-actions { gap: 6px; } .ctl { gap: 8px 12px; } }
+@media (max-width: 760px) { .toolbar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 4px; } .tool { padding: 5px 0 4px; } .tool svg { width: 20px; height: 20px; } .tool span { letter-spacing: -0.01em; font-size: 10.5px; text-overflow: clip; } .tool.running::after { right: 4px; } .icon-btn { width: 38px; height: 38px; } .top-actions { gap: 6px; } .ctl { gap: 8px 12px; } }
 @media (min-width: 900px) { .hud-bottom { align-items: center; } }
 </style>
 
@@ -151,6 +157,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="titan-hud" id="titan-hud" hidden></div>
 
 <div class="hud-bottom">
   <div class="panel" id="panel">
@@ -194,6 +201,12 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
       <div class="slider"><label for="bh-pow">Masa</label><input id="bh-pow" type="range" min="1" max="10" value="6"><output id="bh-pow-out">6</output></div>
       <div class="slider"><label for="bh-dur">Duración</label><input id="bh-dur" type="range" min="5" max="40" value="15"><output id="bh-dur-out">15</output></div>
     </div>
+    <div class="ctl" data-for="titans" hidden>
+      <div class="seg mini" id="titan-mode"><button data-m="fight" aria-pressed="true">Combate</button><button data-m="basalt" aria-pressed="false">Solo Basalto</button><button data-m="vex" aria-pressed="false">Solo Vex</button></div>
+      <div class="slider"><label for="titan-fury">Furia</label><input id="titan-fury" type="range" min="1" max="10" value="6"><output id="titan-fury-out">6</output></div>
+      <div class="slider"><label for="titan-dur">Duración</label><input id="titan-dur" type="range" min="20" max="180" step="10" value="60"><output id="titan-dur-out">60</output></div>
+      <button class="pill-btn" id="titan-btn">Retirar</button>
+    </div>
     <div class="ctl" data-for="build" hidden>
       <div class="seg mini" id="build-type"><button data-b="tower" aria-pressed="true">Torre</button><button data-b="glass" aria-pressed="false">Vidrio</button><button data-b="brick" aria-pressed="false">Ladrillo</button><button data-b="stepped" aria-pressed="false">Escalones</button></div>
       <div class="slider"><label for="build-floors">Pisos</label><input id="build-floors" type="range" min="2" max="16" value="8"><output id="build-floors-out">8</output></div>
@@ -210,6 +223,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
     <button class="tool" data-tool="storm" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15a5 5 0 1 1 1.5-9.8A6 6 0 0 1 19 9a3.5 3.5 0 0 1-1 6.8"/><path d="M13 12l-3 5h4l-3 5"/></svg><span class="long">Tormenta</span><span class="short">Rayos</span></button>
     <button class="tool" data-tool="volcano" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21l6-10h3l2-3h0l2 3h3l4 10z"/><path d="M10 5l1 2M14 4l-1 3M12 2v3"/></svg><span class="long">Volcán</span><span class="short">Volcán</span></button>
     <button class="tool" data-tool="blackhole" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2" fill="currentColor"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-20 12 12)"/></svg><span class="long">Agujero negro</span><span class="short">A. negro</span></button>
+    <button class="tool" data-tool="titans" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21v-6l-2-3 1-5 3-2h6l3 2 1 5-2 3v6"/><path d="M10 9h.01M14 9h.01M9 13h6"/></svg><span class="long">Titanes</span><span class="short">Titanes</span></button>
     <button class="tool" data-tool="build" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 21V8h7v13M11 21V3h9v18M2 21h20"/><path d="M14 7h3M14 11h3M14 15h3M7 12h1M7 16h1"/></svg><span class="long">Construir</span><span class="short">Crear</span></button>
     <button class="tool stop-all" id="btn-stop" aria-label="Detener todos los desastres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/></svg><span class="long">Detener</span><span class="short">Parar</span></button>
     <button class="tool reset" id="btn-reset" aria-label="Reconstruir la ciudad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span class="long">Reconstruir</span><span class="short">Reset</span></button>
