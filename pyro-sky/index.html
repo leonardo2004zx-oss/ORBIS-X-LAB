@@ -1,0 +1,185 @@
+<title>Pyro Sky Simulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700;900&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: cielo a pantalla completa; consola de disparo anclada abajo como el pupitre de un pirotécnico. */
+:root {
+  --night: #03050c;          /* fondo */
+  --panel: rgba(9, 12, 24, 0.82);
+  --line: rgba(255, 196, 120, 0.16);
+  --ink: #efe7da;            /* texto principal, papel kraft claro */
+  --dim: #9c94a6;
+  --ember: #ff7a2a;          /* acento: brasa de mecha */
+  --ember-deep: #c2410c;
+  --ok: #7fe0a8;
+  --f-display: 'Big Shoulders Stencil Display', 'Arial Narrow', Impact, sans-serif;
+  --f-body: 'IBM Plex Sans Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { background: var(--night); color: var(--ink); font-family: var(--f-body); overflow: hidden; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+#sky { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+/* ----- barra superior ----- */
+.top { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(rgba(3,5,12,0.75), rgba(3,5,12,0)); pointer-events: none; z-index: 5; }
+.brand { white-space: nowrap; flex: none; font-family: var(--f-display); font-weight: 900; font-size: 22px; letter-spacing: 0.04em; line-height: 0.9; margin-right: auto; text-transform: uppercase; }
+.brand small { display: block; font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.18em; color: var(--ember); font-weight: 500; }
+.tools { display: flex; gap: 6px; pointer-events: auto; flex-wrap: nowrap; justify-content: flex-end; min-width: 0; }
+.tbtn { flex: none; min-width: 42px; height: 40px; padding: 0 9px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px; backdrop-filter: blur(6px); }
+.tbtn svg { width: 18px; height: 18px; flex: none; }
+.tbtn[aria-pressed="true"] { border-color: var(--ember); color: #fff; background: rgba(194,65,12,0.55); }
+.tbtn .lbl { display: none; }
+@media (min-width: 720px) { .tbtn .lbl { display: inline; } }
+
+.meter { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(env(safe-area-inset-top, 0px) + 58px); display: flex; gap: 2px; align-items: flex-end; height: 22px; z-index: 5; pointer-events: none; }
+.meter i { width: 3px; background: var(--ember); opacity: 0.18; border-radius: 1px; }
+.meter i.on { opacity: 0.95; }
+.hud { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); top: calc(env(safe-area-inset-top, 0px) + 86px); font-family: var(--f-mono); font-size: 10px; color: var(--dim); z-index: 5; pointer-events: none; letter-spacing: 0.06em; line-height: 1.6; }
+.toast { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 64px); transform: translateX(-50%); background: var(--panel); border: 1px solid var(--line);
+  padding: 8px 14px; border-radius: 999px; font-size: 13px; z-index: 6; pointer-events: none; transition: opacity .3s; opacity: 0; white-space: nowrap; }
+.toast.show { opacity: 1; }
+
+/* ----- consola inferior ----- */
+.console { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 12px) max(16px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(rgba(3,5,12,0), rgba(3,5,12,0.88) 30%); }
+.rack { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.rack::-webkit-scrollbar { display: none; }
+.card { flex: 0 0 auto; width: 148px; scroll-snap-align: start; text-align: left; border-radius: 12px; border: 1px solid var(--line); background: var(--panel);
+  padding: 8px 10px 9px; display: grid; grid-template-columns: 26px 1fr; gap: 2px 8px; align-items: start; position: relative; }
+.card canvas { grid-row: span 3; width: 26px; height: 64px; }
+.card b { font-family: var(--f-display); font-weight: 700; font-size: 18px; letter-spacing: 0.03em; line-height: 1; text-transform: uppercase; }
+.card .spec { font-family: var(--f-mono); font-size: 9.5px; color: var(--dim); letter-spacing: 0.04em; }
+.card .snd { font-size: 11px; color: var(--ink); opacity: 0.8; line-height: 1.2; }
+.card .dots { display: flex; gap: 3px; margin-top: 3px; }
+.card .dots span { width: 8px; height: 8px; border-radius: 50%; }
+.card .badge { position: absolute; top: 6px; right: 6px; font-style: normal; font-family: var(--f-mono); font-size: 8.5px; letter-spacing: 0.12em; color: #1a0a02; background: var(--ember); border-radius: 4px; padding: 1px 4px; }
+.card[aria-checked="true"] { border-color: var(--ember); box-shadow: inset 0 0 0 1px var(--ember), 0 0 18px rgba(255,122,42,0.25); }
+.fire-row { display: flex; gap: 8px; align-items: stretch; }
+.fire { flex: 1; height: 62px; border-radius: 14px; border: 0; background: linear-gradient(180deg, var(--ember), var(--ember-deep)); color: #1a0a02;
+  font-family: var(--f-display); font-weight: 900; font-size: 30px; letter-spacing: 0.08em; text-transform: uppercase; box-shadow: 0 6px 24px rgba(255,100,20,0.35), inset 0 1px 0 rgba(255,255,255,0.35); }
+.fire:active { transform: translateY(1px) scale(0.99); filter: brightness(1.1); }
+.fire small { display: block; font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.12em; font-weight: 500; margin-top: -2px; opacity: 0.75; }
+.side { width: 74px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.1; }
+.side b { display: block; font-family: var(--f-display); font-size: 20px; letter-spacing: 0.04em; }
+
+/* ----- paneles ----- */
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; background: rgba(7, 9, 18, 0.96); border-top: 1px solid var(--line); border-radius: 18px 18px 0 0;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 16px) max(16px, env(safe-area-inset-left, 0px)); max-height: 72%; overflow-y: auto; }
+.sheet h2 { font-family: var(--f-display); font-weight: 900; font-size: 26px; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 4px; }
+.sheet p { margin: 0 0 12px; color: var(--dim); font-size: 13px; max-width: 60ch; }
+.sheet .close { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); top: 12px; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: transparent; font-size: 20px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.chip { height: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.chip i { width: 10px; height: 10px; border-radius: 50%; }
+.seq { display: flex; flex-wrap: wrap; gap: 6px; min-height: 46px; padding: 8px; border: 1px dashed var(--line); border-radius: 12px; margin-bottom: 12px; }
+.seq .chip { height: 32px; font-size: 12px; }
+.seq .chip.now { border-color: var(--ember); background: rgba(194,65,12,0.4); }
+.seq:empty::before { content: 'Tocá los cohetes de arriba para armar la secuencia.'; color: var(--dim); font-size: 13px; padding: 4px; }
+.btn { height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,0.05); font-weight: 600; font-size: 14px; }
+.btn.primary { background: var(--ember); color: #1a0a02; border-color: var(--ember); }
+label.ctl { display: grid; grid-template-columns: 110px 1fr 44px; align-items: center; gap: 10px; font-size: 14px; margin-bottom: 10px; }
+label.ctl output { font-family: var(--f-mono); font-size: 12px; color: var(--dim); text-align: right; }
+input[type=range] { width: 100%; accent-color: var(--ember); height: 30px; }
+label.sw { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-bottom: 10px; }
+label.sw input { width: 22px; height: 22px; accent-color: var(--ember); }
+.note { font-size: 12px; color: var(--dim); }
+
+/* ----- portada / activar audio ----- */
+.gate { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 120%, rgba(194,65,12,0.28), rgba(3,5,12,0.92) 60%);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.gate .inner { text-align: center; max-width: 520px; }
+.gate h1 { font-family: var(--f-display); font-weight: 900; font-size: clamp(54px, 15vw, 104px); line-height: 0.84; letter-spacing: 0.02em; margin: 0; text-transform: uppercase; text-wrap: balance; }
+.gate h1 span { color: var(--ember); display: block; }
+.gate .kicker { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.24em; color: var(--dim); margin-bottom: 14px; text-transform: uppercase; }
+.gate p { color: var(--dim); font-size: 15px; margin: 18px auto 26px; max-width: 40ch; line-height: 1.45; }
+.gate .go { height: 70px; padding: 0 34px; border: 0; border-radius: 16px; background: linear-gradient(180deg, var(--ember), var(--ember-deep)); color: #1a0a02;
+  font-family: var(--f-display); font-weight: 900; font-size: 30px; letter-spacing: 0.08em; text-transform: uppercase; box-shadow: 0 10px 40px rgba(255,100,20,0.45); display: inline-flex; align-items: center; gap: 12px; }
+.gate .go svg { width: 28px; height: 28px; }
+.gate .hint { font-size: 12px; margin-top: 16px; color: var(--dim); }
+.fuse-line { height: 2px; margin: 22px auto 0; width: 160px; background: linear-gradient(90deg, transparent, var(--ember), transparent); animation: burn 2.4s linear infinite; }
+@keyframes burn { from { background-position: -160px 0; } to { background-position: 160px 0; } }
+@media (prefers-reduced-motion: reduce) { .fuse-line { animation: none; } }
+@media (max-height: 560px) { .card { width: 128px; padding: 6px 8px; } .card .snd { display: none; } .card canvas { height: 40px; } .fire { height: 48px; font-size: 24px; } .side { width: 64px; } .rack { padding-bottom: 6px; } }
+</style>
+
+<canvas id="sky" aria-label="Cielo nocturno con fuegos artificiales"></canvas>
+
+<header class="top">
+  <div class="brand">Pyro Sky<small>SIMULADOR · AUDIO 3D</small></div>
+  <div class="tools">
+    <button class="tbtn" id="btnCam" title="Cambiar cámara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg><span class="lbl" id="camName">Público</span></button>
+    <button class="tbtn" id="btnSlow" aria-pressed="false" title="Cámara lenta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg><span class="lbl">Lenta</span></button>
+    <button class="tbtn" id="btnShow" title="Crear espectáculo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 14l5 3-5 3z" fill="currentColor"/></svg><span class="lbl">Show</span></button>
+    <button class="tbtn" id="btnFinale" title="Gran final automático"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M19 5l-4 4M9 15l-4 4"/></svg><span class="lbl">Gran final</span></button>
+    <button class="tbtn" id="btnSet" title="Sonido y ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 010 6M19 6a8 8 0 010 12"/></svg><span class="lbl">Sonido</span></button>
+  </div>
+</header>
+<div class="meter" id="meter" aria-hidden="true"></div>
+<div class="hud" id="hud"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<section class="console" aria-label="Consola de disparo">
+  <div class="rack" id="rack" role="radiogroup" aria-label="Catálogo de cohetes"></div>
+  <div class="fire-row">
+    <button class="side" id="btnZoomOut" title="Alejar"><b>−</b>Zoom</button>
+    <button class="fire" id="btnFire">Lanzar<small id="fireSub">PEONÍA CARMESÍ</small></button>
+    <button class="side" id="btnSalvo" title="Ráfaga de 5"><b>×5</b>Ráfaga</button>
+    <button class="side" id="btnZoomIn" title="Acercar"><b>+</b>Zoom</button>
+  </div>
+</section>
+
+<section class="sheet" id="sheetShow" hidden aria-label="Crear espectáculo">
+  <button class="close" data-close aria-label="Cerrar">×</button>
+  <h2>Tu espectáculo</h2>
+  <p>Agregá cohetes en el orden que quieras y ajustá la separación. Se guarda en este navegador.</p>
+  <div class="row" id="showPalette"></div>
+  <div class="seq" id="seq"></div>
+  <label class="ctl">Separación <input type="range" id="gap" min="0.2" max="3" step="0.1" value="0.9"><output id="gapOut">0.9 s</output></label>
+  <div class="row">
+    <button class="btn primary" id="showPlay">▶ Reproducir</button>
+    <button class="btn" id="showStop">■ Detener</button>
+    <button class="btn" id="showUndo">Quitar último</button>
+    <button class="btn" id="showClear">Vaciar</button>
+    <button class="btn" id="showDemo">Cargar ejemplo</button>
+  </div>
+</section>
+
+<section class="sheet" id="sheetSet" hidden aria-label="Sonido y ajustes">
+  <button class="close" data-close aria-label="Cerrar">×</button>
+  <h2>Sonido</h2>
+  <p>Cada cohete se sintetiza en vivo en seis etapas: mecha, despegue, ascenso, estallido, chisporroteo y eco del valle.</p>
+  <label class="ctl">Volumen <input type="range" id="vol" min="0" max="1.5" step="0.01" value="0.85"><output id="volOut">85</output></label>
+  <label class="ctl">Eco / reverb <input type="range" id="rev" min="0" max="1.2" step="0.01" value="0.65"><output id="revOut">65</output></label>
+  <label class="sw"><input type="checkbox" id="delay"> Retardo real del sonido (343 m/s): el estallido se ve antes de oírse</label>
+  <label class="sw"><input type="checkbox" id="reflect" checked> Reflejos en el lago</label>
+  <label class="ctl">Calidad <input type="range" id="qual" min="0" max="2" step="1" value="1"><output id="qualOut">Media</output></label>
+  <p class="note">Si no escuchás nada en Android, revisá el volumen multimedia del teléfono. Arrastrá el cielo para girar la cámara y pellizcá para acercar.</p>
+</section>
+
+<div class="gate" id="gate">
+  <div class="inner">
+    <div class="kicker">Simulador audiovisual de pirotecnia</div>
+    <h1>Pyro Sky<span>Simulator</span></h1>
+    <p>Elegí un cohete, prendé la mecha y escuchá cómo silba, ruge y estalla sobre el valle. Usá auriculares para oír el eco.</p>
+    <button class="go" id="btnGo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 010 6M19 6a8 8 0 010 12"/></svg>Activar audio</button>
+    <div class="hint">El navegador necesita un toque para habilitar el sonido.</div>
+    <div class="fuse-line"></div>
+  </div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/world.js"></script>
+<script src="js/rockets.js"></script>
+<script src="js/main.js"></script>
