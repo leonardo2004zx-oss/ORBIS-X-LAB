@@ -17,6 +17,9 @@ Proyecto independiente: no depende de otras carpetas del repositorio.
   pasos según superficie (barro, charco, hojas), ramas que se quiebran, ropa mojada y respiración según el esfuerzo.
 - Primera persona, caminar/correr con resistencia, colisiones con troncos y rocas, brújula, objetivo, cartel interactivo.
 - Controles: joystick virtual + deslizar para mirar + botones (Android); WASD, ratón, Shift, E, F, Esc (PC).
+- Mapa del parque en papel (tecla M, Tab o botón Mapa): relieve, curvas de nivel, cada árbol, sendero, charcos,
+  lugares conocidos, tu posición y dirección, y tu recorrido a lápiz (se guarda). Zoom con + / − o la rueda.
+  Minimapa circular que gira con la mirada (se puede ocultar en Configuración).
 - Portada animada, Nueva partida / Continuar / Configuración / Créditos; calidad Baja/Media/Alta, volúmenes,
   sensibilidad, FPS; resolución dinámica; guardado local automático.
 
@@ -36,4 +39,5 @@ Proyecto independiente: no depende de otras carpetas del repositorio.
 | `js/weather.js` | Lluvia, salpicaduras, relámpagos, director de la tormenta |
 | `js/audio.js` | Motor de audio procedural |
 | `js/player.js` | Controles, movimiento, linterna |
+| `js/map.js` | Mapa del parque y minimapa |
 | `js/main.js` | Menús, configuración, guardado, bucle |

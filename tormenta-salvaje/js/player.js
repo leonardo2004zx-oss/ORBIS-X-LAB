@@ -11,10 +11,11 @@
       this.touch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
       this.canvas = canvas; this.enabled = false;
       addEventListener('keydown', e => {
-        if (!this.enabled && e.code !== 'Escape') return;
+        if (!this.enabled && e.code !== 'Escape' && e.code !== 'KeyM' && e.code !== 'Tab') return;
         this.keys[e.code] = true;
         if (e.code === 'KeyE') this.onAction('interact');
         if (e.code === 'KeyF') this.onAction('flashlight');
+        if (e.code === 'KeyM' || e.code === 'Tab') { e.preventDefault(); this.onAction('map'); }
         if (e.code === 'Escape') this.onAction('pause');
       });
       addEventListener('keyup', e => { this.keys[e.code] = false; });

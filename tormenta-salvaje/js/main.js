@@ -15,7 +15,7 @@
     { name: 'Alta', dpr: 1.75, aa: true, terrainSeg: 230, treeCount: 2500, nearR: 56, farR: 120, fog: 0.025, ferns: 7000, grass: 6000, bushes: 1100, rocks: 600, logs: 80, mist: 18, rain: 13000, splash: 700, shadows: 1024 },
   ];
   const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || matchMedia('(pointer: coarse)').matches;
-  const settings = Object.assign({ q: mobile ? 1 : 2, master: 0.9, rain: 1, thunder: 1, sens: 1, fps: false, invert: false }, store.get('settings', {}));
+  const settings = Object.assign({ q: mobile ? 1 : 2, master: 0.9, rain: 1, thunder: 1, sens: 1, fps: false, invert: false, mini: true }, store.get('settings', {}));
   const Q = QUALITY[settings.q];
 
   /* ---------- motor ---------- */
@@ -29,7 +29,7 @@
   renderer.shadowMap.enabled = !!Q.shadows; renderer.shadowMap.type = THREE.PCFShadowMap;
   const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 900);
 
-  let world, rain, splashes, lightning, storm, player, flashlight, input;
+  let world, rain, splashes, lightning, storm, player, flashlight, input, map;
   const audio = new T.StormAudio();
   const state = { mode: 'menu', time: 0, objective: '', msgT: 0, saveT: 0, creakT: 8, flags: {} };
   window.__ts = { state, get world() { return world; }, get player() { return player; }, get storm() { return storm; }, audio, get flashlight() { return flashlight; }, get lightning() { return lightning; }, renderer, camera };
@@ -45,6 +45,11 @@
     player = new T.Player(world, camera, audio, splashes);
     input = new T.Input(canvas, { stick: $('stick'), knob: $('knob'), lookZone: $('look'), runBtn: $('bRun'), useBtn: $('bUse'), lightBtn: $('bLight'), pauseBtn: $('bPause') });
     input.onAction = onAction;
+    map = new T.ParkMap(world, 1024);
+    map.addPlace({ x: 0, z: 178, label: 'Tu auto', icon: 'car' });
+    map.addPlace({ x: world.signPos.x, z: world.signPos.z, label: 'Cartel', icon: 'sign' });
+    map.addPlace({ x: -84, z: -166, label: 'Camping Los Alerces', icon: 'tent', known: false });
+    window.__ts.map = map;
     world.wetMats.forEach(m => { m.userData.env = m.envMapIntensity; });
     world.updateLOD(new V3(0, 0, 172), true);
     resize();
@@ -75,7 +80,8 @@
     return best;
   }
   function onAction(a) {
-    if (a === 'pause') { if (state.mode === 'play') pause(); else if (state.mode === 'pause') resume(); return; }
+    if (a === 'map') { if (state.mode === 'play') openMap(); else if (state.mode === 'map') closeMap(); return; }
+    if (a === 'pause') { if (state.mode === 'map') { closeMap(); return; } if (state.mode === 'play') pause(); else if (state.mode === 'pause') resume(); return; }
     if (state.mode !== 'play') return;
     if (a === 'flashlight') { flashlight.toggle(); audio.click(); }
     if (a === 'interact') { const it = nearestInteractable(); if (it) it.use(); }
@@ -98,7 +104,7 @@
   /* ---------- guardado ---------- */
   function save() {
     if (!player) return;
-    store.set('save', { x: player.pos.x, z: player.pos.z, yaw: player.yaw, battery: flashlight.battery, flags: state.flags, objective: state.objective, t: Date.now() });
+    store.set('save', { x: player.pos.x, z: player.pos.z, yaw: player.yaw, battery: flashlight.battery, flags: state.flags, objective: state.objective, trail: map.trail.slice(-1500), t: Date.now() });
   }
   function refreshContinue() {
     const s = store.get('save', null);
@@ -115,10 +121,10 @@
     const s = cont ? store.get('save', null) : null;
     state.flags = {};
     if (s) {
-      player.pos.set(s.x, world.groundHeight(s.x, s.z), s.z); player.yaw = s.yaw; flashlight.battery = s.battery || 1; state.flags = s.flags || {};
+      player.pos.set(s.x, world.groundHeight(s.x, s.z), s.z); player.yaw = s.yaw; flashlight.battery = s.battery || 1; state.flags = s.flags || {}; map.trail = s.trail || [];
       setObjective(s.objective || 'Encontrá el camping.');
     } else {
-      player.pos.set(0, T.height(0, 172), 172); player.yaw = 0; player.pitch = -0.05; flashlight.battery = 1;
+      player.pos.set(0, T.height(0, 172), 172); player.yaw = 0; player.pitch = -0.05; flashlight.battery = 1; map.trail = [];
       setObjective('Estás perdido. Encontrá el camping Los Alerces antes de que la tormenta empeore. Seguí el sendero.');
       showMessage('El auto quedó atascado en la ruta. Dijeron que el camping estaba cerca…', 6);
     }
@@ -133,6 +139,26 @@
     // primer trueno para "presentar" la tormenta
     storm.nextStrike = 2.5;
   }
+  /* ---------- mapa ---------- */
+  const mapCanvas = $('mapCanvas');
+  function drawMap() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    mapCanvas.width = Math.round(innerWidth * dpr); mapCanvas.height = Math.round(innerHeight * dpr);
+    map.draw(mapCanvas, player, state.mapZoom || 1);
+  }
+  function openMap() {
+    state.mode = 'map'; $('pMap').hidden = false; state.mapZoom = state.mapZoom || (innerHeight < 520 ? 1.8 : 1); drawMap(); state.mapT = 0;
+    audio.paper && audio.paper();
+    if (!state.flags.mapSeen) { state.flags.mapSeen = 1; }
+  }
+  function closeMap() { $('pMap').hidden = true; state.mode = 'play'; }
+  $('bMap').addEventListener('click', () => onAction('map'));
+  $('mapClose').addEventListener('click', closeMap);
+  const zoomMap = (f) => { state.mapZoom = Math.max(1, Math.min(4, (state.mapZoom || 1) * f)); drawMap(); };
+  $('mapIn').addEventListener('click', () => zoomMap(1.5));
+  $('mapOut').addEventListener('click', () => zoomMap(1 / 1.5));
+  mapCanvas.addEventListener('wheel', (e) => { e.preventDefault(); zoomMap(e.deltaY < 0 ? 1.25 : 0.8); }, { passive: false });
+
   function pause() { state.mode = 'pause'; $('pPause').hidden = false; input.enabled = false; save(); if (document.exitPointerLock) document.exitPointerLock(); }
   function resume() { $('pPause').hidden = true; state.mode = 'play'; input.enabled = true; }
   function quitToMenu() { save(); $('pPause').hidden = true; $('hud').hidden = true; $('title').hidden = false; state.mode = 'menu'; input.enabled = false; document.body.classList.remove('playing'); refreshContinue(); }
@@ -152,7 +178,7 @@
     $('pSettings').hidden = false;
     document.querySelectorAll('#qSeg button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.q === settings.q ? 'true' : 'false'));
     $('sMaster').value = settings.master; $('sRain').value = settings.rain; $('sThunder').value = settings.thunder; $('sSens').value = settings.sens;
-    $('sFps').checked = settings.fps; $('sInvert').checked = settings.invert; syncOut();
+    $('sFps').checked = settings.fps; $('sMini').checked = settings.mini; $('sInvert').checked = settings.invert; syncOut();
   }
   function syncOut() {
     $('oMaster').textContent = Math.round(settings.master * 100); $('oRain').textContent = Math.round(settings.rain * 100);
@@ -161,11 +187,12 @@
   function applySettings() {
     audio.setVolumes({ master: settings.master, rain: settings.rain, thunder: settings.thunder });
     if (input) input.sens = settings.sens;
-    $('fps').hidden = !settings.fps;
+    $('fps').hidden = !settings.fps; $('mini').hidden = !settings.mini;
     store.set('settings', settings);
   }
   [['sMaster', 'master'], ['sRain', 'rain'], ['sThunder', 'thunder'], ['sSens', 'sens']].forEach(([id, k]) => $(id).addEventListener('input', e => { settings[k] = +e.target.value; syncOut(); applySettings(); }));
   $('sFps').addEventListener('change', e => { settings.fps = e.target.checked; applySettings(); });
+  $('sMini').addEventListener('change', e => { settings.mini = e.target.checked; applySettings(); });
   $('sInvert').addEventListener('change', e => { settings.invert = e.target.checked; applySettings(); });
   $('qSeg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -215,12 +242,15 @@
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     state.time += dt;
     if (state.mode === 'pause') { renderer.render(world.scene, camera); return; }
+    const playing = state.mode === 'play' || state.mode === 'map';
     updateStorm(dt);
+    if (state.mode === 'map') { player.update(dt, input, true); state.mapT += dt; if (state.mapT > 0.5) { state.mapT = 0; drawMap(); } }
     if (state.mode === 'play') {
       player.update(dt, input, false);
+      map.track(player.pos.x, player.pos.z);
       if (settings.invert) {} // aplicado en la entrada
     } else menuCamera(dt);
-    const I = flashlight.update(dt, state.time, camera, state.mode === 'play' ? player.moving : 0.3, state.mode === 'play' ? player.running : 0);
+    const I = flashlight.update(dt, state.time, camera, playing ? player.moving : 0.3, playing ? player.running : 0);
     const fl = { pos: flashlight.pos, dir: flashlight.dir, cos: flashlight.cos, on: I };
     rain.update(state.time, camera, storm, fl);
     splashes.update(dt, camera, storm, fl, (x, z) => {
@@ -228,7 +258,7 @@
     });
     world.update(dt, state.time, camera.position, storm);
 
-    if (state.mode === 'play') {
+    if (playing) {
       // audio ambiente según el entorno inmediato
       let near = 0; for (const c of world.collidersNear(camera.position.x, camera.position.z)) if ((c.x - camera.position.x) ** 2 + (c.z - camera.position.z) ** 2 < 100) near++;
       let pd = 1e9; for (const p of world.puddles) pd = Math.min(pd, Math.hypot(p.x - player.pos.x, p.z - player.pos.z) - p.r);
@@ -248,6 +278,7 @@
       $('batt').classList.toggle('low', flashlight.battery < 0.2);
       const deg = ((-player.yaw * 180 / Math.PI) % 360 + 360) % 360;
       tape.style.transform = `translateX(${-deg * 2.2}px)`;
+      if (settings.mini && state.mode === 'play' && (state.miniT = (state.miniT || 0) + dt) > 0.05) { state.miniT = 0; map.drawMini($('mini'), player); }
       const it = nearestInteractable();
       $('prompt').hidden = !it;
       if (it) $('prompt').innerHTML = `<kbd>${input.touch ? '✋' : 'E'}</kbd>${it.label}`;
