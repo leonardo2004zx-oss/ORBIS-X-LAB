@@ -39,10 +39,12 @@ Son aproximaciones visuales en WebGL: no hay humo volumétrico real, reflejos de
 - **Panel plegable** y protección contra toques accidentales al mover la cámara.
 
 ## Titanes (criaturas originales)
-- **Basalto**: gólem de roca volcánica con grietas de magma y cristales en la espalda. Surge del suelo, pisotea, golpea, arranca rocas y las lanza (proyectiles físicos).
-- **Vex**: alienígena insectoide de cuatro patas con espinas bioluminiscentes y cola con aguijón. Cae del cielo, azota con la cola y dispara un rayo de plasma que corta edificios.
-- Modos: **Combate** (pelean entre sí, con barras de vida, retroceso al recibir golpes y derrota sin violencia gráfica: Basalto se desmorona en rocas y Vex es abducido en un destello) o **Solo Basalto / Solo Vex** arrasando la ciudad. Furia y duración ajustables; botón Retirar.
-- Interactúan de verdad con la física: cuerpos cinemáticos que empujan y rompen edificios, pisadas que fragmentan lo que está debajo. La gente huye, suenan sirenas y llegan emergencias.
+- **Basalto**: gólem de roca volcánica, estilo boxeador. Jab–cross–uppercut en combo, golpe de revés, martillazo con las dos manos (onda expansiva), embestida con el hombro, agarre y lanzamiento, guardia, rocas arrancadas de la calle y, cuando le queda poca vida, una hoja de magma.
+- **Vex**: alienígena insectoide. Combo de garras y mordida, aguijonazo de cola (estilo escorpión), salto sobre el rival, agarre con la cola y azote contra el suelo, esquives laterales con contraataque y rayo de plasma.
+- **Animación**: cada articulación (hombros, codos, rodillas, torso, cabeza, patas, cola) sigue su pose con un resorte amortiguado; los golpes tienen anticipación, impacto y recuperación, y los impactos sacuden la cabeza y el torso del que los recibe.
+- **Cine**: pausa de impacto en golpes fuertes, cámara lenta en el K.O., cámara de cine que encuadra la pelea (se pausa si tocás la cámara), textos de combo, bloqueo, llave y K.O.
+- **Reacciones**: retroceso según el golpe, caída y levantarse, salir volando contra los edificios. Cada movimiento grande tiene su tiempo de recarga.
+- Interacción física real con la ciudad (cuerpos cinemáticos, pisadas, embestidas que atraviesan edificios). Sin violencia gráfica: Basalto se desmorona en rocas y Vex es abducido.
 
 ## Rendimiento
 Calidad baja/media/alta, límites de escombros y de partículas, resolución dinámica y piezas que se duermen solas cuando quedan quietas.

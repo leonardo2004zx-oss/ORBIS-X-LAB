@@ -105,7 +105,7 @@ function frame(now) {
   const fdt = Math.min(0.1, (now - last) / 1000); ema('frame', now - last); last = now;
   if (paused) return;
   const tA = performance.now();
-  const sdt = fdt * timeScale;
+  const sdt = fdt * timeScale * cineScale(fdt);
   acc += sdt;
   let n = 0;
   while (acc >= DT && n < Q.substeps) {

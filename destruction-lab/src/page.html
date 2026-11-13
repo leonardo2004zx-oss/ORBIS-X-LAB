@@ -68,6 +68,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .titan-hud i { display: block; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.12); overflow: hidden; }
 .titan-hud b { display: block; height: 100%; width: 100%; transition: width .25s; }
 .titan-hud .basalt b { background: linear-gradient(90deg, #ff5a1f, #ffb347); } .titan-hud .vex b { background: linear-gradient(90deg, #26c6ff, #8ff3ff); }
+.fight-pop { position: fixed; z-index: 7; left: 50%; top: 34%; transform: translate(-50%, -50%) scale(0.6); font-family: var(--display); font-weight: 700; font-size: clamp(30px, 8vw, 64px); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; pointer-events: none; opacity: 0; text-shadow: 0 3px 0 rgba(0,0,0,0.55), 0 0 24px rgba(0,0,0,0.5); }
+.fight-pop.go { animation: pop 1.1s ease-out forwards; }
+@keyframes pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(0.95); } 22% { transform: translate(-50%, -50%) scale(1.05); } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -62%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .fight-pop.go { animation: none; opacity: 1; } }
 .hint { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.35; }
 .hint strong { color: var(--fg); font-weight: 600; }
 .ctl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -158,6 +162,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="titan-hud" id="titan-hud" hidden></div>
+<div class="fight-pop" id="fight-pop" aria-live="polite"></div>
 
 <div class="hud-bottom">
   <div class="panel" id="panel">
@@ -205,6 +210,7 @@ input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height
       <div class="seg mini" id="titan-mode"><button data-m="fight" aria-pressed="true">Combate</button><button data-m="basalt" aria-pressed="false">Solo Basalto</button><button data-m="vex" aria-pressed="false">Solo Vex</button></div>
       <div class="slider"><label for="titan-fury">Furia</label><input id="titan-fury" type="range" min="1" max="10" value="6"><output id="titan-fury-out">6</output></div>
       <div class="slider"><label for="titan-dur">Duración</label><input id="titan-dur" type="range" min="20" max="180" step="10" value="60"><output id="titan-dur-out">60</output></div>
+      <label class="check" for="titan-cine" style="flex:1 1 auto"><span>Cámara de cine</span><input type="checkbox" id="titan-cine" checked></label>
       <button class="pill-btn" id="titan-btn">Retirar</button>
     </div>
     <div class="ctl" data-for="build" hidden>

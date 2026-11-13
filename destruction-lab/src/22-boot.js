@@ -66,7 +66,9 @@ window.__lab = {
   titanState: () => titans.list.map((T) => ({ k: T.kind, s: T.state, hp: Math.round(T.hp), x: Math.round(T.pos.x), z: Math.round(T.pos.z) })),
   retreat: () => retreatTitans(),
   titanHp: (k, hp) => { const T = titans.list.find((x) => x.kind === k); if (T) T.hp = hp; },
-  titanAttack: (k, kind) => { const T = titans.list.find((x) => x.kind === k); if (T) { T.state = kind; T.t = 0; } },
+  titanAttack: (k, move) => { const T = titans.list.find((x) => x.kind === k); if (T && !T.busy()) startAct(T, move); },
+  fightLog: () => { const l = titans.log || []; titans.log = []; return l.join(' '); },
+  cineState: () => ({ slow: +cine.slow.toFixed(2), hitStop: +cine.hitStop.toFixed(2) }),
   gfx: (on) => { if (on !== undefined) setGfx(on); return { enhanced: gfx.enhanced, post: gfx.ready && gfx.post, env: !!scene.environment, rubble: rubble.count }; },
 };
 boot();

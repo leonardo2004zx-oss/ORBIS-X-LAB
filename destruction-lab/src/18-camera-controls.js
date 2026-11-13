@@ -12,9 +12,10 @@ const controls = {
     camera.position.set(this.target.x + this.radius * sp * Math.sin(this.theta), this.target.y + this.radius * Math.cos(this.phi), this.target.z + this.radius * sp * Math.cos(this.theta));
     camera.lookAt(this.target);
   },
-  rotate(dx, dy) { this.goal.theta -= dx * 0.006; this.goal.phi = THREE.MathUtils.clamp(this.goal.phi - dy * 0.005, 0.12, 1.5); },
-  zoom(f) { this.userZoomed = true; this.goal.radius = THREE.MathUtils.clamp(this.goal.radius * f, 8, 160); },
+  rotate(dx, dy) { this.userT = performance.now(); this.goal.theta -= dx * 0.006; this.goal.phi = THREE.MathUtils.clamp(this.goal.phi - dy * 0.005, 0.12, 1.5); },
+  zoom(f) { this.userT = performance.now(); this.userZoomed = true; this.goal.radius = THREE.MathUtils.clamp(this.goal.radius * f, 8, 160); },
   pan(dx, dy) {
+    this.userT = performance.now();
     const s = this.radius * 0.0016;
     const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0); right.y = 0; right.normalize();
     const fwd = new THREE.Vector3(-Math.sin(this.theta), 0, -Math.cos(this.theta));

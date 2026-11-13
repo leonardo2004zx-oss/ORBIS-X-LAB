@@ -51,6 +51,7 @@ bindSlider('bh-dur', (v) => (blackhole.dur = v));
 bindSlider('titan-fury', (v) => (titans.fury = v));
 bindSlider('titan-dur', (v) => (titans.dur = v));
 bindSeg('titan-mode', 'm', (v) => (titans.mode = v));
+$('#titan-cine').addEventListener('change', (e) => { titans.cine = e.target.checked; });
 $('#titan-btn').addEventListener('click', () => { if (titans.list.length) retreatTitans(); });
 function setQuake(on) {
   quake.on = on;
